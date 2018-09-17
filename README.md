@@ -9,3 +9,5 @@ Steps:
 		- outputs the coordinates of red regions in the image to a JSON file
 	3. Run generate_truth.m
 		- this creates the ground truth object that will be used to train the R-CNN
+
+test
