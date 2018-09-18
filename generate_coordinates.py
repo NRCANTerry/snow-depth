@@ -76,7 +76,7 @@ for count, img_name in enumerate(images):
 	# reduce noise in image by local smoothing
 	img = cv2.medianBlur(img, median_kernal_size)
 
-	# identify red areas in image based on two hardcoded ranges of HSV
+	# identify coloured areas in image based on two hardcoded ranges of HSV
 	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 	mask1 = cv2.inRange(hsv, lower_hsv1, upper_hsv1)
 	mask2 = cv2.inRange(hsv, lower_hsv2, upper_hsv2)
@@ -89,7 +89,7 @@ for count, img_name in enumerate(images):
 	# dilate contours slightly
 	mask_open = cv2.dilate(mask_open, dilate_kernel, iterations = 3)
 
-	# find final red polygon regions
+	# find final coloured polygon regions
 	mask_filtered = np.zeros((h,w), dtype = np.uint8)
 	contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 	number_contours = len(contours)
