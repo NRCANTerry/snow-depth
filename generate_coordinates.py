@@ -67,7 +67,7 @@ for count, img_name in enumerate(images):
 	img =  img[img_border_upper:(h-img_border_lower),:, :]
 
 	# replace original image with cropped image
-	output_path = './training-images/' + img_name
+	output_path = img_dir + img_name
 	cv2.imwrite(output_path, img)
 
 	# reduce noise in image by local smoothing
@@ -77,18 +77,18 @@ for count, img_name in enumerate(images):
 	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 	mask1 = cv2.inRange(hsv, lower_hsv1, upper_hsv1)
 	mask2 = cv2.inRange(hsv, lower_hsv2, upper_hsv2)
-	red_mask = cv2.bitwise_or(mask1, mask2)
+	mask = cv2.bitwise_or(mask1, mask2)
 
 	# erosion followed by dilation to reduce noise
 	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
-	red_mask_open = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
+	mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
 	# dilate contours slightly
-	red_mask_open = cv2.dilate(red_mask_open, dilate_kernel, iterations = 3)
+	mask_open = cv2.dilate(mask_open, dilate_kernel, iterations = 3)
 
 	# find final red polygon regions
-	red_mask_filtered = np.zeros((h,w), dtype = np.uint8)
-	contours = cv2.findContours(red_mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+	mask_filtered = np.zeros((h,w), dtype = np.uint8)
+	contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 	number_contours = len(contours)
 
 	for i,cnt in enumerate(contours):
@@ -104,7 +104,7 @@ for count, img_name in enumerate(images):
 			if(angle >= angle_thresh and width <= height and bar_width_low <= width <= bar_width_high) or \
 				(angle <= angle_thresh and width >= height and bar_width_low <= height <= bar_width_high):
 				# draw contour
-				cv2.drawContours(red_mask_filtered, [cnt], 0, 255, -1)
+				cv2.drawContours(mask_filtered, [cnt], 0, 255, -1)
 				
 				# get rectangle points
 				coords = cv2.boxPoints(rect)
@@ -117,7 +117,7 @@ for count, img_name in enumerate(images):
 				output_string += ("%s %s %s %s" % (topLeft[0], (topLeft[1]), width, height))
 				if i != number_contours - 1:
 					output_string += ";"
-
+	
 	# update output string
 	output_string += "]"
 
