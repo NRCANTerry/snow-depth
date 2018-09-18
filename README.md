@@ -7,7 +7,10 @@ Steps:
 	2. Run generate_coordinates.py
 		- specify image folder, HSV ranges, and image borders
 		- outputs the coordinates of red regions in the image to a JSON file
+		- to determine HSV ranges use the preview tool in the GUI
 	3. Run generate_truth.m
 		- this creates the ground truth object that will be used to train the R-CNN
 
-test
+	HSV Ranges:
+	Orange: (0, 111, 0) -> (31, 225, 186)
+	Red: (159, 101, 25) -> (180, 255, 255)
