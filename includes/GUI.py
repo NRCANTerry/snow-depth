@@ -4,6 +4,7 @@ import tkFileDialog
 import colorsys
 from tkColorChooser import askcolor
 import tkMessageBox
+from preview import HSVPreview
 
 class GUI:
 	def __init__(self):
@@ -185,6 +186,16 @@ class GUI:
 			font = ("Calibri", 12))
 		self.runButton.grid(row = 11, column = 0, sticky = tk.W, padx = 20, pady = 5)
 
+		# preview HSV button
+		self.HSVButton = tk.Button(
+			self.root,
+			text = " Preview Mask ",
+			background = '#ffffff',
+			foreground = '#000000',
+			command = lambda: self.launchPreview(),
+			font = ("Calibri", 12))
+		self.HSVButton.grid(row = 11, column = 1, sticky = tk.W, padx = 20, pady = 5)
+		
 		#---------------------------------------------------------------------------------
 		# Entry
 		#---------------------------------------------------------------------------------
@@ -308,3 +319,7 @@ class GUI:
 			self.upperButton2.config(state = "disabled")
 			self.lowerLabel2.config(bg = '#ffffff')
 			self.upperLabel2.config(bg = '#ffffff')
+
+	# function launch HSV preview tool
+	def launchPreview(self):
+		HSVPreview()
