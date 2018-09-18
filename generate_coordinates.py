@@ -42,6 +42,9 @@ img_dir = params[0] + '/'
 # contains output data
 coordinate_output = {}
 
+# add directory to output
+coordinate_output["directory"] = img_dir
+
 # get images
 images = [file_name for file_name in os.listdir(img_dir)]
 num_images = len(images)
