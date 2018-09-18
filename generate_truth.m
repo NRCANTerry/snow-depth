@@ -1,5 +1,11 @@
-% Create a data source from an image
-imageDir = fullfile('training-images');
+% Open JSON file containing coordinates
+jsonData = jsondecode(fileread('coordinates.json'));
+
+% Get image directory
+image_dir = jsonData.directory
+
+% Create a data source
+imageDir = fullfile(image_dir);
 dataSource = groundTruthDataSource(imageDir);
 
 % Define labels used to specify ground truth
@@ -10,9 +16,6 @@ labelDefs = table(names, types, 'VariableNames', {'Name', 'Type'});
 % Determine number of images
 numImages = numel(dataSource.Source);
 Truth = cell(numImages, 1);
-
-% Open JSON file containing coordinates
-jsonData = jsondecode(fileread('coordinates.json'));
 
 % Identify ROI in all images
 for image = 1:numImages
