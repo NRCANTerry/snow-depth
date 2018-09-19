@@ -320,6 +320,6 @@ class GUI:
 			self.lowerLabel2.config(bg = '#ffffff')
 			self.upperLabel2.config(bg = '#ffffff')
 
-	# function launch HSV preview tool
+	# function to launch HSV preview tool
 	def launchPreview(self):
 		HSVPreview()
