@@ -6,7 +6,7 @@ Steps:
 	1. Place all training images in a folder
 	2. Run generate_coordinates.py
 		- specify image folder, HSV ranges, and image borders
-		- outputs the coordinates of red regions in the image to a JSON file
+		- outputs the coordinates of coloured regions in the image to a JSON file
 		- to determine HSV ranges use the preview tool in the GUI
 	3. Run generate_truth.m
 		- this creates the ground truth object that will be used to train the R-CNN
