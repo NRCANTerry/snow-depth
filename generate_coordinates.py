@@ -86,8 +86,8 @@ for count, img_name in enumerate(images):
 	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
 	mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
-	# dilate contours slightly
-	mask_open = cv2.dilate(mask_open, dilate_kernel, iterations = 3)
+	# dilate contours
+	mask_open = cv2.dilate(mask_open, dilate_kernel, iterations = 5)
 
 	# find final coloured polygon regions
 	mask_filtered = np.zeros((h,w), dtype = np.uint8)
@@ -116,8 +116,13 @@ for count, img_name in enumerate(images):
 				# get top left coordinate
 				topLeft = min(coords)
 
+				# increase the size of the bounding boxes
+				horizontal_increase = 10
+				vertical_increase = 10
+
 				# update output string
-				output_string += ("%s %s %s %s" % (topLeft[0], (topLeft[1]), width, height))
+				output_string += ("%s %s %s %s" % (topLeft[0]-horizontal_increase, (topLeft[1])-vertical_increase, \
+					width+(horizontal_increase*2), height+vertical_increase))
 				if i != number_contours - 1:
 					output_string += ";"
 	
