@@ -37,7 +37,7 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri", 14))
-        self.label.grid(row=0, sticky=tk.W, padx=10, pady=5)
+        self.label.grid(row=0, sticky=tk.W, columnspan = 5, padx=10, pady=5)
 
         # image path Label
         self.pathLabel = tk.Label(
@@ -55,7 +55,25 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri", 14))
-        self.label2.grid(row=2, column=0, sticky=tk.W, padx=10, pady=5)
+        self.label2.grid(row=2, column=0, sticky=tk.W, columnspan = 2, padx=10, pady=5)
+
+        # lower H label 1
+        self.lowerH1 = tk.Label(
+            self.root,
+            text="   H:",
+            background='#ffffff',
+            foreground='#000000',
+            font=("Calibri", 12))
+        self.lowerH1.grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+
+        # lower H label 2
+        self.upperH1 = tk.Label(
+            self.root,
+            text="   H:",
+            background='#ffffff',
+            foreground='#000000',
+            font=("Calibri", 12))
+        self.upperH1.grid(row=4, column=0, sticky=tk.W, padx=5, pady=5)
 
         # lower HSV label
         self.lowerLabel = tk.Label(
@@ -64,7 +82,7 @@ class GUI:
             foreground='#000000',
             width=20,
             height=1)
-        self.lowerLabel.grid(row=3, column=1, sticky=tk.W, padx=20, pady=5)
+        #self.lowerLabel.grid(row=3, column=1, sticky=tk.W, padx=20, pady=5)
 
         # upper HSV label
         self.upperLabel = tk.Label(
@@ -73,7 +91,7 @@ class GUI:
             foreground='#000000',
             width=20,
             height=1)
-        self.upperLabel.grid(row=4, column=1, sticky=tk.W, padx=20, pady=5)
+        #self.upperLabel.grid(row=4, column=1, sticky=tk.W, padx=20, pady=5)
 
         # second lower HSV label
         self.lowerLabel2 = tk.Label(
@@ -82,7 +100,7 @@ class GUI:
             foreground='#000000',
             width=20,
             height=1)
-        self.lowerLabel2.grid(row=6, column=1, sticky=tk.W, padx=20, pady=5)
+        #self.lowerLabel2.grid(row=6, column=1, sticky=tk.W, padx=20, pady=5)
 
         # second upper HSV label
         self.upperLabel2 = tk.Label(
@@ -91,7 +109,7 @@ class GUI:
             foreground='#000000',
             width=20,
             height=1)
-        self.upperLabel2.grid(row=7, column=1, sticky=tk.W, padx=20, pady=5)
+        #self.upperLabel2.grid(row=7, column=1, sticky=tk.W, padx=20, pady=5)
 
         # step 3 Label
         self.label3 = tk.Label(
@@ -100,7 +118,7 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri", 14))
-        self.label3.grid(row=8, column=0, sticky=tk.W, padx=10, pady=5)
+        #self.label3.grid(row=8, column=0, sticky=tk.W, columnspan = 2, padx=10, pady=5)
 
         # upper border label
         self.upperBorderLabel = tk.Label(
@@ -109,7 +127,7 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri", 12))
-        self.upperBorderLabel.grid(row=9, column=0, sticky=tk.W, padx=20, pady=5)
+        #self.upperBorderLabel.grid(row=9, column=0, sticky=tk.W, padx=20, pady=5)
 
         # lower border label
         self.lowerBorderLabel = tk.Label(
@@ -118,7 +136,7 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri", 12))
-        self.lowerBorderLabel.grid(row=10, column=0, sticky=tk.W, padx=20, pady=5)
+        #self.lowerBorderLabel.grid(row=10, column=0, sticky=tk.W, padx=20, pady=5)
 
         # ---------------------------------------------------------------------------------
         # Buttons
@@ -132,27 +150,7 @@ class GUI:
             foreground='#000000',
             command=lambda: self.selectDirectory(),
             font=("Calibri", 12))
-        self.directoryButton.grid(row=0, column=1, sticky=tk.W, padx=20, pady=10)
-
-        # lower HSV range button
-        self.lowerButton = tk.Button(
-            self.root,
-            text="Lower Range:",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.getColour("lower"),
-            font=("Calibri", 12))
-        self.lowerButton.grid(row=3, column=0, sticky=tk.W, padx=20, pady=5)
-
-        # upper HSV range button
-        self.upperButton = tk.Button(
-            self.root,
-            text="Upper Range:",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.getColour("upper"),
-            font=("Calibri", 12))
-        self.upperButton.grid(row=4, column=0, sticky=tk.W, padx=20, pady=5)
+        #self.directoryButton.grid(row=0, column=1, sticky=tk.W, columnspan = 3, padx=20, pady=10)
 
         # second lower HSV range button
         self.lowerButton2 = tk.Button(
@@ -163,7 +161,7 @@ class GUI:
             command=lambda: self.getColour("lower2"),
             state="disabled",
             font=("Calibri", 12))
-        self.lowerButton2.grid(row=6, column=0, sticky=tk.W, padx=20, pady=5)
+        #self.lowerButton2.grid(row=6, column=0, sticky=tk.W, padx=20, pady=5)
 
         # second upper HSV range button
         self.upperButton2 = tk.Button(
@@ -174,7 +172,7 @@ class GUI:
             command=lambda: self.getColour("upper2"),
             state="disabled",
             font=("Calibri", 12))
-        self.upperButton2.grid(row=7, column=0, sticky=tk.W, padx=20, pady=5)
+        #self.upperButton2.grid(row=7, column=0, sticky=tk.W, padx=20, pady=5)
 
         # execute button
         self.runButton = tk.Button(
@@ -184,7 +182,7 @@ class GUI:
             foreground='#000000',
             command=lambda: self.saveValues(),
             font=("Calibri", 12))
-        self.runButton.grid(row=11, column=0, sticky=tk.W, padx=20, pady=5)
+        self.runButton.grid(row=11, column=0, sticky=tk.W, columnspan = 5, padx=20, pady=5)
 
         # preview HSV button
         self.HSVButton = tk.Button(
@@ -194,17 +192,24 @@ class GUI:
             foreground='#000000',
             command=lambda: self.launchPreview(),
             font=("Calibri", 12))
-        self.HSVButton.grid(row=11, column=1, sticky=tk.W, padx=20, pady=5)
+        #self.HSVButton.grid(row=11, column=1, sticky=tk.W, columnspan = 3, padx=20, pady=5)
 
         # ---------------------------------------------------------------------------------
         # Entry
         # ---------------------------------------------------------------------------------
 
+        # HSV Range 1 entry fields
+        self.entryLowerH1 = tk.Entry(self.root, font=("Calibri", 12), width = 3)
+        self.entryLowerH1.grid(row=3, column=1, sticky=tk.W, pady=5)
+        self.entryUpperH1 = tk.Entry(self.root, font=("Calibri", 12), width = 3)
+        self.entryUpperH1.grid(row=4, column=1, sticky=tk.W, pady=5)
+
+        # Upper and lower border entry fields
         validateCommand = self.root.register(self.validate)  # we have to wrap the command
-        self.entryUpper = tk.Entry(self.root, validate="key", validatecommand=(validateCommand, '%P', 'upper'))
-        self.entryUpper.grid(row=9, column=1, sticky=tk.W, padx=10, pady=5)
-        self.entryLower = tk.Entry(self.root, validate="key", validatecommand=(validateCommand, '%P', 'lower'))
-        self.entryLower.grid(row=10, column=1, sticky=tk.W, padx=10, pady=5)
+        self.entryUpper = tk.Entry(self.root, validate="key", validatecommand=(validateCommand, '%P', 'upper'), font=("Calibri", 12))
+        #self.entryUpper.grid(row=9, column=1, sticky=tk.W, columnspan = 3, padx=10, pady=5)
+        self.entryLower = tk.Entry(self.root, validate="key", validatecommand=(validateCommand, '%P', 'lower'), font=("Calibri", 12))
+        #self.entryLower.grid(row=10, column=1, sticky=tk.W, columnspan = 3, padx=10, pady=5)
 
         # ---------------------------------------------------------------------------------
         # Checkbox
@@ -219,7 +224,7 @@ class GUI:
             foreground='#000000',
             command=lambda: self.updateSelections(),
             font=("Calibri", 12))
-        self.checkBox.grid(row=5, column=0, stick=tk.W, padx=20, pady=5)
+        self.checkBox.grid(row=5, column=0, stick=tk.W, padx=20, columnspan = 5, pady=5)
 
         self.root.mainloop()
 
@@ -294,6 +299,7 @@ class GUI:
 
     # function to select colour
     def getColour(self, method):
+
         colour = askcolor()
 
         if (method == "upper"):
