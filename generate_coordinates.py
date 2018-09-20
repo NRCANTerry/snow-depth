@@ -24,10 +24,10 @@ if(params == False):
 # update parameters
 img_border_upper = params[5]
 img_border_lower = params[6]
-lower_hsv1 = np.array([params[1][0] * 180, params[1][1] * 255, params[1][2] * 255])
-upper_hsv1 = np.array([params[2][0] * 180, params[2][1] * 255, params[2][2] * 255])
-lower_hsv2 = np.array([params[3][0] * 180, params[3][1] * 255, params[3][2] * 255])
-upper_hsv2 = np.array([params[4][0] * 180, params[4][1] * 255, params[4][2] * 255])
+lower_hsv1 = params[1]
+upper_hsv1 = params[2]
+lower_hsv2 = params[3]
+upper_hsv2 = params[4]
 median_kernal_size = 5
 dilate_kernel = (5, 5)
 min_contour_area = 1e2

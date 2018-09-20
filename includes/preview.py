@@ -16,7 +16,7 @@ def HSVPreview():
 
 	# open slider window
 	cv2.namedWindow("HSV Sliders")
-	cv2.resizeWindow("HSV Sliders", 500, 350)
+	cv2.resizeWindow("HSV Sliders", 600, 350)
 
 	# open comparison window
 	cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
