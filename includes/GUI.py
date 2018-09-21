@@ -7,6 +7,8 @@ import numpy as np
 import ConfigParser
 import ast
 import cv2
+import sys
+import os
 
 class GUI:
     def __init__(self):
@@ -743,6 +745,17 @@ class GUI:
                 # add to config file
                 self.config.set('HSV Ranges', name.get(), outputString)
 
+                '''
+                # write preferences to file
+                with open('./preferences.cfg', 'wb') as configfile:
+                    self.config.write(configfile)
+
+                # close window
+                self.root.destroy()
+
+                # restart program
+                os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
+                '''
         else:
             tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
 
