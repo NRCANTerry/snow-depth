@@ -2,11 +2,11 @@
 import Tkinter as tk
 import tkFileDialog
 import tkMessageBox
-from preview import HSVPreview
 import ttk
 import numpy as np
 import ConfigParser
 import ast
+import cv2
 
 class GUI:
     def __init__(self):
@@ -254,7 +254,7 @@ class GUI:
             text=" Preview",
             background='#ffffff',
             foreground='#000000',
-            command=lambda: self.launchPreview(),
+            command=lambda: self.runPreview(),
             width = 17,
             font=("Calibri Light", 14))
 
@@ -689,6 +689,7 @@ class GUI:
             self.lower_hsv2 = np.array([0,0,0])
             self.upper_hsv2 = np.array([0,0,0])
 
+    # function to allow user to save HSV ranges to preferences file
     def saveRanges(self):
         # if required fields are filled in
         if(self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" \
@@ -697,6 +698,7 @@ class GUI:
             # ask for name
             name = tk.StringVar()
             newWindow = tk.Toplevel(self.root)
+            newWindow.configure(background='#ffffff')
 
             nameLabel = tk.Label(
                 newWindow,
@@ -743,3 +745,154 @@ class GUI:
 
         else:
             tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
+
+    # function to run HSV range preview
+    def runPreview(self):
+        # embedded function to update HSV mask on slider movement
+        def updateValues(event):
+            # get slider positions
+            h1 = H1Slider.get()
+            h2 = H2Slider.get()
+            s1 = S1Slider.get()
+            s2 = S2Slider.get()
+            v1 = V1Slider.get()
+            v2 = V2Slider.get()
+
+            # convert image to HSV
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+            # apply HSV mask
+            mask = cv2.inRange(hsv, np.array([h1, s1, v1]), np.array([h2, s2, v2]))
+            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+            # create horizontal stack
+            numpy_horizontal = np.hstack((img, mask))
+
+            # display image to user
+            cv2.imshow("Comparison", numpy_horizontal)
+
+        # embedded function to save values to main GUI window
+        def saveValuestoMain():
+            # update entries
+            for field in self.entries1:
+                field.delete(0, tk.END)
+
+            # update variables
+            self.lower_hsv1 = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+            self.upper_hsv1 = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+            # update entries
+            for count, field in enumerate(self.entries1):
+                if(count < 3):
+                    field.insert(0, self.lower_hsv1[count])
+                else:
+                    field.insert(0, self.upper_hsv1[count-3])
+
+            # disable second range
+            if(self.secondHSV.get() == 1):
+                self.secondHSV.set(0)
+                self.updateSelections()
+
+            newWindow.destroy()
+            cv2.destroyAllWindows()
+
+        # open new window
+        newWindow = tk.Toplevel(self.root)
+        newWindow.configure(background='#ffffff')
+        newWindow.withdraw()
+        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))   
+
+        newWindow.deiconify()
+        newWindow.geometry("500x575") # window size of 500 x 575
+
+        # create widgets
+        HSVSlidersLabel = tk.Label(
+            newWindow,
+            text="HSV Sliders",
+            background='#ffffff',
+            foreground='#000000',
+            font=("Calibri Light", 24))
+
+        LowerLabel = tk.Label(
+            newWindow,
+            text="Lower",
+            background='#ffffff',
+            foreground='#000000',
+            font=("Calibri Light", 15))
+
+        UpperLabel = tk.Label(
+            newWindow,
+            text="Upper",
+            background='#ffffff',
+            foreground='#000000',
+            font=("Calibri Light", 15))  
+
+        # button
+        savetoMain = tk.Button(
+            newWindow, 
+            text = "Save Values",
+            background = '#ffffff',
+            foreground = '#000000',
+            command = lambda: saveValuestoMain(),
+            width = 20,
+            font=("Calibri Light", 15))
+
+        # frames
+        Frame1 = tk.Frame(newWindow, background='#ffffff')    
+        Frame2 = tk.Frame(newWindow, background='#ffffff')    
+        Frame3 = tk.Frame(newWindow, background='#ffffff')    
+        Frame4 = tk.Frame(newWindow, background='#ffffff')    
+        Frame5 = tk.Frame(newWindow, background='#ffffff')    
+        Frame6 = tk.Frame(newWindow, background='#ffffff')    
+
+        # H, S, and V Labels
+        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+
+        # sliders
+        H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+        S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+        V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+        H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+        S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+        V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+
+        # packing
+        HSVSlidersLabel.pack(pady = (20,5))  
+        LowerLabel.pack(pady = (5,0))
+        Frame1.pack(pady = 2) 
+        H1Lower.pack(side = tk.LEFT, padx = 5)    
+        H1Slider.pack(side = tk.LEFT, padx = 5)
+        Frame2.pack(pady = 2) 
+        S1Lower.pack(side = tk.LEFT, padx = 5) 
+        S1Slider.pack(side = tk.LEFT, padx = 5)
+        Frame3.pack(pady = 2) 
+        V1Lower.pack(side = tk.LEFT, padx = 5) 
+        V1Slider.pack(side = tk.LEFT, padx = 5)
+        UpperLabel.pack(pady = (10,0))
+        Frame4.pack(pady = 2) 
+        H1Upper.pack(side = tk.LEFT, padx = 5) 
+        H2Slider.pack(side = tk.LEFT, padx = 5)
+        Frame5.pack(pady = 2) 
+        S1Upper.pack(side = tk.LEFT, padx = 5)         
+        S2Slider.pack(side = tk.LEFT, padx = 5)
+        Frame6.pack(pady = 2) 
+        V1Upper.pack(side = tk.LEFT, padx = 5)       
+        V2Slider.pack(side = tk.LEFT, padx = 5)
+        savetoMain.pack(pady = 25)
+
+        # open comparison window
+        cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+
+        # open image
+        img = cv2.imread(filename)
+
+        # resize image to 1/4 of original size
+        img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+
+        # wait until user closes window
+        self.root.wait_window(newWindow)
