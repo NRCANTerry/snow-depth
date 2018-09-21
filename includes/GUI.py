@@ -5,6 +5,8 @@ import tkMessageBox
 from preview import HSVPreview
 import ttk
 import numpy as np
+import ConfigParser
+import ast
 
 class GUI:
     def __init__(self):
@@ -26,6 +28,16 @@ class GUI:
         self.lowerBorder = 0
         self.upperBorder = 0
         self.windowClosed = False
+
+        # ConfigParser object
+        self.config = ConfigParser.ConfigParser()
+
+        # open preferences file
+        self.saved_Colours = self.getPreferences()
+        self.colourOptions = list(self.saved_Colours.keys())
+
+        # window closing protocol
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # ---------------------------------------------------------------------------------
         # Labels
@@ -163,6 +175,9 @@ class GUI:
             foreground='#D3D3D3',
             font=("Calibri Light", 14))
 
+        # list of labels for second HSV range
+        self.labels2 = [self.lowerH2, self.lowerS2, self.lowerV2, self.arrow2, self.upperH2, self.upperS2, self.upperV2]
+
         # step 3 label
         self.label3 = tk.Label(
             self.root,
@@ -170,6 +185,9 @@ class GUI:
             background='#ffffff',
             foreground='#000000',
             font=("Calibri Light", 24))
+
+        # frame containing default menu widgets
+        self.defaultFrame = tk.Frame(self.root, background='#ffffff')
 
         # frame containing border widgets
         self.borderFrame1 = tk.Frame(self.root, background='#ffffff')
@@ -240,6 +258,16 @@ class GUI:
             width = 17,
             font=("Calibri Light", 14))
 
+       # save HSV range button
+        self.saveRange = tk.Button(
+            self.buttonFrame,
+            text=" Save",
+            background='#ffffff',
+            foreground='#000000',
+            command=lambda: self.saveRanges(),
+            width = 17,
+            font=("Calibri Light", 14))
+
         # ---------------------------------------------------------------------------------
         # Entry
         # ---------------------------------------------------------------------------------
@@ -262,6 +290,9 @@ class GUI:
         self.entryUpperV1 = tk.Entry(self.range1Frame, validate="key", validatecommand=(validateCommand, '%P', 'uv1'),
             font=("Calibri Light", 13), width = 4)
 
+        # list of entries
+        self.entries1 = [self.entryLowerH1, self.entryLowerS1, self.entryLowerV1, self.entryUpperH1, self.entryUpperS1, self.entryUpperV1]
+
         # h, s, and v entries lower range 2
         self.entryLowerH2 = tk.Entry(self.range2Frame, validate="key", validatecommand=(validateCommand, '%P', 'lh2'),
             font=("Calibri Light", 13), width = 4, state = 'disabled')
@@ -277,6 +308,9 @@ class GUI:
             font=("Calibri Light", 13), width = 4, state = 'disabled')
         self.entryUpperV2 = tk.Entry(self.range2Frame, validate="key", validatecommand=(validateCommand, '%P', 'uv2'),
             font=("Calibri Light", 13), width = 4, state = 'disabled')
+
+        # list of entries
+        self.entries2 = [self.entryLowerH2, self.entryLowerS2, self.entryLowerV2, self.entryUpperH2, self.entryUpperS2, self.entryUpperV2]
 
         # Upper and lower border entry fields
         self.entryUpper = tk.Entry(self.borderFrame1, validate="key", validatecommand=(validateCommand, '%P', 'upper'),
@@ -297,6 +331,17 @@ class GUI:
             foreground='#000000',
             command=lambda: self.updateSelections(),
             font=("Calibri Light", 14))
+
+        # ---------------------------------------------------------------------------------
+        # Drop Down Menu
+        # ---------------------------------------------------------------------------------
+
+        self.menuVar = tk.StringVar(self.root)
+        self.menuVar.set('Select Saved Profile')
+        self.menu = tk.OptionMenu(self.defaultFrame, self.menuVar, 'Select Saved Profile', *self.colourOptions)
+        self.menu.config(font=("Calibri Light", 13))
+        self.menu.config(background='#ffffff')
+        self.menuVar.trace('w', self.change_dropdown)
 
         # ---------------------------------------------------------------------------------
         # Packing
@@ -344,6 +389,10 @@ class GUI:
         self.upperV2.pack(side = tk.LEFT, padx = 5)
         self.entryUpperV2.pack(side = tk.LEFT, padx = (5,0))
 
+        # drop down menu
+        self.defaultFrame.pack(pady = (20,0))
+        self.menu.pack(side = tk.LEFT, padx = 5)
+
         # border frame packing
         self.label3.pack(pady = (20,5))
         self.borderFrame1.pack(pady = 5)
@@ -357,6 +406,7 @@ class GUI:
 
         # button packing
         self.buttonFrame.pack(pady = 20)
+        self.saveRange.pack(side = tk.LEFT, padx = 10)
         self.runButton.pack(side = tk.LEFT, padx = 10)
         self.previewButton.pack(side = tk.LEFT, padx = 10)
 
@@ -506,6 +556,11 @@ class GUI:
                 and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" and self.entryUpperV2.get() != "") or self.secondHSV.get() != 1) and self.directory != ""):
             # close window and return to other program
             self.windowClosed = True
+
+            # write preferences to file
+            with open('./preferences.cfg', 'wb') as configfile:
+                self.config.write(configfile)
+
             self.root.destroy()
 
         # else show error
@@ -523,42 +578,164 @@ class GUI:
     # function to update appearance of second set of HSV selections
     # based on status of checkbox
     def updateSelections(self):
-        if (self.secondHSV.get() == 1):
-            self.lowerH2.config(fg='#000000')
-            self.lowerS2.config(fg='#000000')
-            self.lowerV2.config(fg='#000000')
-            self.upperH2.config(fg='#000000')
-            self.upperS2.config(fg='#000000')
-            self.upperV2.config(fg='#000000')  
-            self.arrow2.config(fg='#000000')            
-            self.entryLowerH2.config(state="normal")
-            self.entryLowerS2.config(state="normal")
-            self.entryLowerV2.config(state="normal")
-            self.entryUpperH2.config(state="normal")
-            self.entryUpperS2.config(state="normal")
-            self.entryUpperV2.config(state="normal")
-
+        if (self.secondHSV.get() == 1): 
+            # update labels
+            for label in self.labels2:
+                label.config(fg ='#000000')
+            # update fields
+            for field in self.entries2:
+                field.config(state = "normal")
         else:
-            self.lowerH2.config(fg='#D3D3D3')
-            self.lowerS2.config(fg='#D3D3D3')
-            self.lowerV2.config(fg='#D3D3D3')
-            self.upperH2.config(fg='#D3D3D3')
-            self.upperS2.config(fg='#D3D3D3')
-            self.upperV2.config(fg='#D3D3D3')  
-            self.arrow2.config(fg='#D3D3D3')  
-            self.entryLowerH2.delete(0, tk.END)
-            self.entryLowerS2.delete(0, tk.END)
-            self.entryLowerV2.delete(0, tk.END)
-            self.entryUpperH2.delete(0, tk.END)
-            self.entryUpperS2.delete(0, tk.END)
-            self.entryUpperV2.delete(0, tk.END)
-            self.entryLowerH2.config(state="disabled")
-            self.entryLowerS2.config(state="disabled")
-            self.entryLowerV2.config(state="disabled")
-            self.entryUpperH2.config(state="disabled")
-            self.entryUpperS2.config(state="disabled")
-            self.entryUpperV2.config(state="disabled")
+            # update labels
+            for label in self.labels2:
+                label.config(fg ='#D3D3D3')            
+            # update fields
+            for field in self.entries2:
+                field.delete(0, tk.END)
+                field.config(state = "disabled")      
 
     # function to launch HSV preview tool
     def launchPreview(self):
         HSVPreview()
+
+    # function to fetch preferences
+    def getPreferences(self):
+
+        # if no preferences file present, create one
+        if(str(self.config.read('./preferences.cfg')) == "[]"):
+            self.config.add_section('HSV Ranges')
+        # else read in existing file
+        else:
+            self.config.read('./preferences.cfg')
+
+        # load in colour preferences
+        return (dict(self.config.items('HSV Ranges')))
+
+    # function run when user closes window
+    def on_closing(self):
+        # write preferences to file
+        with open('./preferences.cfg', 'wb') as configfile:
+            self.config.write(configfile)
+
+        # close window
+        self.root.destroy()
+
+    # function to update values on menu selection
+    def change_dropdown(self, *args):
+
+        if(self.menuVar.get() != 'Select Saved Profile'):        
+            # create list from value stored in preferences
+            hsvList = ast.literal_eval(self.saved_Colours[self.menuVar.get()])
+
+            # determine whether stored value is 1 range or 2
+            length = len(hsvList)
+
+            # update entries
+            for field in self.entries1:
+                field.delete(0, tk.END)
+            for field in self.entries2:
+                field.delete(0, tk.END)
+
+            # single HSV range
+            self.lower_hsv1 = np.asarray(hsvList[0])
+            self.upper_hsv1 = np.asarray(hsvList[1])
+
+            # update entries
+            for count, field in enumerate(self.entries1):
+                if(count < 3):
+                    field.insert(0, self.lower_hsv1[count])
+                else:
+                    field.insert(0, self.upper_hsv1[count-3])
+
+            # double HSV ranges
+            if(length == 4):
+                self.lower_hsv2 = np.asarray(hsvList[2])
+                self.upper_hsv2 = np.asarray(hsvList[3])
+
+                # enable second range
+                if (self.secondHSV.get() != 1): 
+                    self.secondHSV.set(1)
+                    self.updateSelections()
+
+                # update entries
+                for count, field in enumerate(self.entries2):
+                    if(count < 3):
+                        field.insert(0, self.lower_hsv2[count])
+                    else:
+                        field.insert(0, self.upper_hsv2[count-3])
+
+            # single HSV range
+            else:
+                # disable second range
+                if(self.secondHSV.get() == 1):
+                    self.secondHSV.set(0)
+                    self.updateSelections()
+
+        else:
+            # update entries
+            for field in self.entries1:
+                field.delete(0, tk.END)
+            for field in self.entries2:
+                field.delete(0, tk.END)
+
+            # disable second range
+            if(self.secondHSV.get() == 1):
+                self.secondHSV.set(0)
+                self.updateSelections()
+
+            # update variables
+            self.lower_hsv1 = np.array([0,0,0])
+            self.upper_hsv1 = np.array([0,0,0])
+            self.lower_hsv2 = np.array([0,0,0])
+            self.upper_hsv2 = np.array([0,0,0])
+
+    def saveRanges(self):
+        # if required fields are filled in
+        if(self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" \
+            and self.entryUpperV1.get() != "" and ((self.secondHSV.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" and self.entryLowerV2.get() != "" \
+                and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" and self.entryUpperV2.get() != "") or self.secondHSV.get() != 1)):
+            # ask for name
+            name = tk.StringVar()
+            newWindow = tk.Toplevel(self.root)
+
+            nameLabel = tk.Label(
+                newWindow,
+                text="Name",
+                background='#ffffff',
+                foreground='#000000',
+                font=("Calibri Light", 14))
+
+            nameEntry = tk.Entry(
+                newWindow, 
+                font=("Calibri Light", 13),
+                textvariable = name,
+                width = 10)
+
+            nameButton = tk.Button(
+                newWindow,
+                text = "Save",
+                background='#ffffff',
+                foreground='#000000',
+                command = lambda: newWindow.destroy(),
+                width = 10,
+                font=("Calibri Light", 14))
+
+            nameLabel.pack()
+            nameEntry.pack()
+            nameButton.pack()
+
+            # wait until user inputs name
+            self.root.wait_window(newWindow)
+
+            # create output string
+            outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                np.array2string(self.upper_hsv1, separator = ',').replace("[","(").replace("]", ")")
+
+            if(self.secondHSV.get() == 1):
+                outputString += "," + np.array2string(self.lower_hsv2, separator = ',').replace("[","(").replace("]", ")")
+                outputString += "," + np.array2string(self.upper_hsv2, separator = ',').replace("[","(").replace("]", ")")
+            
+            outputString += "]"
+
+            # add to config file
+            self.config.set('HSV Ranges', name.get(), outputString)
