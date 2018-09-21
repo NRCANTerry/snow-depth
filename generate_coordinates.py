@@ -33,8 +33,8 @@ dilate_kernel = (5, 5)
 min_contour_area = 1e2
 max_contour_area = 1e5
 angle_thresh = -45
-bar_width_low = 15
-bar_width_high = 75
+bar_width_low = 60
+bar_width_high = 300
 
 # process all images in sub-directory
 img_dir = params[0] + '/'
