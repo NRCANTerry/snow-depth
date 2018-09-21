@@ -727,15 +727,19 @@ class GUI:
             # wait until user inputs name
             self.root.wait_window(newWindow)
 
-            # create output string
-            outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
-                np.array2string(self.upper_hsv1, separator = ',').replace("[","(").replace("]", ")")
+            if(name.get() != ""):
+                # create output string
+                outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                    np.array2string(self.upper_hsv1, separator = ',').replace("[","(").replace("]", ")")
 
-            if(self.secondHSV.get() == 1):
-                outputString += "," + np.array2string(self.lower_hsv2, separator = ',').replace("[","(").replace("]", ")")
-                outputString += "," + np.array2string(self.upper_hsv2, separator = ',').replace("[","(").replace("]", ")")
-            
-            outputString += "]"
+                if(self.secondHSV.get() == 1):
+                    outputString += "," + np.array2string(self.lower_hsv2, separator = ',').replace("[","(").replace("]", ")")
+                    outputString += "," + np.array2string(self.upper_hsv2, separator = ',').replace("[","(").replace("]", ")")
+                
+                outputString += "]"
 
-            # add to config file
-            self.config.set('HSV Ranges', name.get(), outputString)
+                # add to config file
+                self.config.set('HSV Ranges', name.get(), outputString)
+
+        else:
+            tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
