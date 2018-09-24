@@ -594,11 +594,7 @@ class GUI:
             # update fields
             for field in self.entries2:
                 field.delete(0, tk.END)
-                field.config(state = "disabled")      
-
-    # function to launch HSV preview tool
-    def launchPreview(self):
-        HSVPreview()
+                field.config(state = "disabled")
 
     # function to fetch preferences
     def getPreferences(self):
@@ -691,7 +687,19 @@ class GUI:
             self.lower_hsv2 = np.array([0,0,0])
             self.upper_hsv2 = np.array([0,0,0])
 
-    # function to allow user to save HSV ranges to preferences file
+    # function to restart script to load changes        
+    def restart(self):
+	    # write preferences to file
+	    with open('./preferences.cfg', 'wb') as configfile:
+	        self.config.write(configfile)
+
+	    # close window
+	    self.root.destroy()
+
+	    # restart program
+	    os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
+   
+   	# function to allow user to save HSV ranges to preferences file
     def saveRanges(self):
         # if required fields are filled in
         if(self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" \
@@ -701,19 +709,21 @@ class GUI:
             name = tk.StringVar()
             newWindow = tk.Toplevel(self.root)
             newWindow.configure(background='#ffffff')
-
+            newWindow.geometry("350x180") # window size in pixels
+            
+            # labels
             nameLabel = tk.Label(
                 newWindow,
                 text="Name",
                 background='#ffffff',
                 foreground='#000000',
-                font=("Calibri Light", 14))
+                font=("Calibri Light", 24))
 
             nameEntry = tk.Entry(
                 newWindow, 
-                font=("Calibri Light", 13),
+                font=("Calibri Light", 14),
                 textvariable = name,
-                width = 10)
+                width = 20)
 
             nameButton = tk.Button(
                 newWindow,
@@ -721,12 +731,13 @@ class GUI:
                 background='#ffffff',
                 foreground='#000000',
                 command = lambda: newWindow.destroy(),
-                width = 10,
+                width = 20,
                 font=("Calibri Light", 14))
 
-            nameLabel.pack()
-            nameEntry.pack()
-            nameButton.pack()
+            # packing
+            nameLabel.pack(pady = (20,5))
+            nameEntry.pack(pady = 10)
+            nameButton.pack(pady = 5)
 
             # wait until user inputs name
             self.root.wait_window(newWindow)
@@ -745,17 +756,6 @@ class GUI:
                 # add to config file
                 self.config.set('HSV Ranges', name.get(), outputString)
 
-                '''
-                # write preferences to file
-                with open('./preferences.cfg', 'wb') as configfile:
-                    self.config.write(configfile)
-
-                # close window
-                self.root.destroy()
-
-                # restart program
-                os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
-                '''
         else:
             tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
 
