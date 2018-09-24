@@ -16,7 +16,7 @@ class GUI:
         self.root = tk.Tk()
         self.root.configure(background='#ffffff')
         self.root.title("Generate Training Images")
-        self.root.geometry("600x650") # window size of 1000 x 700
+        self.root.geometry("600x600") # window size of 1000 x 700
 
         # ---------------------------------------------------------------------------------
         # Variables
@@ -250,26 +250,6 @@ class GUI:
             width = 17,
             font=("Calibri Light", 14))
 
-        # preview HSV button
-        self.previewButton = tk.Button(
-            self.buttonFrame,
-            text=" Preview",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.runPreview(),
-            width = 17,
-            font=("Calibri Light", 14))
-
-       # save HSV range button
-        self.saveRange = tk.Button(
-            self.buttonFrame,
-            text=" Save",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.saveRanges(),
-            width = 17,
-            font=("Calibri Light", 14))
-
         # ---------------------------------------------------------------------------------
         # Entry
         # ---------------------------------------------------------------------------------
@@ -346,6 +326,24 @@ class GUI:
         self.menuVar.trace('w', self.change_dropdown)
 
         # ---------------------------------------------------------------------------------
+        # Top Menu
+        # ---------------------------------------------------------------------------------
+
+        # create menu bar
+        self.menubar = tk.Menu(self.root)
+        self.filemenu = tk.Menu(self.menubar, tearoff=0)
+
+        # add commands
+        self.filemenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
+        self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label = "Exit", command = lambda: self.root.destroy())
+        self.menubar.add_cascade(label = "File", menu = self.filemenu)
+
+        # configure menu bar
+        self.root.config(menu = self.menubar)
+
+        # ---------------------------------------------------------------------------------
         # Packing
         # ---------------------------------------------------------------------------------
 
@@ -408,9 +406,7 @@ class GUI:
 
         # button packing
         self.buttonFrame.pack(pady = 20)
-        self.saveRange.pack(side = tk.LEFT, padx = 10)
         self.runButton.pack(side = tk.LEFT, padx = 10)
-        self.previewButton.pack(side = tk.LEFT, padx = 10)
 
         self.root.mainloop()
 
@@ -545,6 +541,7 @@ class GUI:
             self.pathLabel.config(text=dirname)
             self.directory = str(dirname)
 
+    # function to save inputted values and start generating coordinates
     def saveValues(self):
         # if second HSV range is not selected
         if (self.secondHSV.get() != 1):
