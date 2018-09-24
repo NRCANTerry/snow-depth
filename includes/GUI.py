@@ -335,9 +335,11 @@ class GUI:
 
         # add commands
         self.filemenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
+        self.filemenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
         self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
         self.filemenu.add_separator()
-        self.filemenu.add_command(label = "Exit", command = lambda: self.root.destroy())
+        self.filemenu.add_command(label = "Restart", command = lambda: self.restart())
+        self.filemenu.add_command(label = "Exit", command = lambda: self.on_closing())
         self.menubar.add_cascade(label = "File", menu = self.filemenu)
 
         # configure menu bar
@@ -756,6 +758,53 @@ class GUI:
         else:
             tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
 
+    # function to remove an HSV range from the preferences file
+    def removeRanges(self):
+    	# ask for name
+		name = tk.StringVar()
+		newWindow = tk.Toplevel(self.root)
+		newWindow.configure(background='#ffffff')
+		newWindow.geometry("350x180") # window size in pixels
+
+		# labels
+		nameLabel = tk.Label(
+		    newWindow,
+		    text="Name",
+		    background='#ffffff',
+		    foreground='#000000',
+		    font=("Calibri Light", 24))
+
+		# drop down menu used to select profile to delete
+		removeMenuVar = tk.StringVar(self.root)
+		removeMenuVar.set('Select Profile to Remove')
+		removeMenu = tk.OptionMenu(newWindow, removeMenuVar, 'Select Profile to Remove', *self.colourOptions)
+		removeMenu.config(font=("Calibri Light", 13))
+		removeMenu.config(background='#ffffff')
+
+		# button
+		nameButton = tk.Button(
+		    newWindow,
+		    text = "Save",
+		    background='#ffffff',
+		    foreground='#000000',
+		    command = lambda: newWindow.destroy(),
+		    width = 20,
+		    font=("Calibri Light", 14))
+
+		# packing
+		nameLabel.pack(pady = (20,5))
+		removeMenu.pack(pady = 10)
+		nameButton.pack(pady = 5)
+
+		# wait until user inputs name
+		self.root.wait_window(newWindow)
+
+		# remove selected option from menu
+		if(removeMenuVar.get() != 'Select Profile to Remove'):
+			self.config.remove_option("HSV Ranges", removeMenuVar.get())
+			self.colourOptions.remove(removeMenuVar.get())
+			self.saved_Colours.pop(removeMenuVar.get())
+
     # function to run HSV range preview
     def runPreview(self):
         # embedded function to update HSV mask on slider movement
@@ -768,11 +817,22 @@ class GUI:
             v1 = V1Slider.get()
             v2 = V2Slider.get()
 
+            if(previewSecondHSV.get() == 1):
+	            h3 = H3Slider.get()
+	            h4 = H4Slider.get()
+	            s3 = S3Slider.get()
+	            s4 = S4Slider.get()
+	            v3 = V3Slider.get()
+	            v4 = V4Slider.get() 	
+
             # convert image to HSV
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
             # apply HSV mask
             mask = cv2.inRange(hsv, np.array([h1, s1, v1]), np.array([h2, s2, v2]))
+            if(previewSecondHSV.get() == 1):
+            	mask2 = cv2.inRange(hsv, np.array([h3, s3, v3]), np.array([h4, s4, v4]))
+            	mask = cv2.bitwise_or(mask, mask2)
             mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
             # create horizontal stack
@@ -787,6 +847,12 @@ class GUI:
             for field in self.entries1:
                 field.delete(0, tk.END)
 
+            if(previewSecondHSV.get() == 1):
+                self.secondHSV.set(1)
+                self.updateSelections()            	
+            	for field in self.entries2:
+            		field.delete(0, tk.END)
+
             # update variables
             self.lower_hsv1 = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
             self.upper_hsv1 = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
@@ -798,13 +864,47 @@ class GUI:
                 else:
                     field.insert(0, self.upper_hsv1[count-3])
 
+            if(previewSecondHSV.get() == 1):
+				self.lower_hsv2 = np.array([H3Slider.get(), S3Slider.get(), V3Slider.get()])
+				self.upper_hsv2 = np.array([H4Slider.get(), S4Slider.get(), V4Slider.get()])     	
+
+				# update entries
+				for count, field in enumerate(self.entries2):
+					if(count < 3):
+					    field.insert(0, self.lower_hsv2[count])
+					else:
+					    field.insert(0, self.upper_hsv2[count-3])
+
             # disable second range
-            if(self.secondHSV.get() == 1):
+            if(self.secondHSV.get() == 1 and previewSecondHSV.get() != 1):
                 self.secondHSV.set(0)
                 self.updateSelections()
 
             newWindow.destroy()
             cv2.destroyAllWindows()
+
+        # function to toggle second HSV range on and off
+        def toggleSecondHSV():
+        	# if checkbox selected
+        	if(previewSecondHSV.get() == 1):
+        		# resize window
+        		newWindow.geometry("900x575")
+        		
+        		# pack second HSV widgets
+        		for widget in secondRangeWidgets:
+        			widget.pack(side = tk.LEFT, padx =(15,5))
+
+        	# if checkbox not selected
+        	else:
+        		# unpack second HSV widgets
+        		for widget in secondRangeWidgets:
+        			widget.pack_forget()
+
+        		# resize window
+        		newWindow.geometry("500x575")
+
+       	# flag to track if second HSV range is in use
+       	secondRangePreview = False
 
         # open new window
         newWindow = tk.Toplevel(self.root)
@@ -812,97 +912,130 @@ class GUI:
         newWindow.withdraw()
         filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))   
 
-        newWindow.deiconify()
-        newWindow.geometry("500x575") # window size of 500 x 575
+        if(filename != ""):
+	        newWindow.deiconify()
+	        newWindow.geometry("500x575") # window size of 500 x 575
 
-        # create widgets
-        HSVSlidersLabel = tk.Label(
-            newWindow,
-            text="HSV Sliders",
-            background='#ffffff',
-            foreground='#000000',
-            font=("Calibri Light", 24))
+	        # create widgets
+	        HSVSlidersLabel = tk.Label(
+	            newWindow,
+	            text="HSV Sliders",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 24))
 
-        LowerLabel = tk.Label(
-            newWindow,
-            text="Lower",
-            background='#ffffff',
-            foreground='#000000',
-            font=("Calibri Light", 15))
+	        LowerLabel = tk.Label(
+	            newWindow,
+	            text="Lower",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 15))
 
-        UpperLabel = tk.Label(
-            newWindow,
-            text="Upper",
-            background='#ffffff',
-            foreground='#000000',
-            font=("Calibri Light", 15))  
+	        UpperLabel = tk.Label(
+	            newWindow,
+	            text="Upper",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 15))         
 
-        # button
-        savetoMain = tk.Button(
-            newWindow, 
-            text = "Save Values",
-            background = '#ffffff',
-            foreground = '#000000',
-            command = lambda: saveValuestoMain(),
-            width = 20,
-            font=("Calibri Light", 15))
+	        # button
+	        savetoMain = tk.Button(
+	            newWindow, 
+	            text = "Save Values",
+	            background = '#ffffff',
+	            foreground = '#000000',
+	            command = lambda: saveValuestoMain(),
+	            width = 20,
+	            font=("Calibri Light", 15))
 
-        # frames
-        Frame1 = tk.Frame(newWindow, background='#ffffff')    
-        Frame2 = tk.Frame(newWindow, background='#ffffff')    
-        Frame3 = tk.Frame(newWindow, background='#ffffff')    
-        Frame4 = tk.Frame(newWindow, background='#ffffff')    
-        Frame5 = tk.Frame(newWindow, background='#ffffff')    
-        Frame6 = tk.Frame(newWindow, background='#ffffff')    
+	        # frames
+	        Frame1 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame2 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame3 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame4 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame5 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame6 = tk.Frame(newWindow, background='#ffffff')    
 
-        # H, S, and V Labels
-        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        # H, S, and V Labels
+	        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
 
-        # sliders
-        H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-        S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-        V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-        H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-        S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-        V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        # sliders
+	        H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
 
-        # packing
-        HSVSlidersLabel.pack(pady = (20,5))  
-        LowerLabel.pack(pady = (5,0))
-        Frame1.pack(pady = 2) 
-        H1Lower.pack(side = tk.LEFT, padx = 5)    
-        H1Slider.pack(side = tk.LEFT, padx = 5)
-        Frame2.pack(pady = 2) 
-        S1Lower.pack(side = tk.LEFT, padx = 5) 
-        S1Slider.pack(side = tk.LEFT, padx = 5)
-        Frame3.pack(pady = 2) 
-        V1Lower.pack(side = tk.LEFT, padx = 5) 
-        V1Slider.pack(side = tk.LEFT, padx = 5)
-        UpperLabel.pack(pady = (10,0))
-        Frame4.pack(pady = 2) 
-        H1Upper.pack(side = tk.LEFT, padx = 5) 
-        H2Slider.pack(side = tk.LEFT, padx = 5)
-        Frame5.pack(pady = 2) 
-        S1Upper.pack(side = tk.LEFT, padx = 5)         
-        S2Slider.pack(side = tk.LEFT, padx = 5)
-        Frame6.pack(pady = 2) 
-        V1Upper.pack(side = tk.LEFT, padx = 5)       
-        V2Slider.pack(side = tk.LEFT, padx = 5)
-        savetoMain.pack(pady = 25)
+			# second range H, S, and V Labels
+	        H2Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S2Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V2Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H2Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S2Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V2Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
 
-        # open comparison window
-        cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+	        # second range sliders
+	        H3Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S3Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V3Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        H4Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S4Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V4Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
 
-        # open image
-        img = cv2.imread(filename)
+	        # list containing widgets for second HSV range
+	        secondRangeWidgets = [H2Lower, S2Lower, V2Lower, H2Upper, S2Upper, V2Upper, H3Slider, S3Slider, V3Slider, \
+	        	H4Slider, S4Slider, V4Slider]
 
-        # resize image to 1/4 of original size
-        img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+	        # checkbox
+	        previewSecondHSV = tk.IntVar()
+	        previewCheckBox = tk.Checkbutton(
+	        	newWindow,
+	            text="Second HSV Range",
+	            variable= previewSecondHSV,
+	            background='#ffffff',
+	            foreground='#000000',
+	            command=lambda: toggleSecondHSV(),
+	            font=("Calibri Light", 14))
 
-        # wait until user closes window
-        self.root.wait_window(newWindow)
+	        # packing
+	        HSVSlidersLabel.pack(pady = (20,5))  
+	        LowerLabel.pack(pady = (5,0))
+	        Frame1.pack(pady = 2) 
+	        H1Lower.pack(side = tk.LEFT, padx = 5)    
+	        H1Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame2.pack(pady = 2) 
+	        S1Lower.pack(side = tk.LEFT, padx = 5) 
+	        S1Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame3.pack(pady = 2) 
+	        V1Lower.pack(side = tk.LEFT, padx = 5) 
+	        V1Slider.pack(side = tk.LEFT, padx = 5)
+	        UpperLabel.pack(pady = (10,0))
+	        Frame4.pack(pady = 2) 
+	        H1Upper.pack(side = tk.LEFT, padx = 5) 
+	        H2Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame5.pack(pady = 2) 
+	        S1Upper.pack(side = tk.LEFT, padx = 5)         
+	        S2Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame6.pack(pady = 2) 
+	        V1Upper.pack(side = tk.LEFT, padx = 5)       
+	        V2Slider.pack(side = tk.LEFT, padx = 5)
+	        previewCheckBox.pack(pady = (20, 10))
+	        savetoMain.pack(pady = (10,25))
+
+	        # open comparison window
+	        cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+
+	        # open image
+	        img = cv2.imread(filename)
+
+	        # resize image to 1/4 of original size
+	        img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+
+	        # wait until user closes window
+	        self.root.wait_window(newWindow)
