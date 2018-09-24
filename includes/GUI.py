@@ -410,13 +410,17 @@ class GUI:
         self.buttonFrame.pack(pady = 20)
         self.runButton.pack(side = tk.LEFT, padx = 10)
 
+        # run window
         self.root.mainloop()
 
     # ---------------------------------------------------------------------------------
     # Functions
     # ---------------------------------------------------------------------------------
 
-    # validate method for text entry
+    # ---------------------------------------------------------------------------------
+    # Validate method for text entry
+    # ---------------------------------------------------------------------------------
+
     def validate(self, new_text, entry_field):
         if not new_text:  # the field is being cleared
             if (entry_field == "upper"):
@@ -533,7 +537,10 @@ class GUI:
         except ValueError:
             return False
 
-    # function allow selection of directory/file where images are stored
+    # ---------------------------------------------------------------------------------
+    # Function to allow selection of directory/file where images are stored
+    # ---------------------------------------------------------------------------------
+
     def selectDirectory(self):
         # open directory selector
         dirname = tkFileDialog.askdirectory(parent=self.root, initialdir="/", title='Select Directory')
@@ -543,7 +550,10 @@ class GUI:
             self.pathLabel.config(text=dirname)
             self.directory = str(dirname)
 
-    # function to save inputted values and start generating coordinates
+    # ---------------------------------------------------------------------------------
+    # Function to save inputted values and close window
+    # ---------------------------------------------------------------------------------
+
     def saveValues(self):
         # if second HSV range is not selected
         if (self.secondHSV.get() != 1):
@@ -568,16 +578,24 @@ class GUI:
         else:
             tkMessageBox.showinfo("Error", "Not All Fields Populated")
 
-    # function to return parameters
+    # ---------------------------------------------------------------------------------
+    # Accessor function to return parameters to main file
+    # ---------------------------------------------------------------------------------
+
     def getValues(self):
+    	# return values in tuple format
         if(self.windowClosed):
             return self.directory, self.lower_hsv1, self.upper_hsv1, self.lower_hsv2, self.upper_hsv2, \
                    self.upperBorder, self.lowerBorder
+
+        # return False if generate button wasn't pressed
         else:
             return False
 
-    # function to update appearance of second set of HSV selections
-    # based on status of checkbox
+    # ---------------------------------------------------------------------------------
+    # Function to update appearance of GUI based on status of checkbox
+    # ---------------------------------------------------------------------------------
+
     def updateSelections(self):
         if (self.secondHSV.get() == 1): 
             # update labels
@@ -595,9 +613,11 @@ class GUI:
                 field.delete(0, tk.END)
                 field.config(state = "disabled")
 
-    # function to fetch preferences
-    def getPreferences(self):
+    # ---------------------------------------------------------------------------------
+    # Function to fetch preferences from preferences.cfg file
+    # ---------------------------------------------------------------------------------
 
+    def getPreferences(self):
         # if no preferences file present, create one
         if(str(self.config.read('./preferences.cfg')) == "[]"):
             self.config.add_section('HSV Ranges')
@@ -608,7 +628,10 @@ class GUI:
         # load in colour preferences
         return (dict(self.config.items('HSV Ranges')))
 
-    # function run when user closes window
+    # ---------------------------------------------------------------------------------
+    # Function that is run when user closes window
+    # ---------------------------------------------------------------------------------
+
     def on_closing(self):
         # write preferences to file
         with open('./preferences.cfg', 'wb') as configfile:
@@ -617,9 +640,12 @@ class GUI:
         # close window
         self.root.destroy()
 
-    # function to update values on menu selection
-    def change_dropdown(self, *args):
+    # ---------------------------------------------------------------------------------
+    # Function to update values on menu selection
+    # ---------------------------------------------------------------------------------
 
+    def change_dropdown(self, *args):
+    	# if menu selection has changed
         if(self.menuVar.get() != 'Select Saved Profile'):        
             # create list from value stored in preferences
             hsvList = ast.literal_eval(self.saved_Colours[self.menuVar.get()])
@@ -668,6 +694,7 @@ class GUI:
                     self.secondHSV.set(0)
                     self.updateSelections()
 
+        # if default is selected, clear the fields
         else:
             # update entries
             for field in self.entries1:
@@ -686,7 +713,10 @@ class GUI:
             self.lower_hsv2 = np.array([0,0,0])
             self.upper_hsv2 = np.array([0,0,0])
 
-    # function to restart script to load changes        
+    # ---------------------------------------------------------------------------------
+    # Function to restart script to load changes
+    # ---------------------------------------------------------------------------------
+
     def restart(self):
 	    # write preferences to file
 	    with open('./preferences.cfg', 'wb') as configfile:
@@ -697,8 +727,11 @@ class GUI:
 
 	    # restart program
 	    os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
-   
-   	# function to allow user to save HSV ranges to preferences file
+
+    # ---------------------------------------------------------------------------------
+    # Function to allow user to save HSV ranges to preferences file
+    # ---------------------------------------------------------------------------------
+
     def saveRanges(self):
         # if required fields are filled in
         if(self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" \
@@ -711,19 +744,8 @@ class GUI:
             newWindow.geometry("350x180") # window size in pixels
             
             # labels
-            nameLabel = tk.Label(
-                newWindow,
-                text="Name",
-                background='#ffffff',
-                foreground='#000000',
-                font=("Calibri Light", 24))
-
-            nameEntry = tk.Entry(
-                newWindow, 
-                font=("Calibri Light", 14),
-                textvariable = name,
-                width = 20)
-
+            nameLabel = tk.Label(newWindow,text="Name",background='#ffffff',foreground='#000000',font=("Calibri Light", 24))
+            nameEntry = tk.Entry(newWindow, font=("Calibri Light", 14),textvariable = name,width = 20)
             nameButton = tk.Button(
                 newWindow,
                 text = "Save",
@@ -741,6 +763,7 @@ class GUI:
             # wait until user inputs name
             self.root.wait_window(newWindow)
 
+            # if name was inputted
             if(name.get() != ""):
                 # create output string
                 outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
@@ -755,10 +778,14 @@ class GUI:
                 # add to config file
                 self.config.set('HSV Ranges', name.get(), outputString)
 
+        # show error message is all fields aren't populated
         else:
             tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
 
-    # function to remove an HSV range from the preferences file
+    # ---------------------------------------------------------------------------------
+    # Function to remove an HSV range from the preferences file
+    # ---------------------------------------------------------------------------------
+
     def removeRanges(self):
     	# ask for name
 		name = tk.StringVar()
@@ -805,8 +832,12 @@ class GUI:
 			self.colourOptions.remove(removeMenuVar.get())
 			self.saved_Colours.pop(removeMenuVar.get())
 
-    # function to run HSV range preview
+    # ---------------------------------------------------------------------------------
+    # Function to run HSV range preview
+    # ---------------------------------------------------------------------------------
+
     def runPreview(self):
+
         # embedded function to update HSV mask on slider movement
         def updateValues(event):
             # get slider positions
@@ -817,6 +848,7 @@ class GUI:
             v1 = V1Slider.get()
             v2 = V2Slider.get()
 
+            # if second HSV range selected
             if(previewSecondHSV.get() == 1):
 	            h3 = H3Slider.get()
 	            h4 = H4Slider.get()
@@ -847,6 +879,7 @@ class GUI:
             for field in self.entries1:
                 field.delete(0, tk.END)
 
+            # if second range selected
             if(previewSecondHSV.get() == 1):
                 self.secondHSV.set(1)
                 self.updateSelections()            	
@@ -864,6 +897,7 @@ class GUI:
                 else:
                     field.insert(0, self.upper_hsv1[count-3])
 
+            # second range
             if(previewSecondHSV.get() == 1):
 				self.lower_hsv2 = np.array([H3Slider.get(), S3Slider.get(), V3Slider.get()])
 				self.upper_hsv2 = np.array([H4Slider.get(), S4Slider.get(), V4Slider.get()])     	
@@ -875,15 +909,16 @@ class GUI:
 					else:
 					    field.insert(0, self.upper_hsv2[count-3])
 
-            # disable second range
+            # disable second range if required
             if(self.secondHSV.get() == 1 and previewSecondHSV.get() != 1):
                 self.secondHSV.set(0)
                 self.updateSelections()
 
+            # close windows
             newWindow.destroy()
             cv2.destroyAllWindows()
 
-        # function to toggle second HSV range on and off
+        # embedded function to toggle second HSV range on and off
         def toggleSecondHSV():
         	# if checkbox selected
         	if(previewSecondHSV.get() == 1):
