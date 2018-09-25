@@ -117,12 +117,12 @@ for count, img_name in enumerate(images):
                 topLeft = min(coords)
 
                 # increase the size of the bounding boxes
-                horizontal_increase = 10
-                vertical_increase = 10
+                horizontal_increase = 5
+                vertical_increase = 5
 
                 # update output string
                 output_string += ("%s %s %s %s" % (topLeft[0] - horizontal_increase, (topLeft[1]) - vertical_increase, \
-                                                   width + (horizontal_increase * 2), height + vertical_increase))
+                                                   width + (horizontal_increase*2), height + vertical_increase))
                 if i != number_contours - 1:
                     output_string += ";"
 
