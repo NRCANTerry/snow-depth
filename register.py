@@ -118,7 +118,6 @@ def alignImages(img1, img2):
 
 	return img1Reg, h
 
-
 # open GUI
 gui = GUI()
 
