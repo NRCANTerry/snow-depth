@@ -2,11 +2,13 @@
 import Tkinter as tk
 import tkFileDialog
 import tkMessageBox
-from preview import HSVPreview
 import ttk
 import numpy as np
 import ConfigParser
 import ast
+import cv2
+import sys
+import os
 
 class GUI:
     def __init__(self):
@@ -14,7 +16,7 @@ class GUI:
         self.root = tk.Tk()
         self.root.configure(background='#ffffff')
         self.root.title("Generate Training Images")
-        self.root.geometry("600x650") # window size of 1000 x 700
+        self.root.geometry("600x700") # window size of 600 x 700
 
         # ---------------------------------------------------------------------------------
         # Variables
@@ -248,26 +250,6 @@ class GUI:
             width = 17,
             font=("Calibri Light", 14))
 
-        # preview HSV button
-        self.previewButton = tk.Button(
-            self.buttonFrame,
-            text=" Preview",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.launchPreview(),
-            width = 17,
-            font=("Calibri Light", 14))
-
-       # save HSV range button
-        self.saveRange = tk.Button(
-            self.buttonFrame,
-            text=" Save",
-            background='#ffffff',
-            foreground='#000000',
-            command=lambda: self.saveRanges(),
-            width = 17,
-            font=("Calibri Light", 14))
-
         # ---------------------------------------------------------------------------------
         # Entry
         # ---------------------------------------------------------------------------------
@@ -344,6 +326,26 @@ class GUI:
         self.menuVar.trace('w', self.change_dropdown)
 
         # ---------------------------------------------------------------------------------
+        # Top Menu
+        # ---------------------------------------------------------------------------------
+
+        # create menu bar
+        self.menubar = tk.Menu(self.root)
+        self.filemenu = tk.Menu(self.menubar, tearoff=0)
+
+        # add commands
+        self.filemenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
+        self.filemenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
+        self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label = "Restart", command = lambda: self.restart())
+        self.filemenu.add_command(label = "Exit", command = lambda: self.on_closing())
+        self.menubar.add_cascade(label = "File", menu = self.filemenu)
+
+        # configure menu bar
+        self.root.config(menu = self.menubar)
+
+        # ---------------------------------------------------------------------------------
         # Packing
         # ---------------------------------------------------------------------------------
 
@@ -406,17 +408,19 @@ class GUI:
 
         # button packing
         self.buttonFrame.pack(pady = 20)
-        self.saveRange.pack(side = tk.LEFT, padx = 10)
         self.runButton.pack(side = tk.LEFT, padx = 10)
-        self.previewButton.pack(side = tk.LEFT, padx = 10)
 
+        # run window
         self.root.mainloop()
 
     # ---------------------------------------------------------------------------------
     # Functions
     # ---------------------------------------------------------------------------------
 
-    # validate method for text entry
+    # ---------------------------------------------------------------------------------
+    # Validate method for text entry
+    # ---------------------------------------------------------------------------------
+
     def validate(self, new_text, entry_field):
         if not new_text:  # the field is being cleared
             if (entry_field == "upper"):
@@ -533,7 +537,10 @@ class GUI:
         except ValueError:
             return False
 
-    # function allow selection of directory/file where images are stored
+    # ---------------------------------------------------------------------------------
+    # Function to allow selection of directory/file where images are stored
+    # ---------------------------------------------------------------------------------
+
     def selectDirectory(self):
         # open directory selector
         dirname = tkFileDialog.askdirectory(parent=self.root, initialdir="/", title='Select Directory')
@@ -542,6 +549,10 @@ class GUI:
         if (len(dirname) > 0):
             self.pathLabel.config(text=dirname)
             self.directory = str(dirname)
+
+    # ---------------------------------------------------------------------------------
+    # Function to save inputted values and close window
+    # ---------------------------------------------------------------------------------
 
     def saveValues(self):
         # if second HSV range is not selected
@@ -567,16 +578,24 @@ class GUI:
         else:
             tkMessageBox.showinfo("Error", "Not All Fields Populated")
 
-    # function to return parameters
+    # ---------------------------------------------------------------------------------
+    # Accessor function to return parameters to main file
+    # ---------------------------------------------------------------------------------
+
     def getValues(self):
+    	# return values in tuple format
         if(self.windowClosed):
             return self.directory, self.lower_hsv1, self.upper_hsv1, self.lower_hsv2, self.upper_hsv2, \
                    self.upperBorder, self.lowerBorder
+
+        # return False if generate button wasn't pressed
         else:
             return False
 
-    # function to update appearance of second set of HSV selections
-    # based on status of checkbox
+    # ---------------------------------------------------------------------------------
+    # Function to update appearance of GUI based on status of checkbox
+    # ---------------------------------------------------------------------------------
+
     def updateSelections(self):
         if (self.secondHSV.get() == 1): 
             # update labels
@@ -592,15 +611,13 @@ class GUI:
             # update fields
             for field in self.entries2:
                 field.delete(0, tk.END)
-                field.config(state = "disabled")      
+                field.config(state = "disabled")
 
-    # function to launch HSV preview tool
-    def launchPreview(self):
-        HSVPreview()
+    # ---------------------------------------------------------------------------------
+    # Function to fetch preferences from preferences.cfg file
+    # ---------------------------------------------------------------------------------
 
-    # function to fetch preferences
     def getPreferences(self):
-
         # if no preferences file present, create one
         if(str(self.config.read('./preferences.cfg')) == "[]"):
             self.config.add_section('HSV Ranges')
@@ -611,7 +628,10 @@ class GUI:
         # load in colour preferences
         return (dict(self.config.items('HSV Ranges')))
 
-    # function run when user closes window
+    # ---------------------------------------------------------------------------------
+    # Function that is run when user closes window
+    # ---------------------------------------------------------------------------------
+
     def on_closing(self):
         # write preferences to file
         with open('./preferences.cfg', 'wb') as configfile:
@@ -620,9 +640,12 @@ class GUI:
         # close window
         self.root.destroy()
 
-    # function to update values on menu selection
-    def change_dropdown(self, *args):
+    # ---------------------------------------------------------------------------------
+    # Function to update values on menu selection
+    # ---------------------------------------------------------------------------------
 
+    def change_dropdown(self, *args):
+    	# if menu selection has changed
         if(self.menuVar.get() != 'Select Saved Profile'):        
             # create list from value stored in preferences
             hsvList = ast.literal_eval(self.saved_Colours[self.menuVar.get()])
@@ -671,6 +694,7 @@ class GUI:
                     self.secondHSV.set(0)
                     self.updateSelections()
 
+        # if default is selected, clear the fields
         else:
             # update entries
             for field in self.entries1:
@@ -689,6 +713,25 @@ class GUI:
             self.lower_hsv2 = np.array([0,0,0])
             self.upper_hsv2 = np.array([0,0,0])
 
+    # ---------------------------------------------------------------------------------
+    # Function to restart script to load changes
+    # ---------------------------------------------------------------------------------
+
+    def restart(self):
+	    # write preferences to file
+	    with open('./preferences.cfg', 'wb') as configfile:
+	        self.config.write(configfile)
+
+	    # close window
+	    self.root.destroy()
+
+	    # restart program
+	    os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
+
+    # ---------------------------------------------------------------------------------
+    # Function to allow user to save HSV ranges to preferences file
+    # ---------------------------------------------------------------------------------
+
     def saveRanges(self):
         # if required fields are filled in
         if(self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" \
@@ -697,45 +740,337 @@ class GUI:
             # ask for name
             name = tk.StringVar()
             newWindow = tk.Toplevel(self.root)
-
-            nameLabel = tk.Label(
-                newWindow,
-                text="Name",
-                background='#ffffff',
-                foreground='#000000',
-                font=("Calibri Light", 14))
-
-            nameEntry = tk.Entry(
-                newWindow, 
-                font=("Calibri Light", 13),
-                textvariable = name,
-                width = 10)
-
+            newWindow.configure(background='#ffffff')
+            newWindow.geometry("350x180") # window size in pixels
+            
+            # labels
+            nameLabel = tk.Label(newWindow,text="Name",background='#ffffff',foreground='#000000',font=("Calibri Light", 24))
+            nameEntry = tk.Entry(newWindow, font=("Calibri Light", 14),textvariable = name,width = 20)
             nameButton = tk.Button(
                 newWindow,
                 text = "Save",
                 background='#ffffff',
                 foreground='#000000',
                 command = lambda: newWindow.destroy(),
-                width = 10,
+                width = 20,
                 font=("Calibri Light", 14))
 
-            nameLabel.pack()
-            nameEntry.pack()
-            nameButton.pack()
+            # packing
+            nameLabel.pack(pady = (20,5))
+            nameEntry.pack(pady = 10)
+            nameButton.pack(pady = 5)
 
             # wait until user inputs name
             self.root.wait_window(newWindow)
 
-            # create output string
-            outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
-                np.array2string(self.upper_hsv1, separator = ',').replace("[","(").replace("]", ")")
+            # if name was inputted
+            if(name.get() != ""):
+                # create output string
+                outputString = "[" + np.array2string(self.lower_hsv1, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                    np.array2string(self.upper_hsv1, separator = ',').replace("[","(").replace("]", ")")
 
-            if(self.secondHSV.get() == 1):
-                outputString += "," + np.array2string(self.lower_hsv2, separator = ',').replace("[","(").replace("]", ")")
-                outputString += "," + np.array2string(self.upper_hsv2, separator = ',').replace("[","(").replace("]", ")")
-            
-            outputString += "]"
+                if(self.secondHSV.get() == 1):
+                    outputString += "," + np.array2string(self.lower_hsv2, separator = ',').replace("[","(").replace("]", ")")
+                    outputString += "," + np.array2string(self.upper_hsv2, separator = ',').replace("[","(").replace("]", ")")
+                
+                outputString += "]"
 
-            # add to config file
-            self.config.set('HSV Ranges', name.get(), outputString)
+                # add to config file
+                self.config.set('HSV Ranges', name.get(), outputString)
+
+        # show error message is all fields aren't populated
+        else:
+            tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
+
+    # ---------------------------------------------------------------------------------
+    # Function to remove an HSV range from the preferences file
+    # ---------------------------------------------------------------------------------
+
+    def removeRanges(self):
+    	# ask for name
+		name = tk.StringVar()
+		newWindow = tk.Toplevel(self.root)
+		newWindow.configure(background='#ffffff')
+		newWindow.geometry("350x180") # window size in pixels
+
+		# labels
+		nameLabel = tk.Label(
+		    newWindow,
+		    text="Name",
+		    background='#ffffff',
+		    foreground='#000000',
+		    font=("Calibri Light", 24))
+
+		# drop down menu used to select profile to delete
+		removeMenuVar = tk.StringVar(self.root)
+		removeMenuVar.set('Select Profile to Remove')
+		removeMenu = tk.OptionMenu(newWindow, removeMenuVar, 'Select Profile to Remove', *self.colourOptions)
+		removeMenu.config(font=("Calibri Light", 13))
+		removeMenu.config(background='#ffffff')
+
+		# button
+		nameButton = tk.Button(
+		    newWindow,
+		    text = "Save",
+		    background='#ffffff',
+		    foreground='#000000',
+		    command = lambda: newWindow.destroy(),
+		    width = 20,
+		    font=("Calibri Light", 14))
+
+		# packing
+		nameLabel.pack(pady = (20,5))
+		removeMenu.pack(pady = 10)
+		nameButton.pack(pady = 5)
+
+		# wait until user inputs name
+		self.root.wait_window(newWindow)
+
+		# remove selected option from menu
+		if(removeMenuVar.get() != 'Select Profile to Remove'):
+			self.config.remove_option("HSV Ranges", removeMenuVar.get())
+			self.colourOptions.remove(removeMenuVar.get())
+			self.saved_Colours.pop(removeMenuVar.get())
+
+    # ---------------------------------------------------------------------------------
+    # Function to run HSV range preview
+    # ---------------------------------------------------------------------------------
+
+    def runPreview(self):
+
+        # embedded function to update HSV mask on slider movement
+        def updateValues(event):
+            # get slider positions
+            h1 = H1Slider.get()
+            h2 = H2Slider.get()
+            s1 = S1Slider.get()
+            s2 = S2Slider.get()
+            v1 = V1Slider.get()
+            v2 = V2Slider.get()
+
+            # if second HSV range selected
+            if(previewSecondHSV.get() == 1):
+	            h3 = H3Slider.get()
+	            h4 = H4Slider.get()
+	            s3 = S3Slider.get()
+	            s4 = S4Slider.get()
+	            v3 = V3Slider.get()
+	            v4 = V4Slider.get() 	
+
+            # convert image to HSV
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+            # apply HSV mask
+            mask = cv2.inRange(hsv, np.array([h1, s1, v1]), np.array([h2, s2, v2]))
+            if(previewSecondHSV.get() == 1):
+            	mask2 = cv2.inRange(hsv, np.array([h3, s3, v3]), np.array([h4, s4, v4]))
+            	mask = cv2.bitwise_or(mask, mask2)
+            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+            # create horizontal stack
+            numpy_horizontal = np.hstack((img, mask))
+
+            # display image to user
+            cv2.imshow("Comparison", numpy_horizontal)
+
+        # embedded function to save values to main GUI window
+        def saveValuestoMain():
+            # update entries
+            for field in self.entries1:
+                field.delete(0, tk.END)
+
+            # if second range selected
+            if(previewSecondHSV.get() == 1):
+                self.secondHSV.set(1)
+                self.updateSelections()            	
+            	for field in self.entries2:
+            		field.delete(0, tk.END)
+
+            # update variables
+            self.lower_hsv1 = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+            self.upper_hsv1 = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+            # update entries
+            for count, field in enumerate(self.entries1):
+                if(count < 3):
+                    field.insert(0, self.lower_hsv1[count])
+                else:
+                    field.insert(0, self.upper_hsv1[count-3])
+
+            # second range
+            if(previewSecondHSV.get() == 1):
+				self.lower_hsv2 = np.array([H3Slider.get(), S3Slider.get(), V3Slider.get()])
+				self.upper_hsv2 = np.array([H4Slider.get(), S4Slider.get(), V4Slider.get()])     	
+
+				# update entries
+				for count, field in enumerate(self.entries2):
+					if(count < 3):
+					    field.insert(0, self.lower_hsv2[count])
+					else:
+					    field.insert(0, self.upper_hsv2[count-3])
+
+            # disable second range if required
+            if(self.secondHSV.get() == 1 and previewSecondHSV.get() != 1):
+                self.secondHSV.set(0)
+                self.updateSelections()
+
+            # close windows
+            newWindow.destroy()
+            cv2.destroyAllWindows()
+
+        # embedded function to toggle second HSV range on and off
+        def toggleSecondHSV():
+        	# if checkbox selected
+        	if(previewSecondHSV.get() == 1):
+        		# resize window
+        		newWindow.geometry("900x650")
+        		
+        		# pack second HSV widgets
+        		for widget in secondRangeWidgets:
+        			widget.pack(side = tk.LEFT, padx =(15,5))
+
+        	# if checkbox not selected
+        	else:
+        		# unpack second HSV widgets
+        		for widget in secondRangeWidgets:
+        			widget.pack_forget()
+
+        		# resize window
+        		newWindow.geometry("500x650")
+
+       	# flag to track if second HSV range is in use
+       	secondRangePreview = False
+
+        # open new window
+        newWindow = tk.Toplevel(self.root)
+        newWindow.configure(background='#ffffff')
+        newWindow.withdraw()
+        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))   
+
+        if(filename != ""):
+	        newWindow.deiconify()
+	        newWindow.geometry("500x650") # window size of 500 x 650
+
+	        # create widgets
+	        HSVSlidersLabel = tk.Label(
+	            newWindow,
+	            text="HSV Sliders",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 24))
+
+	        LowerLabel = tk.Label(
+	            newWindow,
+	            text="Lower",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 15))
+
+	        UpperLabel = tk.Label(
+	            newWindow,
+	            text="Upper",
+	            background='#ffffff',
+	            foreground='#000000',
+	            font=("Calibri Light", 15))         
+
+	        # button
+	        savetoMain = tk.Button(
+	            newWindow, 
+	            text = "Save Values",
+	            background = '#ffffff',
+	            foreground = '#000000',
+	            command = lambda: saveValuestoMain(),
+	            width = 20,
+	            font=("Calibri Light", 15))
+
+	        # frames
+	        Frame1 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame2 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame3 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame4 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame5 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame6 = tk.Frame(newWindow, background='#ffffff')    
+
+	        # H, S, and V Labels
+	        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+
+	        # sliders
+	        H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+
+			# second range H, S, and V Labels
+	        H2Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S2Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V2Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H2Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        S2Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        V2Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+
+	        # second range sliders
+	        H3Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S3Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V3Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        H4Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        S4Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+	        V4Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+
+	        # list containing widgets for second HSV range
+	        secondRangeWidgets = [H2Lower, S2Lower, V2Lower, H2Upper, S2Upper, V2Upper, H3Slider, S3Slider, V3Slider, \
+	        	H4Slider, S4Slider, V4Slider]
+
+	        # checkbox
+	        previewSecondHSV = tk.IntVar()
+	        previewCheckBox = tk.Checkbutton(
+	        	newWindow,
+	            text="Second HSV Range",
+	            variable= previewSecondHSV,
+	            background='#ffffff',
+	            foreground='#000000',
+	            command=lambda: toggleSecondHSV(),
+	            font=("Calibri Light", 14))
+
+	        # packing
+	        HSVSlidersLabel.pack(pady = (20,5))  
+	        LowerLabel.pack(pady = (5,0))
+	        Frame1.pack(pady = 2) 
+	        H1Lower.pack(side = tk.LEFT, padx = 5)    
+	        H1Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame2.pack(pady = 2) 
+	        S1Lower.pack(side = tk.LEFT, padx = 5) 
+	        S1Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame3.pack(pady = 2) 
+	        V1Lower.pack(side = tk.LEFT, padx = 5) 
+	        V1Slider.pack(side = tk.LEFT, padx = 5)
+	        UpperLabel.pack(pady = (10,0))
+	        Frame4.pack(pady = 2) 
+	        H1Upper.pack(side = tk.LEFT, padx = 5) 
+	        H2Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame5.pack(pady = 2) 
+	        S1Upper.pack(side = tk.LEFT, padx = 5)         
+	        S2Slider.pack(side = tk.LEFT, padx = 5)
+	        Frame6.pack(pady = 2) 
+	        V1Upper.pack(side = tk.LEFT, padx = 5)       
+	        V2Slider.pack(side = tk.LEFT, padx = 5)
+	        previewCheckBox.pack(pady = (20, 10))
+	        savetoMain.pack(pady = (10,25))
+
+	        # open comparison window
+	        cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+
+	        # open image
+	        img = cv2.imread(filename)
+
+	        # resize image to 1/4 of original size
+	        img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+
+	        # wait until user closes window
+	        self.root.wait_window(newWindow)
