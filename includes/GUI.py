@@ -923,7 +923,7 @@ class GUI:
         	# if checkbox selected
         	if(previewSecondHSV.get() == 1):
         		# resize window
-        		newWindow.geometry("900x575")
+        		newWindow.geometry("900x650")
         		
         		# pack second HSV widgets
         		for widget in secondRangeWidgets:
@@ -936,7 +936,7 @@ class GUI:
         			widget.pack_forget()
 
         		# resize window
-        		newWindow.geometry("500x575")
+        		newWindow.geometry("500x650")
 
        	# flag to track if second HSV range is in use
        	secondRangePreview = False
@@ -949,7 +949,7 @@ class GUI:
 
         if(filename != ""):
 	        newWindow.deiconify()
-	        newWindow.geometry("500x575") # window size of 500 x 575
+	        newWindow.geometry("500x650") # window size of 500 x 650
 
 	        # create widgets
 	        HSVSlidersLabel = tk.Label(
