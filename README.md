@@ -8,9 +8,6 @@ Steps:
 		- specify image folder, HSV ranges, and image borders
 		- outputs the coordinates of coloured regions in the image to a JSON file
 		- to determine HSV ranges use the preview tool in the GUI
+		- to save or remove HSV range use file menu - saved to preferences.cfg
 	3. Run generate_truth.m
 		- this creates the ground truth object that will be used to train the R-CNN
-
-	HSV Ranges:
-	Orange: (0, 111, 0) -> (31, 225, 186)
-	Red: (159, 101, 25) -> (180, 255, 255)
