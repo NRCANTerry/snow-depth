@@ -16,7 +16,7 @@ class GUI:
         self.root = tk.Tk()
         self.root.configure(background='#ffffff')
         self.root.title("Generate Training Images")
-        self.root.geometry("600x600") # window size of 1000 x 700
+        self.root.geometry("600x700") # window size of 600 x 700
 
         # ---------------------------------------------------------------------------------
         # Variables
