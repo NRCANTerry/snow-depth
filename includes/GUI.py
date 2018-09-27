@@ -39,11 +39,13 @@ class GUI:
         	"Lower_Blob_Size": 0,
         	"Upper_Blob_Size": 0,
         	"Clip_Limit": 0,
-        	"Tile_Size": (0,0),
+        	"Tile_Size": [0,0],
         	"Saved_Colours": dict(),
         	"Saved_Profiles": dict(),
         	"Colour_Options": list(),
         	"Profile_Options": list(),
+        	"Templates": dict(), 
+        	"Templates_Options": list(),
         	"Window_Closed": False
         }
 
@@ -51,9 +53,10 @@ class GUI:
         self.config = ConfigParser.ConfigParser()
 
         # open preferences file
-        self.systemParameters["Saved_Colours"], self.systemParameters["Saved_Profiles"] = self.getPreferences()
+        self.systemParameters["Saved_Colours"], self.systemParameters["Saved_Profiles"], self.systemParameters["Templates"] = self.getPreferences()
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
+        self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
 
         # window closing protocol
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -130,7 +133,7 @@ class GUI:
         # Entries
         # ---------------------------------------------------------------------------------
 
-        validateCommand = self.root.register(self.validateHSV)
+        validateCommand = self.root.register(self.validate)
 
         # Range 1
         self.entryLowerH1 = tk.Entry(self.range1Frame, validatecommand =((validateCommand, '%P', "Lower_HSV_1", 0)))
@@ -171,13 +174,13 @@ class GUI:
         self.colourMenuVar = tk.StringVar(self.root)
         self.colourMenuVar.set('Select HSV Range')
         self.colourMenu = tk.OptionMenu(self.root, self.colourMenuVar, 'Select HSV Range', *self.systemParameters["Colour_Options"])
-        self.colourMenu.config(font=("Calibri Light", 13), bg='#ffffff')
-        self.colourMenuVar.trace('w', self.change_dropdown)
+        self.colourMenu.config(font=("Calibri Light", 13), bg='#ffffff', width = 15)
+        self.colourMenuVar.trace('w', self.change_HSV_dropdown)
 
         self.profileMenuVar = tk.StringVar(self.root)
         self.profileMenuVar.set('Select Profile')
         self.profileMenu = tk.OptionMenu(self.root, self.profileMenuVar, 'Select Profile', *self.systemParameters["Profile_Options"])
-        self.profileMenu.config(font=("Calibri Light", 13), bg='#ffffff')
+        self.profileMenu.config(font=("Calibri Light", 13), bg='#ffffff', width = 15)
       	# include trace
 
         # ---------------------------------------------------------------------------------
@@ -187,15 +190,25 @@ class GUI:
         # create menu bar
         self.menubar = tk.Menu(self.root)
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
+        self.HSVmenu = tk.Menu(self.menubar, tearoff=0)
+        self.prefMenu = tk.Menu(self.menubar, tearoff=0)
 
         # add commands
-        self.filemenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
-        self.filemenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
         self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
         self.filemenu.add_separator()
         self.filemenu.add_command(label = "Restart", command = lambda: self.restart())
         self.filemenu.add_command(label = "Exit", command = lambda: self.on_closing())
         self.menubar.add_cascade(label = "File", menu = self.filemenu)
+
+        # HSV menu 
+        self.HSVmenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
+        self.HSVmenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
+        self.menubar.add_cascade(label = "HSV Options", menu = self.HSVmenu)
+
+        # Preferences menu
+        self.prefMenu.add_command(label = "Create Profile", command = lambda: self.createProfile())
+        self.prefMenu.add_command(label = "Remove Profile", command = lambda: self.removeProfile())
+        self.menubar.add_cascade(label = "Preferences", menu = self.prefMenu)
 
         # configure menu bar
         self.root.config(menu = self.menubar)
@@ -250,31 +263,45 @@ class GUI:
        	self.profileMenu.pack(pady = 10)
 
         # button packing
-        self.runButton.pack(pady = (10,30))
+        self.runButton.pack(pady = (20,30))
 
     # ---------------------------------------------------------------------------------
     # Functions
     # ---------------------------------------------------------------------------------
 
     # ---------------------------------------------------------------------------------
-    # Validate method for HSV text entry
+    # Validate method for text entry
     # ---------------------------------------------------------------------------------
 
-    def validateHSV(self, new_text, entry_field, index):
-    	# the field is being cleared
-    	if not new_text:
-    		self.systemParameters[str(entry_field)][int(index)] = 0
+    def validate(self, new_text, entry_field, index):
+    	if(index != "-1"):
+			# the field is being cleared
+			if not new_text:
+				self.systemParameters[str(entry_field)][int(index)] = 0
 
-    	try:
-    		if(new_text == ""):
-    			self.systemParameters[str(entry_field)][int(index)] = 0
-    		else:
-    			self.systemParameters[str(entry_field)][int(index)] = int(new_text)
-    		return True
+			try:
+				if(new_text == ""):
+					self.systemParameters[str(entry_field)][int(index)] = 0
+				else:
+					self.systemParameters[str(entry_field)][int(index)] = int(new_text)
+				return True
 
-    	except ValueError:
-    		return False
+			except ValueError:
+				return False
+    	else:
+			# the field is being cleared
+			if not new_text:
+				self.systemParameters[str(entry_field)] = 0
 
+			try:
+				if(new_text == ""):
+					self.systemParameters[str(entry_field)] = 0
+				else:
+					self.systemParameters[str(entry_field)] = int(new_text)
+				return True
+
+			except ValueError:
+				return False
     # ---------------------------------------------------------------------------------
     # Function to confirm that required fields are filled in
     # ---------------------------------------------------------------------------------
@@ -377,12 +404,13 @@ class GUI:
         if(str(self.config.read('./preferences.cfg')) == "[]"):
             self.config.add_section('HSV Ranges')
             self.config.add_section('Profiles')
+            self.config.add_section('Templates')
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
 
         # load in preferences
-        return dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles'))
+        return dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), dict(self.config.items('Templates'))
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -397,10 +425,10 @@ class GUI:
         self.root.destroy()
 
     # ---------------------------------------------------------------------------------
-    # Function to update values on menu selection
+    # Function to update HSV values on menu selection
     # ---------------------------------------------------------------------------------
 
-    def change_dropdown(self, *args):
+    def change_HSV_dropdown(self, *args):
     	# if menu selection has changed
         if(self.colourMenuVar.get() != 'Select HSV Range'):        
             # create list from value stored in preferences
@@ -468,6 +496,24 @@ class GUI:
             self.systemParameters["Upper_HSV_1"] = np.array([0,0,0])
             self.systemParameters["Lower_HSV_2"] = np.array([0,0,0])
             self.systemParameters["Upper_HSV_2"] = np.array([0,0,0])
+
+    # ---------------------------------------------------------------------------------
+    # Function to update preferences based on drop down
+    # ---------------------------------------------------------------------------------
+
+    def change_Preferences_dropdown(self, *args):
+    	# if menu selection has changed
+        if(self.profileMenuVar.get() != 'Select Profile'):        
+            # create list from value stored in preferences
+            optionsList = ast.literal_eval(self.systemParameters["Saved_Profiles"][str(self.profileMenuVar.get())])
+
+            # update system parameters
+            self.systemParameters["Upper_Border"] = int(optionsList[0])
+            self.systemParameters["Lower_Border"] = int(optionsList[1])
+            self.systemParameters["Lower_Blob_Size"] = int(optionsList[2])
+            self.systemParameters["Upper_Blob_Size"] = int(optionsList[3])
+            self.systemParameters["Clip_Limit"] = int(optionsList[4])
+            self.systemParameters["Tile_Size"] = [int(optionsList[5]), int(optionsList[6])]
 
     # ---------------------------------------------------------------------------------
     # Function to restart script to load changes
@@ -542,7 +588,7 @@ class GUI:
                 # add to config file
                 self.config.set('HSV Ranges', name.get(), outputString)
 
-                # update menu 
+                # update menu
                 self.colourMenu['menu'].add_command(label = name.get(), command = tk._setit(self.colourMenuVar, name.get()))
                 self.systemParameters["Saved_Colours"][name.get()] = outputString
                 self.systemParameters["Colour_Options"].append(name.get())
@@ -557,14 +603,13 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def removeRanges(self):
-    	# ask for name
-		name = tk.StringVar()
+    	# create window 
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
 
 		# labels
-		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
+		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
 
 		# drop down menu used to select profile to delete
 		removecolourMenuVar = tk.StringVar(self.root)
@@ -598,6 +643,208 @@ class GUI:
 			for option in self.systemParameters["Colour_Options"]:
 				self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
 
+    # ---------------------------------------------------------------------------------
+    # Function to create a preferences profile
+    # ---------------------------------------------------------------------------------
+
+    def createProfile(self):
+    	# embedded function to allow for creation of template
+		def createTemplate():
+			print("template")
+
+		def getName():
+			# get fields are filled in
+			if all(v.get() != "" for v in entries):# and templateMenuVar.get() != "Select Template":
+				# ask for name
+				name = tk.StringVar()
+				nameWindow = tk.Toplevel(newWindow)
+				nameWindow.configure(bg='#ffffff')
+				self.centre_window(nameWindow, 300, 170)
+
+				# widgets
+				nameLabel = tk.Label(nameWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
+				nameEntry = tk.Entry(nameWindow,font=("Calibri Light", 14),textvariable = name,width = 20)
+				nameButton = tk.Button(nameWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: nameWindow.destroy(),
+				    width = 20,font=("Calibri Light", 14))
+
+				# packing
+				nameLabel.pack(pady = (15,5))
+				nameEntry.pack(pady = 10)
+				nameButton.pack(pady = 5)
+
+				# wait until user inputs name
+				self.root.wait_window(nameWindow)
+
+				# if name was inputted
+				if(name.get() != ""):
+					# create output string
+					outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + str(self.systemParameters["Lower_Border"]) + "," + str(self.systemParameters["Lower_Blob_Size"]) + \
+						"," + str(self.systemParameters["Upper_Blob_Size"]) + "," + str(self.systemParameters["Clip_Limit"]) + "," + str(self.systemParameters["Tile_Size"][0]) + \
+						"," + str(self.systemParameters["Tile_Size"][1]) + "]"
+
+					# add to config file
+					self.config.set('Profiles', name.get(), outputString)
+
+					# update menu
+					self.profileMenu['menu'].add_command(label = name.get(), command = tk._setit(self.profileMenuVar, name.get()))
+					self.systemParameters["Saved_Profiles"][name.get()] = outputString
+					self.systemParameters["Profile_Options"].append(name.get())
+					self.profileMenuVar.set(name.get())
+									
+				# close windows
+				nameWindow.destroy()
+				newWindow.destroy()
+			else:
+				tkMessageBox.showinfo("Error", "Not All Fields Populated")
+
+		# create window
+		newWindow = tk.Toplevel(self.root)
+		newWindow.configure(bg='#ffffff')
+		self.centre_window(newWindow, 500, 550)
+
+		validateCommand = self.root.register(self.validate)
+
+		# frames
+		upperBorderFrame = tk.Frame(newWindow, bg='#ffffff')
+		lowerBorderFrame = tk.Frame(newWindow, bg='#ffffff')
+		lowerBlobFrame = tk.Frame(newWindow, bg='#ffffff')
+		upperBlobFrame = tk.Frame(newWindow, bg='#ffffff')
+		templateFrame = tk.Frame(newWindow, bg='#ffffff')
+		clipLimitFrame = tk.Frame(newWindow, bg='#ffffff')
+		tileSizeFrame = tk.Frame(newWindow, bg='#ffffff')
+		buttonFrame = tk.Frame(newWindow, bg='#ffffff')
+
+		# labels
+		titleLabel = tk.Label(newWindow, text = "Preferences", bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
+		upperBorderLabel = tk.Label(upperBorderFrame, text = "Upper Border")
+		lowerBorderLabel = tk.Label(lowerBorderFrame, text = "Lower Border")
+		lowerBlobLabel = tk.Label(lowerBlobFrame, text = "Lower Blob Size")
+		upperBlobLabel = tk.Label(upperBlobFrame, text = "Upper Blob Size")
+		templateLabel = tk.Label(templateFrame, text = "Template")
+		clipLimitLabel = tk.Label(clipLimitFrame, text = "Clip Limit")
+		tileSizeLabel1 = tk.Label(tileSizeFrame, text = "Tile Size")
+		tileSizeLabel2 = tk.Label(tileSizeFrame, text = "(")
+		tileSizeLabel3 = tk.Label(tileSizeFrame, text = ",")
+		tileSizeLabel4 = tk.Label(tileSizeFrame, text = ")")
+
+		labels = [upperBorderLabel, lowerBorderLabel, lowerBlobLabel, upperBlobLabel, templateLabel, clipLimitLabel, tileSizeLabel1, tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
+
+		for label in labels:
+			label.config(bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+
+		# entries
+		upperBorderEntry = tk.Entry(upperBorderFrame, validatecommand =((validateCommand, '%P', "Upper_Border", -1)))
+		lowerBorderEntry = tk.Entry(lowerBorderFrame, validatecommand =((validateCommand, '%P', "Lower_Border", -1)))
+		lowerBlobEntry = tk.Entry(lowerBlobFrame, validatecommand =((validateCommand, '%P', "Lower_Blob_Size", -1)))
+		upperBlobEntry = tk.Entry(upperBlobFrame, validatecommand =((validateCommand, '%P', "Upper_Blob_Size", -1)))
+		clipLimitEntry = tk.Entry(clipLimitFrame, validatecommand =((validateCommand, '%P', "Clip_Limit", -1)))
+		tileSizeEntry1 = tk.Entry(tileSizeFrame, validatecommand =((validateCommand, '%P', "Tile_Size", 0)))
+		tileSizeEntry2 = tk.Entry(tileSizeFrame, validatecommand =((validateCommand, '%P', "Tile_Size", 1)))
+
+		entries = [upperBorderEntry, lowerBorderEntry, lowerBlobEntry, upperBlobEntry, clipLimitEntry, tileSizeEntry1, tileSizeEntry2]
+
+		for entry in entries:
+			entry.config(validate = "key", font=("Calibri Light", 14), width = 4)
+
+		# drop down
+		templateMenuVar = tk.StringVar(newWindow)
+		templateMenuVar.set('Select Template')
+		templateMenu = tk.OptionMenu(templateFrame, templateMenuVar, 'Select Template', *self.systemParameters["Templates"])
+		templateMenu.config(font=("Calibri Light", 14), bg='#ffffff', width = 15)
+        #self.colourMenuVar.trace('w', self.change_HSV_dropdown)
+
+        # button
+		createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg = '#ffffff',
+			fg = '#000000', font=("Calibri Light", 15), width = 17)
+		createTemplateButton = tk.Button(buttonFrame, text = "Create Template", command = lambda: createTemplate(), bg = '#ffffff',
+			fg = '#000000', font=("Calibri Light", 15), width = 17)
+        
+		# packing
+		titleLabel.pack(pady = 20)
+		upperBorderFrame.pack(pady = 10)
+		upperBorderLabel.pack(side = tk.LEFT, padx = 10)
+		upperBorderEntry.pack(side = tk.LEFT, padx = 10)
+
+		lowerBorderFrame.pack(pady = 10)
+		lowerBorderLabel.pack(side = tk.LEFT, padx = 10)
+		lowerBorderEntry.pack(side = tk.LEFT, padx = 10)
+
+		lowerBlobFrame.pack(pady = 10)
+		lowerBlobLabel.pack(side = tk.LEFT, padx = 10)
+		lowerBlobEntry.pack(side = tk.LEFT, padx = 10)   
+
+		upperBlobFrame.pack(pady = 10)
+		upperBlobLabel.pack(side = tk.LEFT, padx = 10)
+		upperBlobEntry.pack(side = tk.LEFT, padx = 10)   
+
+		templateFrame.pack(pady = 10)
+		templateLabel.pack(side = tk.LEFT, padx = 10)
+		templateMenu.pack(side = tk.LEFT, padx = 10)
+
+		clipLimitFrame.pack(pady = 10)
+		clipLimitLabel.pack(side = tk.LEFT, padx = 10)
+		clipLimitEntry.pack(side = tk.LEFT, padx = 10)    	
+
+		tileSizeFrame.pack(pady = 10)
+		tileSizeLabel1.pack(side = tk.LEFT, padx = 10)
+		tileSizeLabel2.pack(side = tk.LEFT, padx = (5,0))    
+		tileSizeEntry1.pack(side = tk.LEFT)	
+		tileSizeLabel3.pack(side = tk.LEFT, padx = 0)    
+		tileSizeEntry2.pack(side = tk.LEFT)	
+		tileSizeLabel4.pack(side = tk.LEFT, padx = (0,5))    
+
+		buttonFrame.pack(pady = 20)
+		createTemplateButton.pack(side = tk.LEFT, padx = (20, 5))
+		createProfileButton.pack(side = tk.LEFT, padx = (5, 20))
+
+		# wait until user inputs name
+		self.root.wait_window(newWindow)
+
+    # ---------------------------------------------------------------------------------
+    # Function to remove a preferences profile
+    # ---------------------------------------------------------------------------------
+
+    def removeProfile(self):
+    	# create window 
+		newWindow = tk.Toplevel(self.root)
+		newWindow.configure(bg='#ffffff')
+		self.centre_window(newWindow, 300, 170)
+
+		# labels
+		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
+
+		# drop down menu used to select profile to delete
+		removeprofileMenuVar = tk.StringVar(self.root)
+		removeprofileMenuVar.set('Select Profile to Remove')
+		removeMenu = tk.OptionMenu(newWindow, removeprofileMenuVar, 'Select Profile to Remove', *self.systemParameters["Profile_Options"])
+		removeMenu.config(font=("Calibri Light", 13))
+		removeMenu.config(bg='#ffffff')
+
+		# button
+		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: newWindow.destroy(),
+		    width = 20,font=("Calibri Light", 14))
+
+		# packing
+		nameLabel.pack(pady = (20,5))
+		removeMenu.pack(pady = 10)
+		nameButton.pack(pady = 5)
+
+		# wait until user inputs name
+		self.root.wait_window(newWindow)
+
+		# remove selected option from menu
+		if(removeprofileMenuVar.get() != 'Select Profile to Remove'):
+			self.config.remove_option("Profiles", removeprofileMenuVar.get())
+			self.systemParameters["Profile_Options"].remove(removeprofileMenuVar.get())
+			self.systemParameters["Saved_Profiles"].pop(removeprofileMenuVar.get())
+
+			# update menu
+			self.profileMenuVar.set('Select Profile')
+			self.profileMenu['menu'].delete(0, 'end')
+
+			for option in self.systemParameters["Profile_Options"]:
+				self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))	
+				
     # ---------------------------------------------------------------------------------
     # Function to run HSV range preview
     # ---------------------------------------------------------------------------------
@@ -718,36 +965,13 @@ class GUI:
 	        newWindow.geometry("500x650") # window size of 500 x 650
 
 	        # create widgets
-	        HSVSlidersLabel = tk.Label(
-	            newWindow,
-	            text="HSV Sliders",
-	            background='#ffffff',
-	            foreground='#000000',
-	            font=("Calibri Light", 24))
-
-	        LowerLabel = tk.Label(
-	            newWindow,
-	            text="Lower",
-	            background='#ffffff',
-	            foreground='#000000',
-	            font=("Calibri Light", 15))
-
-	        UpperLabel = tk.Label(
-	            newWindow,
-	            text="Upper",
-	            background='#ffffff',
-	            foreground='#000000',
-	            font=("Calibri Light", 15))         
+	        HSVSlidersLabel = tk.Label(newWindow,text="HSV Sliders",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
+	        LowerLabel = tk.Label(newWindow,text="Lower",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))
+	        UpperLabel = tk.Label(newWindow,text="Upper",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))         
 
 	        # button
-	        savetoMain = tk.Button(
-	            newWindow, 
-	            text = "Save Values",
-	            background = '#ffffff',
-	            foreground = '#000000',
-	            command = lambda: saveValuestoMain(),
-	            width = 20,
-	            font=("Calibri Light", 15))
+	        savetoMain = tk.Button(newWindow, text = "Save Values",bg = '#ffffff',fg = '#000000',command = lambda: saveValuestoMain(),
+	            width = 20,font=("Calibri Light", 15))
 
 	        # frames
 	        Frame1 = tk.Frame(newWindow, background='#ffffff')    
