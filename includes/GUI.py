@@ -510,7 +510,7 @@ class GUI:
             # ask for name
             name = tk.StringVar()
             newWindow = tk.Toplevel(self.root)
-            newWindow.configure(background='#ffffff')
+            newWindow.configure(bg='#ffffff')
             self.centre_window(newWindow, 300, 170)
             
             # widgets
@@ -560,33 +560,22 @@ class GUI:
     	# ask for name
 		name = tk.StringVar()
 		newWindow = tk.Toplevel(self.root)
-		newWindow.configure(background='#ffffff')
-		newWindow.geometry("350x180") # window size in pixels
+		newWindow.configure(bg='#ffffff')
+		self.centre_window(newWindow, 300, 170)
 
 		# labels
-		nameLabel = tk.Label(
-		    newWindow,
-		    text="Name",
-		    background='#ffffff',
-		    foreground='#000000',
-		    font=("Calibri Light", 24))
+		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
 
 		# drop down menu used to select profile to delete
 		removecolourMenuVar = tk.StringVar(self.root)
 		removecolourMenuVar.set('Select Profile to Remove')
 		removeMenu = tk.OptionMenu(newWindow, removecolourMenuVar, 'Select Profile to Remove', *self.systemParameters["Colour_Options"])
 		removeMenu.config(font=("Calibri Light", 13))
-		removeMenu.config(background='#ffffff')
+		removeMenu.config(bg='#ffffff')
 
 		# button
-		nameButton = tk.Button(
-		    newWindow,
-		    text = "Save",
-		    background='#ffffff',
-		    foreground='#000000',
-		    command = lambda: newWindow.destroy(),
-		    width = 20,
-		    font=("Calibri Light", 14))
+		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: newWindow.destroy(),
+		    width = 20,font=("Calibri Light", 14))
 
 		# packing
 		nameLabel.pack(pady = (20,5))
@@ -601,6 +590,13 @@ class GUI:
 			self.config.remove_option("HSV Ranges", removecolourMenuVar.get())
 			self.systemParameters["Colour_Options"].remove(removecolourMenuVar.get())
 			self.systemParameters["Saved_Colours"].pop(removecolourMenuVar.get())
+
+			# update menu
+			self.colourMenuVar.set('Select HSV Range')
+			self.colourMenu['menu'].delete(0, 'end')
+
+			for option in self.systemParameters["Colour_Options"]:
+				self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
 
     # ---------------------------------------------------------------------------------
     # Function to run HSV range preview
