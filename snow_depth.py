@@ -13,9 +13,11 @@ from progress_bar import progress
 from equalize import equalize_hist
 from register import alignImages
 from filter_night import isDay
+from check_stakes import getValidStakes
 from GUI import GUI
 import Tkinter as tk
 import datetime
+import time
 
 root = tk.Tk()
 gui = GUI(root)
@@ -23,6 +25,9 @@ root.mainloop()
 
 # get parameters
 params = gui.getValues()
+
+# start timer
+start = time.time()
 
 # ---------------------------------------------------------------------------------
 # Get parameters from GUI
@@ -74,15 +79,20 @@ path = "./measure-depth/" + date
 os.mkdir(path)
 
 # add optional directories
-if(debug):
-    paths_dict["equalized"] = path + "/equalized/"
-    paths_dict["equalized-template"] = path + "/equalized-template/"
-    paths_dict["registered"] = path + "/registered/"
-    paths_dict["matches"] = path + "/matches/"
+paths_dict["equalized"] = path + "/equalized/"
+paths_dict["equalized-template"] = path + "/equalized-template/"
+paths_dict["registered"] = path + "/registered/"
+paths_dict["matches"] = path + "/matches/"
+paths_dict["template-overlay"] = path + "/template-overlay/"
+paths_dict["stake-check"] = path + "/stake-check/"
+
+if(debug):    
     os.mkdir(paths_dict["equalized"])
     os.mkdir(paths_dict["equalized-template"])
     os.mkdir(paths_dict["registered"])
     os.mkdir(paths_dict["matches"])
+    os.mkdir(paths_dict["template-overlay"])
+    os.mkdir(paths_dict["stake-check"])
 
 # ---------------------------------------------------------------------------------
 # Filter Out Night Images
@@ -162,7 +172,7 @@ if(debug):
 # list to hold registered images
 images_registered = list()
 
-print("\nRegistering Images")
+print("\n\nRegistering Images")
 
 # iterate through equalized images
 for count, img in enumerate(images_equalized):
@@ -179,6 +189,52 @@ for count, img in enumerate(images_equalized):
     if(debug):
         cv2.imwrite((paths_dict["registered"] + filtered_names[count]), imgReg)
         cv2.imwrite((paths_dict["matches"] + filtered_names[count]), imgMatch)
+
+# ---------------------------------------------------------------------------------
+# Overlay ROI from template onto images
+# ---------------------------------------------------------------------------------
+
+# only run if in debugging mode
+if(debug):
+    print("\n\nOverlaying ROI")
+
+    # iterate through images
+    for count, img in enumerate(images_registered):
+        # update progress bar
+        progress(count + 1, num_images, status=filtered_names[count])
+
+        # iterate through stakes
+        for stake in roi_coordinates:
+            # iterate through roi in each stake
+            for i, rectangle in enumerate(stake):
+                # stake itself
+                if(i == 0):
+                    cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                        (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 0, 255), 3)
+                # blobs
+                else:
+                    cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                        (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 255, 0), 3)
+
+        cv2.imwrite(paths_dict["template-overlay"] + filtered_names[count], img)
+
+# ---------------------------------------------------------------------------------
+# Get Valid Stakes
+# ---------------------------------------------------------------------------------
+
+print("\n\nValidating Stakes")
+
+for count, img in enumerate(images_registered):
+    # update progress bar
+    progress(count + 1, num_images, status=filtered_names[count])
+
+    # check stakes in image
+    getValidStakes(img, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
+        blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names[count],
+        paths_dict["stake-check"] )
+
+# display run time
+print("\n\nRun Time: %.2f s" % (time.time() - start))
 
 sys.exit()
 
