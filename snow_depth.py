@@ -19,8 +19,7 @@ root.mainloop()
 
 # get parameters
 params = gui.getValues()
-
-print("done")
+print(params)
 
 if(params == False):
     sys.exit()

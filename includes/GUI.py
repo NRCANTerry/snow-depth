@@ -2,6 +2,7 @@
 import Tkinter as tk
 import tkFileDialog
 import tkMessageBox
+import tkSimpleDialog
 import ttk
 import numpy as np
 import ConfigParser
@@ -9,7 +10,9 @@ import ast
 import cv2
 import sys
 import os
-import string
+from PIL import ImageTk, Image
+from scipy.spatial import distance as dist
+import pickle
 
 class GUI:
     def __init__(self, master):
@@ -30,7 +33,7 @@ class GUI:
         # dictionary with options for program
         self.systemParameters = {
         	"Directory": "",
-        	"Lower_HSV_1": np.array([5,10,20]),
+        	"Lower_HSV_1": np.array([0,0,0]),
         	"Upper_HSV_1": np.array([0,0,0]),
         	"Lower_HSV_2": np.array([0,0,0]),
         	"Upper_HSV_2": np.array([0,0,0]),
@@ -46,6 +49,10 @@ class GUI:
         	"Profile_Options": list(),
         	"Templates": dict(), 
         	"Templates_Options": list(),
+        	"Template_Paths": dict(),
+        	"Current_Template_Name": "",
+        	"Current_Template_Coords": list(),
+        	"Current_Template_Path": "",
         	"Window_Closed": False
         }
 
@@ -53,7 +60,7 @@ class GUI:
         self.config = ConfigParser.ConfigParser()
 
         # open preferences file
-        self.systemParameters["Saved_Colours"], self.systemParameters["Saved_Profiles"], self.systemParameters["Templates"] = self.getPreferences()
+        self.systemParameters["Saved_Colours"], self.systemParameters["Saved_Profiles"], self.systemParameters["Templates"], self.systemParameters["Template_Paths"] = self.getPreferences()
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
@@ -181,7 +188,7 @@ class GUI:
         self.profileMenuVar.set('Select Profile')
         self.profileMenu = tk.OptionMenu(self.root, self.profileMenuVar, 'Select Profile', *self.systemParameters["Profile_Options"])
         self.profileMenu.config(font=("Calibri Light", 13), bg='#ffffff', width = 15)
-      	# include trace
+        self.profileMenuVar.trace('w', self.change_Preferences_dropdown)
 
         # ---------------------------------------------------------------------------------
         # Top Menu
@@ -208,6 +215,7 @@ class GUI:
         # Preferences menu
         self.prefMenu.add_command(label = "Create Profile", command = lambda: self.createProfile())
         self.prefMenu.add_command(label = "Remove Profile", command = lambda: self.removeProfile())
+        self.prefMenu.add_command(label = "Preview Profile", command = lambda: self.previewProfile())
         self.menubar.add_cascade(label = "Preferences", menu = self.prefMenu)
 
         # configure menu bar
@@ -312,13 +320,14 @@ class GUI:
 				and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
 				and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
 				and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
-				and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.directory != "")
+				and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.systemParameters["Directory"] != "" \
+				and self.profileMenuVar.get() != "Select Profile")
 		else:
 			return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
 				and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
 				and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
 				and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
-				and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1))
+				and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile")
 
     # ---------------------------------------------------------------------------------
     # Function to allow selection of directory/file where images are stored
@@ -367,8 +376,11 @@ class GUI:
     def getValues(self):
     	# return values in tuple format
         if(self.systemParameters["Window_Closed"]):
-            return self.systemParameters["Directory"], self.systemParameters["Lower_HSV_1"], self.systemParameters["Upper_HSV_1"], \
-            		self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"]
+			return self.systemParameters["Directory"], self.systemParameters["Lower_HSV_1"], self.systemParameters["Upper_HSV_1"], \
+					self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"], self.systemParameters["Upper_Border"], \
+					self.systemParameters["Lower_Border"], self.systemParameters["Lower_Blob_Size"], self.systemParameters["Upper_Blob_Size"], \
+					self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
+					tuple(self.systemParameters["Tile_Size"])
 
         # return False if run button wasn't pressed
         else:
@@ -404,13 +416,15 @@ class GUI:
         if(str(self.config.read('./preferences.cfg')) == "[]"):
             self.config.add_section('HSV Ranges')
             self.config.add_section('Profiles')
-            self.config.add_section('Templates')
+            self.config.add_section('Template Coordinates')
+            self.config.add_section('Template Images')
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
 
         # load in preferences
-        return dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), dict(self.config.items('Templates'))
+        return dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
+        	dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images'))
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -512,8 +526,11 @@ class GUI:
             self.systemParameters["Lower_Border"] = int(optionsList[1])
             self.systemParameters["Lower_Blob_Size"] = int(optionsList[2])
             self.systemParameters["Upper_Blob_Size"] = int(optionsList[3])
-            self.systemParameters["Clip_Limit"] = int(optionsList[4])
-            self.systemParameters["Tile_Size"] = [int(optionsList[5]), int(optionsList[6])]
+            self.systemParameters["Current_Template_Name"] = str(optionsList[4])
+            self.systemParameters["Current_Template_Coords"] = ast.literal_eval(self.systemParameters["Templates"][str(optionsList[4])])
+            self.systemParameters["Current_Template_Path"] = self.systemParameters["Template_Paths"][str(optionsList[4])]
+            self.systemParameters["Clip_Limit"] = int(optionsList[5])
+            self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]	
 
     # ---------------------------------------------------------------------------------
     # Function to restart script to load changes
@@ -603,10 +620,18 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def removeRanges(self):
+    	# function to close window
+    	def closing():
+    		closed = True
+    		newWindow.destroy()
+
     	# create window 
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
+
+		# flag for if window was closed without button
+		closed = False
 
 		# labels
 		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -619,7 +644,7 @@ class GUI:
 		removeMenu.config(bg='#ffffff')
 
 		# button
-		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: newWindow.destroy(),
+		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: closing(),
 		    width = 20,font=("Calibri Light", 14))
 
 		# packing
@@ -631,7 +656,7 @@ class GUI:
 		self.root.wait_window(newWindow)
 
 		# remove selected option from menu
-		if(removecolourMenuVar.get() != 'Select Profile to Remove'):
+		if(removecolourMenuVar.get() != 'Select Profile to Remove' and closed):
 			self.config.remove_option("HSV Ranges", removecolourMenuVar.get())
 			self.systemParameters["Colour_Options"].remove(removecolourMenuVar.get())
 			self.systemParameters["Saved_Colours"].pop(removecolourMenuVar.get())
@@ -648,13 +673,300 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def createProfile(self):
+		# function to order points of minAreaRect
+		def orderPoints(pts):
+			# sort the points based on their x-coordinates
+			xSorted = pts[np.argsort(pts[:, 0]), :]
+
+			# get left-most and right-most points
+			leftMost = xSorted[:2, :]
+			rightMost = xSorted[2:, :]
+
+			# sort left-most coordinates according to y coordinates
+			leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
+			(tl, bl) = leftMost
+
+			# find bottom right
+			D = dist.cdist(tl[np.newaxis], rightMost, "euclidean")[0]
+			(br, tr) = rightMost[np.argsort(D)[::-1], :]
+
+			# return coordiantes in top-left, top-right, bottom-right, bottom-left order
+			return tl, tr, br, bl
+
+		# embedded function to allow for removal of template
+		def removeTemplate():
+			# function to close window
+			def closing():
+				closed = True
+				removeTemplateWindow.destroy()
+
+			# create window
+			removeTemplateWindow = tk.Toplevel(newWindow)
+			removeTemplateWindow.configure(bg='#ffffff')
+			self.centre_window(removeTemplateWindow, 300, 170)	
+					
+			# window closed flag
+			closed = False
+
+			# labels
+			nameLabel = tk.Label(removeTemplateWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
+
+			# drop down menu used to select profile to delete
+			removetemplateMenuVar = tk.StringVar(self.root)
+			removetemplateMenuVar.set('Select Template to Remove')
+			removeTemplateMenu = tk.OptionMenu(removeTemplateWindow, removetemplateMenuVar, 'Select Template to Remove', *self.systemParameters["Templates_Options"])
+			removeTemplateMenu.config(font=("Calibri Light", 13))
+			removeTemplateMenu.config(bg='#ffffff')
+
+			# button
+			nameButton = tk.Button(removeTemplateWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: closing(),
+				width = 20,font=("Calibri Light", 14))
+
+			# packing
+			nameLabel.pack(pady = (20,5))
+			removeTemplateMenu.pack(pady = 10)
+			nameButton.pack(pady = 5)
+			
+			# wait until user selects template
+			newWindow.wait_window(removeTemplateWindow)
+
+			# remove selected option from menu
+			if(removetemplateMenuVar.get() != 'Select Template to Remove' and closed):
+				self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
+				self.config.remove_option("Template Images", removetemplateMenuVar.get())
+				self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
+				self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
+				self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
+
+				# update menu 
+				templateMenuVar.set('Select Template')
+				templateMenu['menu'].delete(0, 'end')
+
+				for option in self.systemParameters["Templates_Options"]:
+					templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
+
     	# embedded function to allow for creation of template
 		def createTemplate():
-			print("template")
+			# embedded function to get template paths
+			def getImage(type):
+				filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + " template",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+				shortName = os.path.split(filename)[1]
+				if(type == "marked"):
+					self.markedTemplate = filename
+					directoryPathLabel1.config(text=shortName)
+				else:
+					self.unmarkedTemplate = filename
+					directoryPathLabel2.config(text=shortName)
 
+			# open new window
+			templateWindow = tk.Toplevel(newWindow)
+			templateWindow.configure(bg='#ffffff')
+			self.centre_window(templateWindow, 450, 750)
+
+			# hide other windows
+			newWindow.withdraw()
+			self.root.withdraw()
+
+			# frames
+			lowerFrame = tk.Frame(templateWindow, bg='#ffffff')
+			upperFrame = tk.Frame(templateWindow, bg='#ffffff')
+			nameFrame = tk.Frame(templateWindow, bg='#ffffff')
+
+			# labels
+			titleLabel = tk.Label(templateWindow, text = "Generate Template", bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
+			directoryLabel1 = tk.Label(templateWindow, text = "Select Marked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+			directoryPathLabel1 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+			directoryLabel2 = tk.Label(templateWindow, text = "Select Unmarked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+			directoryPathLabel2 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+			parametersLabel = tk.Label(templateWindow, text = "Parameters",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+			lowerSizeLabel = tk.Label(lowerFrame, text = "Lower Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+			upperSizeLabel = tk.Label(upperFrame, text = "Upper Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+			nameLabel = tk.Label(nameFrame, text = "Template Name",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+
+			# entries
+			name = tk.StringVar()
+			lowerSize = tk.IntVar()
+			upperSize = tk.IntVar()
+			nameEntry = tk.Entry(nameFrame, font=("Calibri Light", 14),textvariable=name, width=10)
+			lowerEntry = tk.Entry(lowerFrame, font=("Calibri Light", 14),textvariable=lowerSize, width=10)
+			upperEntry = tk.Entry(upperFrame, font=("Calibri Light", 14),textvariable=upperSize, width=10)
+
+			# set default values
+			lowerEntry.insert(0,100)
+			upperEntry.insert(0,10000)
+			lowerSize.set(100)
+			upperSize.set(10000)
+
+			# buttons
+			self.markedTemplate = ""
+			self.unmarkedTemplate = ""
+
+			nameButton = tk.Button(templateWindow, text="Generate",bg='#ffffff',fg='#000000',command = lambda: templateWindow.destroy(),
+				width=20,font=("Calibri Light",14))
+			dirButton1 = tk.Button(templateWindow, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
+				width=20,font=("Calibri Light",14))
+			dirButton2 = tk.Button(templateWindow, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
+				width=20,font=("Calibri Light",14))
+
+			# packing
+			titleLabel.pack(pady = 20)
+			directoryLabel1.pack(pady = 10)
+			directoryPathLabel1.pack(pady = 10)
+			dirButton1.pack(pady = 10)
+			directoryLabel2.pack(pady = (20, 10))
+			directoryPathLabel2.pack(pady = 10)
+			dirButton2.pack(pady = 10)
+			parametersLabel.pack(pady = (20,10))
+			lowerFrame.pack(pady = 10)
+			lowerSizeLabel.pack(side = tk.LEFT, padx = (20,5))
+			lowerEntry.pack(side = tk.LEFT, padx = (5, 20))
+			upperFrame.pack(pady = 10)
+			upperSizeLabel.pack(side = tk.LEFT, padx = (20,5))
+			upperEntry.pack(side = tk.LEFT, padx = (5, 20))			
+			nameFrame.pack(pady = 10)
+			nameLabel.pack(side = tk.LEFT, padx = (20,5))
+			nameEntry.pack(side = tk.LEFT, padx = (5,20))
+			nameButton.pack(pady = (20,10))
+
+			self.root.wait_window(templateWindow)
+
+			# if valid filename
+			if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
+				# hsv ranges
+				lower_pink = np.array([125, 10, 50])
+				upper_pink = np.array([160, 255, 255])
+				lower_green = np.array([60, 160, 130])
+				upper_green = np.array([70, 255, 255])
+				min_contour_area = lowerSize.get()
+				max_contour_area = upperSize.get()
+
+				# import image
+				img = cv2.imread(self.markedTemplate)
+				img_unmarked = cv2.imread(self.unmarkedTemplate)
+
+				# convert to HSV colour space
+				hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+				# create mask to find stakes
+				stake_mask = cv2.inRange(hsv, lower_pink, upper_pink)
+
+				# remove noise
+				kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
+				stake_mask= cv2.morphologyEx(stake_mask, cv2.MORPH_OPEN, kernel)
+
+				# find contours
+				stake_contours = cv2.findContours(stake_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+
+				# list containing stake coordinates
+				stakes_coords = list()
+
+				# variables for number of stakes and blobs found
+				stakes = 0
+				blobs = 0
+				blob_area = 0.0
+				stake_area = 0.0
+
+				# iterate through stake contours
+				for cnt in stake_contours:
+					# get contour coordinates
+					rect = cv2.minAreaRect(cnt)
+					box = np.array(cv2.boxPoints(rect), dtype = "int")
+
+					# order points
+					points = orderPoints(box)
+					points_list = [[points[0], points[2]]]
+					stakes_coords.append(points_list)
+
+					# increment stake counter
+					stakes += 1
+					stake_area += cv2.contourArea(cnt)
+
+				# find blobs pertaining to each stake
+				for stake in stakes_coords:
+					# choose roi to be stake bounding rectangle
+					roi = hsv[stake[0][0][1]: stake[0][1][1], stake[0][0][0]: stake[0][1][0]]
+
+					# apply mask
+					blob_mask = cv2.inRange(roi, lower_green, upper_green)
+
+					# remove noise
+					blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_OPEN, kernel)
+
+					# find contours in roi
+					blob_contours = cv2.findContours(blob_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset = (stake[0][0][0], stake[0][0][1]))[1]
+
+					# iterate through contours
+					for cnt in blob_contours:
+						# filter contours by area
+						if min_contour_area <= cv2.contourArea(cnt) <= max_contour_area:
+							# get contour coordinates
+							rect = cv2.minAreaRect(cnt)
+							box = np.array(cv2.boxPoints(rect), dtype = "int")
+
+							# order points
+							points  = orderPoints(box)
+
+							# add blobs to stake list
+							stake.append([points[0], points[2]])
+
+							# increment blob counter
+							blobs += 1
+							blob_area += cv2.contourArea(cnt)
+
+				# output boxes
+				for stake in stakes_coords:
+					for count, blob in enumerate(stake):
+						if(count == 0):
+							# draw stake
+							cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,0,255),2)
+						else:
+							# draw blob
+							cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
+
+				# output results of template generation
+				print("---------------------------------------")
+				print("Template Generated Successfully\n")
+				print("Number Of Stakes: %s" % stakes)
+				print("Number Of Blobs: %s" % blobs)
+				print("Average Stake Area: %s" % float(stake_area/stakes))
+				print("Average Blob Area: %s" % float(blob_area/blobs))
+
+				# show user image and confirm whether to save template
+				img_unmarked = cv2.resize(img_unmarked, None, fx = 0.75, fy = 0.75)
+				cv2.imshow("Template Overlay", img_unmarked)
+				answer = tkMessageBox.askyesno("Question", "Would you like to save this template")
+
+				# close windows and save if appropriate
+				cv2.destroyAllWindows()
+
+				if(answer):
+					# create output string
+					outputString = str(stakes_coords).replace("array(", "").replace(")", "")
+
+					# save to config file
+					self.config.set('Template Coordinates', name.get(), outputString)
+					self.config.set('Template Images', name.get(), self.unmarkedTemplate)
+
+					# update menu
+					templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
+					self.systemParameters["Templates"][name.get()] = outputString
+					self.systemParameters["Templates_Options"].append(name.get())
+					self.systemParameters["Template_Paths"][name.get()] = self.unmarkedTemplate
+					self.systemParameters["Current_Template_Name"] = name.get()
+					self.systemParameters["Current_Template_Coords"] = outputString
+					self.systemParameters["Current_Template_Path"] = self.unmarkedTemplate
+					templateMenuVar.set(name.get())
+
+					print("Template Saved Successfully: %s \n" % name.get())
+			
+			# reopen other windows
+			newWindow.deiconify()
+			self.root.deiconify()
+
+		# embedded function to get name for saved profile
 		def getName():
 			# get fields are filled in
-			if all(v.get() != "" for v in entries):# and templateMenuVar.get() != "Select Template":
+			if all(v.get() != "" for v in entries) and templateMenuVar.get() != "Select Template":
 				# ask for name
 				name = tk.StringVar()
 				nameWindow = tk.Toplevel(newWindow)
@@ -679,7 +991,7 @@ class GUI:
 				if(name.get() != ""):
 					# create output string
 					outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + str(self.systemParameters["Lower_Border"]) + "," + str(self.systemParameters["Lower_Blob_Size"]) + \
-						"," + str(self.systemParameters["Upper_Blob_Size"]) + "," + str(self.systemParameters["Clip_Limit"]) + "," + str(self.systemParameters["Tile_Size"][0]) + \
+						"," + str(self.systemParameters["Upper_Blob_Size"]) + "," + '"' + str(templateMenuVar.get()) + '"' + "," + str(self.systemParameters["Clip_Limit"]) + "," + str(self.systemParameters["Tile_Size"][0]) + \
 						"," + str(self.systemParameters["Tile_Size"][1]) + "]"
 
 					# add to config file
@@ -741,23 +1053,37 @@ class GUI:
 		tileSizeEntry1 = tk.Entry(tileSizeFrame, validatecommand =((validateCommand, '%P', "Tile_Size", 0)))
 		tileSizeEntry2 = tk.Entry(tileSizeFrame, validatecommand =((validateCommand, '%P', "Tile_Size", 1)))
 
+		# set default values
+		clipLimitEntry.insert(0,5)
+		tileSizeEntry1.insert(0,8)
+		tileSizeEntry2.insert(0,8)
+		self.systemParameters["Clip_Limit"] = 5
+		self.systemParameters["Tile_Size"] = [8,8]
+
 		entries = [upperBorderEntry, lowerBorderEntry, lowerBlobEntry, upperBlobEntry, clipLimitEntry, tileSizeEntry1, tileSizeEntry2]
 
 		for entry in entries:
-			entry.config(validate = "key", font=("Calibri Light", 14), width = 4)
+			entry.config(validate = "key", font=("Calibri Light", 14), width = 6)
 
 		# drop down
 		templateMenuVar = tk.StringVar(newWindow)
 		templateMenuVar.set('Select Template')
-		templateMenu = tk.OptionMenu(templateFrame, templateMenuVar, 'Select Template', *self.systemParameters["Templates"])
+		templateMenu = tk.OptionMenu(templateFrame, templateMenuVar, 'Select Template', *self.systemParameters["Templates_Options"])
 		templateMenu.config(font=("Calibri Light", 14), bg='#ffffff', width = 15)
-        #self.colourMenuVar.trace('w', self.change_HSV_dropdown)
+
+		# menu bar
+		profileMenuBar = tk.Menu(newWindow)
+		profileFileMenu = tk.Menu(profileMenuBar, tearoff=0)
+		profileFileMenu.add_command(label = "Generate Template", command = lambda: createTemplate())
+		profileFileMenu.add_command(label = "Remove Template", command = lambda: removeTemplate())
+		profileMenuBar.add_cascade(label = "File", menu = profileFileMenu)
+		newWindow.config(menu = profileMenuBar)
 
         # button
 		createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg = '#ffffff',
 			fg = '#000000', font=("Calibri Light", 15), width = 17)
-		createTemplateButton = tk.Button(buttonFrame, text = "Create Template", command = lambda: createTemplate(), bg = '#ffffff',
-			fg = '#000000', font=("Calibri Light", 15), width = 17)
+		#createTemplateButton = tk.Button(buttonFrame, text = "Create Template", command = lambda: createTemplate(), bg = '#ffffff',
+		#	fg = '#000000', font=("Calibri Light", 15), width = 17)
         
 		# packing
 		titleLabel.pack(pady = 20)
@@ -794,7 +1120,7 @@ class GUI:
 		tileSizeLabel4.pack(side = tk.LEFT, padx = (0,5))    
 
 		buttonFrame.pack(pady = 20)
-		createTemplateButton.pack(side = tk.LEFT, padx = (20, 5))
+		#createTemplateButton.pack(side = tk.LEFT, padx = (20, 5))
 		createProfileButton.pack(side = tk.LEFT, padx = (5, 20))
 
 		# wait until user inputs name
@@ -805,10 +1131,18 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def removeProfile(self):
+    	# function to close window
+    	def closing():
+    		closed = True
+    		newWindow.destroy()
+
     	# create window 
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
+
+		# window closed flag
+		closed = False
 
 		# labels
 		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -821,7 +1155,7 @@ class GUI:
 		removeMenu.config(bg='#ffffff')
 
 		# button
-		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: newWindow.destroy(),
+		nameButton = tk.Button(newWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: closing(),
 		    width = 20,font=("Calibri Light", 14))
 
 		# packing
@@ -833,7 +1167,7 @@ class GUI:
 		self.root.wait_window(newWindow)
 
 		# remove selected option from menu
-		if(removeprofileMenuVar.get() != 'Select Profile to Remove'):
+		if(removeprofileMenuVar.get() != 'Select Profile to Remove' and closed):
 			self.config.remove_option("Profiles", removeprofileMenuVar.get())
 			self.systemParameters["Profile_Options"].remove(removeprofileMenuVar.get())
 			self.systemParameters["Saved_Profiles"].pop(removeprofileMenuVar.get())
@@ -843,14 +1177,55 @@ class GUI:
 			self.profileMenu['menu'].delete(0, 'end')
 
 			for option in self.systemParameters["Profile_Options"]:
-				self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))	
-				
+				self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))
+
+	# ---------------------------------------------------------------------------------
+    # Function to preview preferences profile
+    # ---------------------------------------------------------------------------------
+
+    def previewProfile(self):
+    	if(self.profileMenuVar.get() != 'Select Profile'):
+			# create window
+			newWindow = tk.Toplevel(self.root)
+			newWindow.configure(bg='#ffffff')
+			self.centre_window(newWindow, 450, 500)
+
+			# labels
+			titleLabel = tk.Label(newWindow, text = str(self.profileMenuVar.get()), bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
+			upperBorderLabel = tk.Label(newWindow, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
+			lowerBorderLabel = tk.Label(newWindow, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
+			lowerBlobLabel = tk.Label(newWindow, text = "Lower Blob Size: " + str(self.systemParameters["Lower_Blob_Size"]))
+			upperBlobLabel = tk.Label(newWindow, text = "Upper Blob Size: " + str(self.systemParameters["Upper_Blob_Size"]))
+			templateLabel = tk.Label(newWindow, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
+			clipLimitLabel = tk.Label(newWindow, text = "Clip Limit: " + str(self.systemParameters["Clip_Limit"]))
+			tileSizeLabel = tk.Label(newWindow, text = "Tile Size: " + str(self.systemParameters["Tile_Size"]))
+
+			labels = [upperBorderLabel, lowerBorderLabel, lowerBlobLabel, upperBlobLabel, templateLabel, clipLimitLabel, tileSizeLabel]
+
+			for label in labels:
+				label.config(bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+	        
+			# packing
+			titleLabel.pack(pady = 20)
+			upperBorderLabel.pack(pady = 10)
+			lowerBorderLabel.pack(pady = 10)
+			lowerBlobLabel.pack(pady = 10)
+			upperBlobLabel.pack(pady = 10)
+			templateLabel.pack(pady = 10)
+			clipLimitLabel.pack(pady = 10)
+			tileSizeLabel.pack(pady = 10)  
+
+			# wait until user closes window
+			self.root.wait_window(newWindow)
+    	else:
+			tkMessageBox.showinfo("Error", "Please Select a Profile under Settings to Preview")
+
+
     # ---------------------------------------------------------------------------------
     # Function to run HSV range preview
     # ---------------------------------------------------------------------------------
 
     def runPreview(self):
-
         # embedded function to update HSV mask on slider movement
         def updateValues(event):
             # get slider positions
