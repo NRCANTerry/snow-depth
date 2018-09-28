@@ -23,10 +23,7 @@ def increase_brightness(img, val):
 	return img
 
 # function to apply adaptive histogram equalization
-def equalize_hist(img_name, clip_limit, tile_size):	
-	# read in image
-	img = cv2.imread(img_name)
-
+def equalize_hist(img, clip_limit, tile_size):	
 	# convert to LAB
 	lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
@@ -48,16 +45,3 @@ def equalize_hist(img_name, clip_limit, tile_size):
 
 	# return image
 	return bgr
-
-# get images
-images = [file_name for file_name in os.listdir('./images')]
-
-for img_name in images:
-	img = cv2.imread('images/' + img_name)
-	img_mod = equalize_hist('images/' + img_name, 5.0, (8,8))
-
-	vis = np.concatenate((img, img_mod), axis = 1)
-	vis = cv2.resize(vis, None, fx = 0.25, fy = 0.25)
-
-	cv2.imshow("Image", vis)
-	cv2.waitKey()
