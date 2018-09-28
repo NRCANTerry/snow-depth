@@ -10,6 +10,7 @@ import numpy as np
 import json
 import imutils
 from progress_bar import progress
+from equalize import equalize_hist
 from GUI import GUI
 import Tkinter as tk
 import datetime
@@ -21,27 +22,12 @@ root.mainloop()
 # get parameters
 params = gui.getValues()
 
-print("Directory %s" % params[0])
-print("Lower HSV 1 %s" % params[1])
-print("Upper HSV 1 %s" % params[2])
-print("Lower HSV 2 %s" % params[3])
-print("Upper HSV 2 %s" % params[4])
-print("Upper Border %s" % params[5])
-print("Lower Border %s" % params[6])
-print("Lower Blob Size %s" % params[7])
-print("Upper Blob Size %s" % params[8])
-print("Coordinates %s" % params[9])
-print("Template Path %s" % params[10])
-print("Clip Limit %s" % params[11])
-print("Tile Size %s" % str(params[12]))
-print("Debug %s" % params[13])
-
 # ---------------------------------------------------------------------------------
 # Get parameters from GUI
 # ---------------------------------------------------------------------------------
 
 # update parameters
-directory = params[0]
+directory = params[0] + "/"
 lower_hsv1 = params[1]
 upper_hsv1 = params[2]
 lower_hsv2 = params[3]
@@ -73,6 +59,9 @@ bar_width_high = 300
 # Create Directories
 # ---------------------------------------------------------------------------------
 
+# dictionary of paths
+paths_dict = dict()
+
 # create directories
 if(not os.path.isdir("measure-depth")):
     os.mkdir("./measure-depth")
@@ -84,28 +73,64 @@ os.mkdir(path)
 
 # add optional directories
 if(debug):
-    os.mkdir((path + "/equalized"))
+    paths_dict["equalized"] = path + "/equalized/"
+    paths_dict["equalized-template"] = path + "/equalized-template/"
+    os.mkdir(paths_dict["equalized"])
+    os.mkdir(paths_dict["equalized-template"])
 
 # ---------------------------------------------------------------------------------
-# Get parameters from GUI
+# Equalize Images
+# ---------------------------------------------------------------------------------
+
+# get images
+images = [file_name for file_name in os.listdir(directory)]
+num_images = len(images)
+
+# list to hold equalized images
+images_equalized = list()
+
+print("\nEqualizing Images")
+
+# iterate through images
+for count, img_name in enumerate(images):
+    # update progress bar
+    progress(count + 1, num_images, status=img_name)
+
+    # read in image
+    img = cv2.imread(directory + img_name)
+
+    # get height and width
+    h, w = img.shape[:2]
+
+    # crop image
+    img = img[img_border_upper:(h - img_border_lower), :, :]
+
+    # equalize image according to specified parameters
+    img_eq = equalize_hist(img, clip_limit, tile_size)
+
+    # add to list
+    images_equalized.append(img_eq)
+
+    # if debugging write to directory
+    if(debug):
+        cv2.imwrite((paths_dict["equalized"] + img_name), img_eq)
+
+# equalize and crop template
+print("\n\nEqualizing Template ...")
+template = cv2.imread(template_path)
+h_temp, w_temp = template.shape[:2]
+template = template[img_border_upper:(h - img_border_lower), :, :]
+template_eq = equalize_hist(template, clip_limit, tile_size)
+
+# if debugging write to directory
+if(debug):
+    cv2.imwrite((paths_dict["equalized-template"]+ os.path.split(template_path)[1]), template_eq)
+
+# ---------------------------------------------------------------------------------
+# Equalize Images
 # ---------------------------------------------------------------------------------
 
 sys.exit()
-
-# update parameters
-img_border_upper = params[5]
-img_border_lower = params[6]
-lower_hsv1 = params[1]
-upper_hsv1 = params[2]
-lower_hsv2 = params[3]
-upper_hsv2 = params[4]
-median_kernal_size = 5
-dilate_kernel = (5, 5)
-min_contour_area = 1e2
-max_contour_area = 1e5
-angle_thresh = -45
-bar_width_low = 15
-bar_width_high = 300
 
 # process all images in sub-directory
 img_dir = params[0] + '/'
