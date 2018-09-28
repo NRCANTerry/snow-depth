@@ -12,7 +12,6 @@ import sys
 import os
 from PIL import ImageTk, Image
 from scipy.spatial import distance as dist
-import pickle
 
 class GUI:
     def __init__(self, master):
@@ -174,6 +173,10 @@ class GUI:
         self.checkBox = tk.Checkbutton(self.root, text="Second HSV Range", bg='#ffffff', fg='#000000',
         	variable = self.secondHSVFlag, command = lambda:self.updateSelections(), font=("Calibri Light", 14))
 
+        self.debug = tk.IntVar()
+        self.debugCheckBox = tk.Checkbutton(self.root, text="Debug", bg='#ffffff', fg='#000000',
+        	variable = self.debug, font=("Calibri Light", 12))
+
         # ---------------------------------------------------------------------------------
         # Drop Down Menus
         # ---------------------------------------------------------------------------------
@@ -271,7 +274,8 @@ class GUI:
        	self.profileMenu.pack(pady = 10)
 
         # button packing
-        self.runButton.pack(pady = (20,30))
+        self.runButton.pack(pady = (20,10))
+        self.debugCheckBox.pack(pady = (10,20))
 
     # ---------------------------------------------------------------------------------
     # Functions
@@ -380,7 +384,7 @@ class GUI:
 					self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"], self.systemParameters["Upper_Border"], \
 					self.systemParameters["Lower_Border"], self.systemParameters["Lower_Blob_Size"], self.systemParameters["Upper_Blob_Size"], \
 					self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
-					tuple(self.systemParameters["Tile_Size"])
+					tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1)
 
         # return False if run button wasn't pressed
         else:
@@ -620,18 +624,28 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def removeRanges(self):
-    	# function to close window
-    	def closing():
-    		closed = True
-    		newWindow.destroy()
+		# function to close window
+		def closing():
+			# close window
+			newWindow.destroy()
+
+			# remove selected option from menu
+			if(removecolourMenuVar.get() != 'Select Profile to Remove'):
+				self.config.remove_option("HSV Ranges", removecolourMenuVar.get())
+				self.systemParameters["Colour_Options"].remove(removecolourMenuVar.get())
+				self.systemParameters["Saved_Colours"].pop(removecolourMenuVar.get())
+
+				# update menu
+				self.colourMenuVar.set('Select HSV Range')
+				self.colourMenu['menu'].delete(0, 'end')
+
+				for option in self.systemParameters["Colour_Options"]:
+					self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
 
     	# create window 
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
-
-		# flag for if window was closed without button
-		closed = False
 
 		# labels
 		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -654,19 +668,6 @@ class GUI:
 
 		# wait until user inputs name
 		self.root.wait_window(newWindow)
-
-		# remove selected option from menu
-		if(removecolourMenuVar.get() != 'Select Profile to Remove' and closed):
-			self.config.remove_option("HSV Ranges", removecolourMenuVar.get())
-			self.systemParameters["Colour_Options"].remove(removecolourMenuVar.get())
-			self.systemParameters["Saved_Colours"].pop(removecolourMenuVar.get())
-
-			# update menu
-			self.colourMenuVar.set('Select HSV Range')
-			self.colourMenu['menu'].delete(0, 'end')
-
-			for option in self.systemParameters["Colour_Options"]:
-				self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
 
     # ---------------------------------------------------------------------------------
     # Function to create a preferences profile
@@ -697,16 +698,28 @@ class GUI:
 		def removeTemplate():
 			# function to close window
 			def closing():
-				closed = True
+				# close window
 				removeTemplateWindow.destroy()
+
+				# remove selected option from menu
+				if(removetemplateMenuVar.get() != 'Select Template to Remove'):
+					self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
+					self.config.remove_option("Template Images", removetemplateMenuVar.get())
+					self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
+					self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
+					self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
+
+					# update menu 
+					templateMenuVar.set('Select Template')
+					templateMenu['menu'].delete(0, 'end')
+
+					for option in self.systemParameters["Templates_Options"]:
+						templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
 
 			# create window
 			removeTemplateWindow = tk.Toplevel(newWindow)
 			removeTemplateWindow.configure(bg='#ffffff')
 			self.centre_window(removeTemplateWindow, 300, 170)	
-					
-			# window closed flag
-			closed = False
 
 			# labels
 			nameLabel = tk.Label(removeTemplateWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -729,21 +742,6 @@ class GUI:
 			
 			# wait until user selects template
 			newWindow.wait_window(removeTemplateWindow)
-
-			# remove selected option from menu
-			if(removetemplateMenuVar.get() != 'Select Template to Remove' and closed):
-				self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
-				self.config.remove_option("Template Images", removetemplateMenuVar.get())
-				self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
-				self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
-				self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
-
-				# update menu 
-				templateMenuVar.set('Select Template')
-				templateMenu['menu'].delete(0, 'end')
-
-				for option in self.systemParameters["Templates_Options"]:
-					templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
 
     	# embedded function to allow for creation of template
 		def createTemplate():
@@ -843,6 +841,7 @@ class GUI:
 				# import image
 				img = cv2.imread(self.markedTemplate)
 				img_unmarked = cv2.imread(self.unmarkedTemplate)
+				img_save = img_unmarked
 
 				# convert to HSV colour space
 				hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -940,21 +939,29 @@ class GUI:
 				cv2.destroyAllWindows()
 
 				if(answer):
+					# search for template directory
+					if(not os.path.isdir("./includes/templates")):
+						os.mkdir("./includes/templates")
+
+					# write image to directory
+					path = os.getcwd() + "\\includes\\templates\\" + os.path.split(self.unmarkedTemplate)[1]
+					cv2.imwrite(path, img_save)
+
 					# create output string
 					outputString = str(stakes_coords).replace("array(", "").replace(")", "")
 
 					# save to config file
 					self.config.set('Template Coordinates', name.get(), outputString)
-					self.config.set('Template Images', name.get(), self.unmarkedTemplate)
+					self.config.set('Template Images', name.get(), path)
 
 					# update menu
 					templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
 					self.systemParameters["Templates"][name.get()] = outputString
 					self.systemParameters["Templates_Options"].append(name.get())
-					self.systemParameters["Template_Paths"][name.get()] = self.unmarkedTemplate
+					self.systemParameters["Template_Paths"][name.get()] = path
 					self.systemParameters["Current_Template_Name"] = name.get()
 					self.systemParameters["Current_Template_Coords"] = outputString
-					self.systemParameters["Current_Template_Path"] = self.unmarkedTemplate
+					self.systemParameters["Current_Template_Path"] = path
 					templateMenuVar.set(name.get())
 
 					print("Template Saved Successfully: %s \n" % name.get())
@@ -1131,18 +1138,28 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def removeProfile(self):
-    	# function to close window
-    	def closing():
-    		closed = True
-    		newWindow.destroy()
+		# function to close window
+		def closing():
+			# close window
+			newWindow.destroy()
 
-    	# create window 
+			# remove selected option from menu
+			if(removeprofileMenuVar.get() != 'Select Profile to Remove'):
+				self.config.remove_option("Profiles", removeprofileMenuVar.get())
+				self.systemParameters["Profile_Options"].remove(removeprofileMenuVar.get())
+				self.systemParameters["Saved_Profiles"].pop(removeprofileMenuVar.get())
+
+				# update menu
+				self.profileMenuVar.set('Select Profile')
+				self.profileMenu['menu'].delete(0, 'end')
+
+				for option in self.systemParameters["Profile_Options"]:
+					self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))
+
+		# create window 
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
-
-		# window closed flag
-		closed = False
 
 		# labels
 		nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -1165,19 +1182,6 @@ class GUI:
 
 		# wait until user inputs name
 		self.root.wait_window(newWindow)
-
-		# remove selected option from menu
-		if(removeprofileMenuVar.get() != 'Select Profile to Remove' and closed):
-			self.config.remove_option("Profiles", removeprofileMenuVar.get())
-			self.systemParameters["Profile_Options"].remove(removeprofileMenuVar.get())
-			self.systemParameters["Saved_Profiles"].pop(removeprofileMenuVar.get())
-
-			# update menu
-			self.profileMenuVar.set('Select Profile')
-			self.profileMenu['menu'].delete(0, 'end')
-
-			for option in self.systemParameters["Profile_Options"]:
-				self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))
 
 	# ---------------------------------------------------------------------------------
     # Function to preview preferences profile

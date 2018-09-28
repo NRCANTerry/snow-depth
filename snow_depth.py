@@ -12,6 +12,7 @@ import imutils
 from progress_bar import progress
 from GUI import GUI
 import Tkinter as tk
+import datetime
 
 root = tk.Tk()
 gui = GUI(root)
@@ -19,7 +20,45 @@ root.mainloop()
 
 # get parameters
 params = gui.getValues()
-print(params)
+
+print("Directory %s" % params[0])
+print("Lower HSV 1 %s" % params[1])
+print("Upper HSV 1 %s" % params[2])
+print("Lower HSV 2 %s" % params[3])
+print("Upper HSV 2 %s" % params[4])
+print("Upper Border %s" % params[5])
+print("Lower Border %s" % params[6])
+print("Lower Blob Size %s" % params[7])
+print("Upper Blob Size %s" % params[8])
+print("Coordinates %s" % params[9])
+print("Template Path %s" % params[10])
+print("Clip Limit %s" % params[11])
+print("Tile Size %s" % str(params[12]))
+print("Debug %s" % params[13])
+
+# flag to run program in debug mode
+debug = params[13]
+
+# ---------------------------------------------------------------------------------
+# Create Directories
+# ---------------------------------------------------------------------------------
+
+# create directories
+if(not os.path.isdir("measure-depth")):
+    os.mkdir("./measure-depth")
+
+# add folder for run
+date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M").replace(" ", "-").replace(":", "-")
+path = "./measure-depth/" + date
+os.mkdir(path)
+
+# add optional directories
+if(debug):
+    os.mkdir((path + "/equalized"))
+
+# ---------------------------------------------------------------------------------
+# Create window
+# ---------------------------------------------------------------------------------
 
 if(params == False):
     sys.exit()
