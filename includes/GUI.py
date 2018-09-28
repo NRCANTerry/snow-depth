@@ -703,11 +703,17 @@ class GUI:
 
 				# remove selected option from menu
 				if(removetemplateMenuVar.get() != 'Select Template to Remove'):
+					# delete saved template image
+					path = self.systemParameters["Template_Paths"][removetemplateMenuVar.get()]
+					os.remove(path)
+
 					self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
 					self.config.remove_option("Template Images", removetemplateMenuVar.get())
 					self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
 					self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
 					self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
+
+
 
 					# update menu 
 					templateMenuVar.set('Select Template')
@@ -841,7 +847,7 @@ class GUI:
 				# import image
 				img = cv2.imread(self.markedTemplate)
 				img_unmarked = cv2.imread(self.unmarkedTemplate)
-				img_save = img_unmarked
+				img_save = img_unmarked.copy()
 
 				# convert to HSV colour space
 				hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)

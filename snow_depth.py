@@ -36,8 +36,38 @@ print("Clip Limit %s" % params[11])
 print("Tile Size %s" % str(params[12]))
 print("Debug %s" % params[13])
 
+# ---------------------------------------------------------------------------------
+# Get parameters from GUI
+# ---------------------------------------------------------------------------------
+
+# update parameters
+directory = params[0]
+lower_hsv1 = params[1]
+upper_hsv1 = params[2]
+lower_hsv2 = params[3]
+upper_hsv2 = params[4]
+img_border_upper = params[5]
+img_border_lower = params[6]
+blob_size_lower = params[7]
+blob_size_upper = params[8]
+roi_coordinates = params[9]
+template_path = params[10]
+clip_limit = params[11]
+tile_size = tuple(params[12])
+
 # flag to run program in debug mode
 debug = params[13]
+
+# window closed with executing
+if(params == False):
+    sys.exit()
+
+# other parameters
+median_kernal_size = 5
+dilate_kernel = (5, 5)
+angle_thresh = -45
+bar_width_low = 15
+bar_width_high = 300
 
 # ---------------------------------------------------------------------------------
 # Create Directories
@@ -57,11 +87,8 @@ if(debug):
     os.mkdir((path + "/equalized"))
 
 # ---------------------------------------------------------------------------------
-# Create window
+# Get parameters from GUI
 # ---------------------------------------------------------------------------------
-
-if(params == False):
-    sys.exit()
 
 sys.exit()
 
