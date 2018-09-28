@@ -11,6 +11,8 @@ import json
 import imutils
 from progress_bar import progress
 from equalize import equalize_hist
+from register import alignImages
+from filter_night import isDay
 from GUI import GUI
 import Tkinter as tk
 import datetime
@@ -75,29 +77,57 @@ os.mkdir(path)
 if(debug):
     paths_dict["equalized"] = path + "/equalized/"
     paths_dict["equalized-template"] = path + "/equalized-template/"
+    paths_dict["registered"] = path + "/registered/"
+    paths_dict["matches"] = path + "/matches/"
     os.mkdir(paths_dict["equalized"])
     os.mkdir(paths_dict["equalized-template"])
+    os.mkdir(paths_dict["registered"])
+    os.mkdir(paths_dict["matches"])
 
 # ---------------------------------------------------------------------------------
-# Equalize Images
+# Filter Out Night Images
 # ---------------------------------------------------------------------------------
 
 # get images
 images = [file_name for file_name in os.listdir(directory)]
 num_images = len(images)
 
-# list to hold equalized images
-images_equalized = list()
+# list for filtered images
+images_filtered = list()
+filtered_names = list()
 
-print("\nEqualizing Images")
+print("\nFiltering Night Images")
 
-# iterate through images
 for count, img_name in enumerate(images):
     # update progress bar
     progress(count + 1, num_images, status=img_name)
 
     # read in image
     img = cv2.imread(directory + img_name)
+
+    # filter out night images
+    if(isDay(img, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2], 
+        blob_size_lower, blob_size_upper)):
+        # add to lists
+        images_filtered.append(img)
+        filtered_names.append(img_name)
+
+# ---------------------------------------------------------------------------------
+# Equalize Images
+# ---------------------------------------------------------------------------------
+
+# get number of filtered images
+num_images = len(images_filtered)
+
+# list to hold equalized images
+images_equalized = list()
+
+print("\n\nEqualizing Images")
+
+# iterate through images
+for count, img in enumerate(images_filtered):
+    # update progress bar
+    progress(count + 1, num_images, status=filtered_names[count])
 
     # get height and width
     h, w = img.shape[:2]
@@ -113,10 +143,9 @@ for count, img_name in enumerate(images):
 
     # if debugging write to directory
     if(debug):
-        cv2.imwrite((paths_dict["equalized"] + img_name), img_eq)
+        cv2.imwrite((paths_dict["equalized"] + filtered_names[count]), img_eq)
 
 # equalize and crop template
-print("\n\nEqualizing Template ...")
 template = cv2.imread(template_path)
 h_temp, w_temp = template.shape[:2]
 template = template[img_border_upper:(h - img_border_lower), :, :]
@@ -127,10 +156,40 @@ if(debug):
     cv2.imwrite((paths_dict["equalized-template"]+ os.path.split(template_path)[1]), template_eq)
 
 # ---------------------------------------------------------------------------------
-# Equalize Images
+# Register Images to Template
 # ---------------------------------------------------------------------------------
 
+# list to hold registered images
+images_registered = list()
+
+print("\nRegistering Images")
+
+# iterate through equalized images
+for count, img in enumerate(images_equalized):
+    # update progress bar
+    progress(count + 1, num_images, status=filtered_names[count])
+
+    # align images
+    imgReg, h, imgMatch = alignImages(img, template_eq)
+
+    # add to list
+    images_registered.append(imgReg)
+
+    # if debugging write to directory
+    if(debug):
+        cv2.imwrite((paths_dict["registered"] + filtered_names[count]), imgReg)
+        cv2.imwrite((paths_dict["matches"] + filtered_names[count]), imgMatch)
+
 sys.exit()
+
+
+
+
+
+
+
+
+
 
 # process all images in sub-directory
 img_dir = params[0] + '/'
