@@ -11,7 +11,7 @@ import cv2
 import sys
 import os
 from PIL import ImageTk, Image
-from scipy.spatial import distance as dist
+from order_points import orderPoints
 
 class GUI:
     def __init__(self, master):
@@ -23,7 +23,6 @@ class GUI:
     	self.root = master
     	self.root.configure(background='#ffffff')
         self.root.title("Measure Snow Depth")
-        #self.root.geometry("600x700")
 
         # ---------------------------------------------------------------------------------
         # Variables
@@ -674,26 +673,6 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def createProfile(self):
-		# function to order points of minAreaRect
-		def orderPoints(pts):
-			# sort the points based on their x-coordinates
-			xSorted = pts[np.argsort(pts[:, 0]), :]
-
-			# get left-most and right-most points
-			leftMost = xSorted[:2, :]
-			rightMost = xSorted[2:, :]
-
-			# sort left-most coordinates according to y coordinates
-			leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
-			(tl, bl) = leftMost
-
-			# find bottom right
-			D = dist.cdist(tl[np.newaxis], rightMost, "euclidean")[0]
-			(br, tr) = rightMost[np.argsort(D)[::-1], :]
-
-			# return coordiantes in top-left, top-right, bottom-right, bottom-left order
-			return tl, tr, br, bl
-
 		# embedded function to allow for removal of template
 		def removeTemplate():
 			# function to close window
