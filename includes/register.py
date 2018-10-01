@@ -4,7 +4,7 @@ import numpy as np
 
 # global variables
 MAX_FEATURES = 500
-GOOD_MATCH_PERCENT = 0.10
+GOOD_MATCH_PERCENT = 0.15
 
 # function to align image to template
 def alignImages(img, template):
