@@ -14,7 +14,7 @@ def getValidStakes(img, coordinates, hsvRanges, min_area, max_area, upper_border
 	if(debug):
 		# open file
 		f = open(debug_directory + "stake_summary.txt", "a")
-		f.write(img_name)
+		f.write(img_name+"\n")
 
 	# determine whether single or double HSV range
 	numRanges = len(hsvRanges)
@@ -29,7 +29,7 @@ def getValidStakes(img, coordinates, hsvRanges, min_area, max_area, upper_border
 
 		# write to debug file
 		if(debug):
-			f.write("	Stake %s:" % j)
+			f.write("	Stake %s\n:" % j)
 
 		# iterate through roi in each stake
 		for i, rectangle in enumerate(stake):
@@ -99,7 +99,7 @@ def getValidStakes(img, coordinates, hsvRanges, min_area, max_area, upper_border
 
 			# write to debug file
 			if(debug):
-				f.write("	Blob %s: %s" % (i, (num_blobs == 1)))
+				f.write("	Blob %s: %s\n" % (i, (num_blobs == 1)))
 
 		# determine number of valid blobs on stake
 		validBlobsOnStake = validBlobs.count(True)
