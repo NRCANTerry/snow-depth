@@ -1,7 +1,10 @@
+# import necessary packages
 import cv2
 import numpy as np
 import json
 from progress_bar import progress
+from order_points import orderPoints
+import os
 
 # parameters
 median_kernel_size = 5
@@ -23,10 +26,17 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 	# create bool dictionary for images
 	validImages = dict()
 
+	# dictionary for blob coordinates
+	blobCoords = dict()
+
 	# iterate through images
-	for count, img in enumerate(imgs):
+	for count, img_ in enumerate(imgs):
 		# update progress bar
 		progress(count + 1, num_images, status=img_names[count])
+
+		# duplicate image
+		img = img_.copy()
+		img_low_blob = img.copy()
 
 		# determine whether single or double HSV range
 		numRanges = len(hsvRanges)
@@ -34,10 +44,16 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 		# create bool list for stakes
 		validStakes = list()
 
+		# create list for blob coordinates on stakes
+		blobCoordsStake = list()
+
 		# iterate through stakes
 		for j, stake in enumerate(coordinates):
 			# create bool list for blobs for each stake
 			validBlobs = list()
+
+			# lowest blob variable
+			lowestBlob = np.array([[0,0],[0,0],[0,0],[0,0]])
 
 			# iterate through roi in each stake
 			for i, rectangle in enumerate(stake):
@@ -77,17 +93,27 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 				# find final coloured polygon regions
 				contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
-				
+				contour_index = 0
+
 				# iterate through contours
-				for cnt in contours:
+				for k, cnt in enumerate(contours):
 					# filter by area
 					if(min_area <= cv2.contourArea(cnt) <= max_area):
 						# increment blob counter
 						num_blobs += 1
+						contour_index = k
 
 				# add to valid blob list if one valid blob found
 				if(num_blobs == 1):
 					validBlobs.append(True)
+
+					# update lowest blob variable
+					rect = cv2.minAreaRect(contours[contour_index])
+					coords = cv2.boxPoints(rect)
+					box = np.array(coords, dtype = "int")
+
+					if box[0][1] > lowestBlob[0][1]:
+						lowestBlob = box
 
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
@@ -124,26 +150,51 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# if more than 2 valid blobs list stake as valid
 			validStakes.append(validStake)
 
+			# add lowest blob to list
+			if validStake:
+				# order coordinates and append to list
+				ordered_coordinates = orderPoints(lowestBlob, False)
+				blobCoordsStake.append(list(ordered_coordinates))
+
+				# write labelled image if in debugging mode
+				if(debug):
+					# draw rectangle
+					cv2.rectangle(img_low_blob, tuple(ordered_coordinates[0]), tuple(ordered_coordinates[2]),
+						(0,255,0), 3)
+			else:
+				# if stake is invalid add zero box
+				blobCoordsStake.append([0,0,0,0])
+
 		# if in debugging mode
 		if(debug):
-			# write image to debug directory
+			# write images to debug directory
+			filename, file_extension = os.path.splitext(img_names[count])
 			cv2.imwrite(debug_directory + img_names[count], img)
+			cv2.imwrite(debug_directory + filename + '-low' + file_extension, img_low_blob)
 
-		# create temporary dictionary
-		stake_dict = dict()
+			# create temporary dictionary
+			stake_dict = dict()
+			stake_dict_coords = dict()
 
-		# add data to output
-		for x in range(0, len(coordinates)):
-			stake_dict['stake' + str(x)] = validStakes[x] 
+			# add data to output
+			for x in range(0, len(coordinates)):
+				stake_dict['stake' + str(x)] = validStakes[x] 
+				stake_dict_coords['stake' + str(x)] = blobCoordsStake[x]
 
-		stake_output[img_names[count]] = stake_dict
+			stake_output[img_names[count]] = {
+				"validity": stake_dict,
+				"lowest blob": stake_dict_coords
+			}
 
-		# add data to return dictionary
+		# add data to return dictionaries
 		validImages[img_names[count]] = validStakes
+		blobCoords[img_names[count]] = blobCoordsStake
 
-	# output JSON file
-	file = open(debug_directory + 'stakes.json', 'w')
-	json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
+	# if in debugging mode
+	if(debug):
+		# output JSON file
+		file = open(debug_directory + 'stakes.json', 'w')
+		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return list of valid stakes
-	return validImages
+	return validImages, blobCoords
