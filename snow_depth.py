@@ -74,7 +74,7 @@ if(not os.path.isdir("measure-depth")):
     os.mkdir("./measure-depth")
 
 # add folder for run
-date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M").replace(" ", "-").replace(":", "-")
+date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "-").replace(":", "-")
 path = "./measure-depth/" + date
 os.mkdir(path)
 
@@ -237,6 +237,32 @@ stake_validity = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
 print("\n\nRun Time: %.2f s" % (time.time() - start))
 
 sys.exit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

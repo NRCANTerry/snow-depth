@@ -10,7 +10,7 @@ dilate_kernel = (5,5)
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
-# returns a bool list indicating which stakes in image are valid
+# returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_border, debug, 
 	img_names, debug_directory):
 
@@ -76,14 +76,13 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 				mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
 				# find final coloured polygon regions
-				mask_filtered = np.zeros(mask.shape, np.uint8)
 				contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+				print(len(contours))
 
 				# iterate through contours
 				for cnt in contours:
 					# filter by area
-					contour_area = cv2.contourArea(cnt)
-					if(min_area <= contour_area <= max_area):
+					if(min_area <= cv2.contourArea(cnt) <= max_area):
 						# increment blob counter
 						num_blobs += 1
 
