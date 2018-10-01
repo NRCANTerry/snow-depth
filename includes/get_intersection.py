@@ -6,6 +6,7 @@ import cv2
 from order_points import orderPoints
 from progress_bar import progress
 import math
+import os
 
 # function that returns the intersection of lines defined by two points
 def lineIntersections(pt1, pt2, ptA, ptB):
@@ -79,18 +80,12 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 				# points are already ordered
 				# determine middle of box
 				middleTop = ((box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2)
-				middleBottom = ((box[2][0] + box[3][0]) / 2, (box[2][1] + box[3][1]) / 2)
+				middleBottom = ((box[6][0] + box[7][0]) / 2, (box[6][1] + box[7][1]) / 2)
 
 				# add combinations to list
 				coordinateCombinations.append((middleTop, middleBottom)) # middle
-				coordinateCombinations.append((box[0], box[3])) # left
-				coordinateCombinations.append((box[1], box[2])) # right
-
-				#for points in coordinateCombinations:
-				#	cv2.circle(img, (int(points[0][0]), int(points[0][1])), 5, (0,255,0), 4)
-				#	cv2.circle(img, (int(points[1][0]), int(points[1][1])), 5, (0,255,0), 4)
-
-				#cv2.imwrite(debug_directory + img_names[count], img)
+				coordinateCombinations.append((box[0], box[7])) # left
+				coordinateCombinations.append((box[1], box[6])) # right
 
 				# iterate through combinations
 				for j, points in enumerate(coordinateCombinations):
@@ -111,13 +106,14 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
 
 					# plot and save
-					#fix, axes = plt.subplots(nrows = 2)
-					#axes[0].imshow(img)
-					#axes[0].plot([x0, x1], [y0, y1], 'ro-')
-					#axes[0].axis('image')
-					#axes[1].plot(lineVals)
+					fig, axes = plt.subplots(nrows = 2)
+					axes[0].imshow(img)
+					axes[0].plot([x0, x1], [y0, y1], 'ro-')
+					axes[0].axis('image')
+					axes[1].plot(lineVals)
 
-					#plt.savefig((debug_directory + img_names[count]))
+					filename, file_extension = os.path.splitext(img_names[count])
+					plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 
 					coords = [a for a, v in enumerate(lineVals) if v > threshold]
 
@@ -127,8 +123,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 							first_coord = coord
 							break
 
-					print ("%s, %s" % (x[first_coord], y[first_coord]))
+					cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
 					cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
-					cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),5)
 
 				cv2.imwrite(debug_directory + img_names[count], img_write)

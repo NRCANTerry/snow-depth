@@ -55,6 +55,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# lowest blob variable
 			lowestBlob = np.array([[0,0],[0,0],[0,0],[0,0]])
 
+			# highest blob variable
+			highestBlob = np.array([[1e5,1e5],[1e5,1e5],[1e5,1e5],[1e5,1e5]])
+
 			# iterate through roi in each stake
 			for i, rectangle in enumerate(stake):
 				# skip stakes
@@ -115,6 +118,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 					if box[0][1] > lowestBlob[0][1]:
 						lowestBlob = box
 
+					if box[0][1] < highestBlob[0][1]:
+						highestBlob = box
+
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
 						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border), 
@@ -153,24 +159,27 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# add lowest blob to list
 			if validStake:
 				# order coordinates and append to list
-				ordered_coordinates = orderPoints(lowestBlob, False)
-				blobCoordsStake.append(list(ordered_coordinates))
+				ordered_coordinates_low = orderPoints(lowestBlob, False)
+				ordered_coordinates_high = orderPoints(highestBlob, False)
+				blobCoordsStake.append(list(ordered_coordinates_high + ordered_coordinates_low))
 
 				# write labelled image if in debugging mode
 				if(debug):
-					# draw rectangle
-					cv2.rectangle(img_low_blob, tuple(ordered_coordinates[0]), tuple(ordered_coordinates[2]),
+					# draw rectangles
+					cv2.rectangle(img_low_blob, tuple(ordered_coordinates_low[0]), tuple(ordered_coordinates_low[2]),
+						(0,255,0), 3)
+					cv2.rectangle(img_low_blob, tuple(ordered_coordinates_high[0]), tuple(ordered_coordinates_high[2]),
 						(0,255,0), 3)
 			else:
 				# if stake is invalid add zero box
-				blobCoordsStake.append([0,0,0,0])
+				blobCoordsStake.append([0,0,0,0,0,0,0,0])
 
 		# if in debugging mode
 		if(debug):
 			# write images to debug directory
 			filename, file_extension = os.path.splitext(img_names[count])
 			cv2.imwrite(debug_directory + img_names[count], img)
-			cv2.imwrite(debug_directory + filename + '-low' + file_extension, img_low_blob)
+			cv2.imwrite(debug_directory + filename + '-boxes' + file_extension, img_low_blob)
 
 			# create temporary dictionary
 			stake_dict = dict()
