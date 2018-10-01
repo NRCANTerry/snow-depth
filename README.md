@@ -11,5 +11,3 @@ Steps:
 		- to save or remove HSV range use file menu - saved to preferences.cfg
 	3. Run generate_truth.m
 		- this creates the ground truth object that will be used to train the R-CNN
-
-- [ ] test
