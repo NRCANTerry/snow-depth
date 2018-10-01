@@ -14,7 +14,7 @@ def alignImages(img, template):
 	img2Gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
 	# detect ORB features and compute descriptors
-	orb = cv2.ORB_create(MAX_FEATURES)
+	orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scoreType = cv2.ORB_FAST_SCORE)
 	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
 	kp2, desc2 = orb.detectAndCompute(img2Gray, None)
 

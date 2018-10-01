@@ -837,8 +837,8 @@ class GUI:
 			# if valid filename
 			if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
 				# hsv ranges
-				lower_pink = np.array([125, 10, 50])
-				upper_pink = np.array([160, 255, 255])
+				lower_pink = np.array([143, 198, 50])#np.array([125, 10, 50])
+				upper_pink = np.array([168, 255, 255])#np.array([160, 255, 255])
 				lower_green = np.array([60, 160, 130])
 				upper_green = np.array([70, 255, 255])
 				min_contour_area = lowerSize.get()
@@ -885,6 +885,8 @@ class GUI:
 					# increment stake counter
 					stakes += 1
 					stake_area += cv2.contourArea(cnt)
+
+				print(stakes)
 
 				# find blobs pertaining to each stake
 				for stake in stakes_coords:
