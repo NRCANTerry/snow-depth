@@ -224,14 +224,14 @@ if(debug):
 
 print("\n\nValidating Stakes")
 
-for count, img in enumerate(images_registered):
-    # update progress bar
-    progress(count + 1, num_images, status=filtered_names[count])
+# check stakes in image
+stake_validity = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
+    blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names,
+    paths_dict["stake-check"])
 
-    # check stakes in image
-    getValidStakes(img, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
-        blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names[count],
-        paths_dict["stake-check"] )
+# ---------------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------------
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
