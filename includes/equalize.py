@@ -41,7 +41,7 @@ def equalize_hist(img, clip_limit, tile_size):
 	bgr = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
 	# increase brightness
-	bgr = increase_brightness(bgr, 30)
+	bgr = increase_brightness(bgr, 40)
 
 	# return image
 	return bgr

@@ -77,8 +77,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 				# find final coloured polygon regions
 				contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
-				print(len(contours))
-
+				
 				# iterate through contours
 				for cnt in contours:
 					# filter by area
