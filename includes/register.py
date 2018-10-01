@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 
 # global variables
-MAX_FEATURES = 1000
-GOOD_MATCH_PERCENT = 0.25
+MAX_FEATURES = 500
+GOOD_MATCH_PERCENT = 0.10
 
 # function to align image to template
 def alignImages(img, template):
