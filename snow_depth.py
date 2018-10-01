@@ -15,6 +15,7 @@ from register import alignImages
 from filter_night import isDay
 from check_stakes import getValidStakes
 from GUI import GUI
+from get_intersection import getIntersections
 import Tkinter as tk
 import datetime
 import time
@@ -85,6 +86,7 @@ paths_dict["registered"] = path + "/registered/"
 paths_dict["matches"] = path + "/matches/"
 paths_dict["template-overlay"] = path + "/template-overlay/"
 paths_dict["stake-check"] = path + "/stake-check/"
+paths_dict["intersection"] = path + "/intersection/"
 
 if(debug):    
     os.mkdir(paths_dict["equalized"])
@@ -93,6 +95,7 @@ if(debug):
     os.mkdir(paths_dict["matches"])
     os.mkdir(paths_dict["template-overlay"])
     os.mkdir(paths_dict["stake-check"])
+    os.mkdir(paths_dict["intersection"])
 
 # ---------------------------------------------------------------------------------
 # Filter Out Night Images
@@ -200,6 +203,9 @@ if(debug):
 
     # iterate through images
     for count, img in enumerate(images_registered):
+        # create copy
+        img_write = img.copy()
+
         # update progress bar
         progress(count + 1, num_images, status=filtered_names[count])
 
@@ -209,14 +215,14 @@ if(debug):
             for i, rectangle in enumerate(stake):
                 # stake itself
                 if(i == 0):
-                    cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
                         (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 0, 255), 3)
                 # blobs
                 else:
-                    cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
                         (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 255, 0), 3)
 
-        cv2.imwrite(paths_dict["template-overlay"] + filtered_names[count], img)
+        cv2.imwrite(paths_dict["template-overlay"] + filtered_names[count], img_write)
 
 # ---------------------------------------------------------------------------------
 # Get Valid Stakes
@@ -225,13 +231,18 @@ if(debug):
 print("\n\nValidating Stakes")
 
 # check stakes in image
-stake_validity = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
+stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
     blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names,
     paths_dict["stake-check"])
 
 # ---------------------------------------------------------------------------------
-# 
+# Determine Snow Intersection Point
 # ---------------------------------------------------------------------------------
+
+print("\n\nDetermining Intersection Points")
+
+# get intersection points
+getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 150, filtered_names, debug, paths_dict["intersection"])
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
