@@ -49,15 +49,13 @@ template_path = params[10]
 clip_limit = params[11]
 tile_size = tuple(params[12])
 template_intersections = params[14]
-print template_intersections
+
 # flag to run program in debug mode
 debug = params[13]
 
 # window closed with executing
 if(params == False):
     sys.exit()
-
-sys.exit()
 
 # other parameters
 median_kernal_size = 5
@@ -240,6 +238,8 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
     blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names,
     paths_dict["stake-check"])
 
+print stake_validity
+
 # ---------------------------------------------------------------------------------
 # Determine Snow Intersection Point
 # ---------------------------------------------------------------------------------
@@ -252,10 +252,13 @@ intersection_coords = getIntersections(images_registered, blob_coords, stake_val
 # test output
 for i, img_name in enumerate(filtered_names):
     img_write2 = images_registered[i]
+    print "\n"
+    print img_name
     coords_stake = intersection_coords[img_name]
-    for stake in coords_stake:
-        if stake_validity[img_name][i]:
+    for j,stake in enumerate(coords_stake):
+        if stake_validity[img_name][j]:
             cv2.circle(img_write2, (int(stake['average'][0]), int(stake['average'][1])), 5, (0,255,0), 3)
+            print "stake %s : %s" % (j, (stake['average'][1] - (template_intersections[j][1] - img_border_upper)))
 
     cv2.imwrite(paths_dict["testing"] + img_name, img_write2)
 
