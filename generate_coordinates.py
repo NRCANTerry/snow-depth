@@ -113,7 +113,7 @@ for count, img_name in enumerate(images):
                 coords = cv2.boxPoints(rect)
                 coords = coords.tolist()
                 coords2 = coords.sort()
-               
+
                	# get top left coordinate
                	topLeft = (10000,100000)
                	for point in coords:
@@ -126,7 +126,7 @@ for count, img_name in enumerate(images):
                 # increase the size of the bounding boxes
                 horizontal_increase = 5
                 vertical_increase = 5
-                
+
                 # update output string
                 output_string += ("%s %s %s %s" % (topLeft[0] - horizontal_increase, (topLeft[1]) - vertical_increase, \
                                                    width + (horizontal_increase*2), height + vertical_increase))
