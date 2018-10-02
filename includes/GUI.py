@@ -543,7 +543,7 @@ class GUI:
             self.systemParameters["Current_Template_Name"] = str(optionsList[4])
             self.systemParameters["Current_Template_Coords"] = ast.literal_eval(self.systemParameters["Templates"][str(optionsList[4])])
             self.systemParameters["Current_Template_Path"] = self.systemParameters["Template_Paths"][str(optionsList[4])]
-            self.systemParameters["Current_Template_Intersections"] = self.systemParameters["Template_Intersections"][str(optionsList[4])]
+            self.systemParameters["Current_Template_Intersections"] = ast.literal_eval(self.systemParameters["Template_Intersections"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
             self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
@@ -700,9 +700,11 @@ class GUI:
 
                     self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
                     self.config.remove_option("Template Images", removetemplateMenuVar.get())
+                    self.config.remove_option("Template Intersections", removetemplateMenuVar.get())
                     self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
                     self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
+                    self.systemParameters["Template_Intersections"].pop(removetemplateMenuVar.get())
 
                     # update menu
                     templateMenuVar.set('Select Template')
@@ -828,8 +830,8 @@ class GUI:
                 # hsv ranges
                 lower_pink = np.array([143, 198, 50])#np.array([125, 10, 50])
                 upper_pink = np.array([168, 255, 255])#np.array([160, 255, 255])
-                lower_green = np.array([60, 160, 130])
-                upper_green = np.array([70, 255, 255])
+                lower_green = np.array([0, 116, 35])
+                upper_green = np.array([65, 223, 255])
                 min_contour_area = lowerSize.get()
                 max_contour_area = upperSize.get()
 
@@ -850,6 +852,11 @@ class GUI:
 
                 # find contours
                 stake_contours = cv2.findContours(stake_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+
+                # sort contours from left to right
+                boundingBoxes = [cv2.boundingRect(c) for c in stake_contours]
+                (stake_contours, boundingBoxes) = zip(*sorted(zip(stake_contours, boundingBoxes),
+                    key = lambda b:b[1][0], reverse = False))
 
                 # list containing stake coordinates
                 stakes_coords = list()
@@ -889,6 +896,9 @@ class GUI:
                     # remove noise
                     blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_OPEN, kernel)
 
+                    # fill holes in blobs
+                    blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_CLOSE, kernel)
+
                     # find contours in roi
                     blob_contours = cv2.findContours(blob_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset = (stake[0][0][0], stake[0][0][1]))[1]
 
@@ -901,10 +911,11 @@ class GUI:
                             box = np.array(cv2.boxPoints(rect), dtype = "int")
 
                             # order points
-                            points  = orderPoints(box)
+                            points = orderPoints(box)
 
                             # add blobs to stake list
-                            stake.append([points[0], points[2]])
+                            # dilate blobs slightly
+                            stake.append([[points[0][0]-10,points[0][1]-10], [points[2][0]+10,points[2][1]+10]])
 
                             # increment blob counter
                             blobs += 1
@@ -914,13 +925,14 @@ class GUI:
                 img_gray = cv2.cvtColor(img_unmarked.copy(), cv2.COLOR_BGR2GRAY)
 
                 # determine intersection points for each stake
+
                 for stake in stakes_coords:
                     # get coordinates of top and bottom blobs on stake
-                    bottom_blob = [[stake[1][0][0]+10,stake[1][0][1]],
-                        [stake[1][1][0]-10, stake[1][1][1]]]
+                    bottom_blob = [[stake[1][0][0]+10,stake[1][0][1]+10],
+                        [stake[1][1][0]-10,stake[1][1][1]-10]]
                     top_index = len(stake) - 1
-                    top_blob = [[stake[top_index][0][0]+10,stake[top_index][0][1]],
-                        [stake[top_index][1][0]-10, stake[top_index][1][1]]]
+                    top_blob = [[stake[top_index][0][0]+10,stake[top_index][0][1]+10],
+                        [stake[top_index][1][0]-10,stake[top_index][1][1]-10]]
 
                     # generate combinations
                     coordinateCombinations = list()
@@ -972,12 +984,13 @@ class GUI:
 
                     stakes_intersect.append([sum(y) / len(y) for y in zip(*combinationResults)])
 
+                print "\n"
                 print stakes_intersect
 
                 # output boxes
-                for stake in stakes_coords:
-                    for count, blob in enumerate(stake):
-                        if(count == 0):
+                for stake_output in stakes_coords:
+                    for k, blob in enumerate(stake_output):
+                        if(k == 0):
                             # draw stake
                             cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,0,255),2)
                         else:
@@ -1013,12 +1026,14 @@ class GUI:
                     path = os.getcwd() + "\\includes\\templates\\" + os.path.split(self.unmarkedTemplate)[1]
                     cv2.imwrite(path, img_save)
 
-                    # create output string
+                    # create output strings
                     outputString = str(stakes_coords).replace("array(", "").replace(")", "")
+                    intersectionString = str(stakes_intersect).replace("array(", "").replace(")", "")
 
                     # save to config file
                     self.config.set('Template Coordinates', name.get(), outputString)
                     self.config.set('Template Images', name.get(), path)
+                    self.config.set('Template Intersections', name.get(), intersectionString)
 
                     # update menu
                     templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
@@ -1028,6 +1043,8 @@ class GUI:
                     self.systemParameters["Current_Template_Name"] = name.get()
                     self.systemParameters["Current_Template_Coords"] = outputString
                     self.systemParameters["Current_Template_Path"] = path
+                    self.systemParameters["Template_Intersections"][name.get()] = intersectionString
+                    self.systemParameters["Current_Template_Intersections"] = intersectionString
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())
