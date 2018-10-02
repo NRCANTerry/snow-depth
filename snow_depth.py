@@ -48,13 +48,16 @@ roi_coordinates = params[9]
 template_path = params[10]
 clip_limit = params[11]
 tile_size = tuple(params[12])
-
+template_intersections = params[14]
+print template_intersections
 # flag to run program in debug mode
 debug = params[13]
 
 # window closed with executing
 if(params == False):
     sys.exit()
+
+sys.exit()
 
 # other parameters
 median_kernal_size = 5
