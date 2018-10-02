@@ -52,6 +52,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# create bool list for blobs for each stake
 			validBlobs = list()
 
+			print stake
+
 			# lowest blob variable
 			lowestBlob = np.array([[0,0],[0,0],[0,0],[0,0]])
 
@@ -110,7 +112,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 				if(num_blobs == 1):
 					validBlobs.append(True)
 
-					# update lowest blob variable
+					# update lowest/highest blob variables
 					rect = cv2.minAreaRect(contours[contour_index])
 					coords = cv2.boxPoints(rect)
 					box = np.array(coords, dtype = "int")
@@ -139,9 +141,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			validBlobsOnStake = validBlobs.count(True)
 
 			# determine if stake is valid
-			validStake = False
-			if(validBlobsOnStake >= 2):
-				validStake = True
+			# need at minimum 2 blobs for stake to be valid
+			validStake = (validBlobsOnStake >= 2)
 
 			# if in debugging mode draw appropriate rectangle around stake
 			if(validStake and debug):
