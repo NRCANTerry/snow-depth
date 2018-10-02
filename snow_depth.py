@@ -87,6 +87,7 @@ paths_dict["matches"] = path + "/matches/"
 paths_dict["template-overlay"] = path + "/template-overlay/"
 paths_dict["stake-check"] = path + "/stake-check/"
 paths_dict["intersection"] = path + "/intersection/"
+paths_dict["testing"] = path + "/testing/"
 
 if(debug):
     os.mkdir(paths_dict["equalized"])
@@ -96,6 +97,7 @@ if(debug):
     os.mkdir(paths_dict["template-overlay"])
     os.mkdir(paths_dict["stake-check"])
     os.mkdir(paths_dict["intersection"])
+    os.mkdir(paths_dict["testing"])
 
 # ---------------------------------------------------------------------------------
 # Filter Out Night Images
@@ -242,13 +244,22 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 150, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 150, filtered_names, debug, paths_dict["intersection"])
+
+# test output
+for i, img_name in enumerate(filtered_names):
+    img_write2 = images_registered[i]
+    coords_stake = intersection_coords[img_name]
+    for stake in coords_stake:
+        if stake_validity[img_name][i]:
+            cv2.circle(img_write2, (int(stake['average'][0]), int(stake['average'][1])), 5, (0,255,0), 3)
+
+    cv2.imwrite(paths_dict["testing"] + img_name, img_write2)
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
 
 sys.exit()
-
 
 
 

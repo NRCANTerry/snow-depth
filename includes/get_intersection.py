@@ -48,13 +48,13 @@ def lineIntersections(pt1, pt2, ptA, ptB):
 # intersection points for each stake
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, img_names, debug, debug_directory):
 
-	# contains output data
+	# contains output data for JSON file
 	intersection_output = {}
 
 	# number of images
 	num_images = len(imgs)
 
-	# create dictionary for images
+	# create output dictionary for images
 	intersectionCoordinates = dict()
 
 	# iterate through images
@@ -63,14 +63,17 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 		progress(count + 1, num_images, status=img_names[count])
 
 		# convert image to gray
-		img_write = img_
-		img = cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY)
+		img_write = img_.copy()
+		img = cv2.cvtColor(img_.copy(), cv2.COLOR_BGR2GRAY)
 
-		# get lowest blob coordinates
-		coords = boxCoords[img_names[count]]
+		# get top and bottom blob coordinates
+		blob_coords = boxCoords[img_names[count]]
+
+		# create list for coordinates on stakes
+		stake_intersections = list()
 
 		# iterate through stakes
-		for i, box in enumerate(coords):
+		for i, box in enumerate(blob_coords):
 			# only continue if stake is valid
 			if(stakeValidity[img_names[count]][i]):
 				# list for three different point combinations
@@ -88,8 +91,11 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 				coordinateCombinations.append((box[0], box[7])) # left
 				coordinateCombinations.append((box[1], box[6])) # right
 
-				# list containing coordinates
-				coordinates = list()
+				# combination names list
+				combination_names = ["middle", "left", "right"]
+
+				# dictionary containing coordinates
+				coordinates = dict()
 
 				# iterate through combinations
 				for j, points in enumerate(coordinateCombinations):
@@ -99,9 +105,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 					# get endpoint for line
 					# intersection of line between points on blob with line defining bottom of stake
-					x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0], 
+					x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
 						roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
-					
+
 					# make a line with "num" points
 					num = 500
 					x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
@@ -110,14 +116,14 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
 
 					# plot and save
-					fig, axes = plt.subplots(nrows = 2)
-					axes[0].imshow(img)
-					axes[0].plot([x0, x1], [y0, y1], 'ro-')
-					axes[0].axis('image')
-					axes[1].plot(lineVals)
+					#fig, axes = plt.subplots(nrows = 2)
+					#axes[0].imshow(img)
+					#axes[0].plot([x0, x1], [y0, y1], 'ro-')
+					#axes[0].axis('image')
+					#axes[1].plot(lineVals)
 
-					filename, file_extension = os.path.splitext(img_names[count])
-					plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
+					#filename, file_extension = os.path.splitext(img_names[count])
+					#plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 
 					coords = [a for a, v in enumerate(lineVals) if v > threshold]
 
@@ -130,25 +136,41 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
 					cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
 
-					# add coordinates to list
-					coordinates.append((x[first_coord], y[first_coord]))
+					# add coordinates to dictionary
+					coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
 
-				# determine average coordinates
-				average_x = (coordinates[0][0] + coordinates[1][0] + coordinates[2][0]) / 3.0
-				average_y = (coordinates[0][1] + coordinates[1][1] + coordinates[2][1]) / 3.0
+				# calculate average intersection point
+				coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
 
-				# add data to output
-				intersection_output[img_names[count]] = {
-					"Middle": coordinates[0],
-					"Left": coordinates[1],
-					"Right": coordinates[2],
-					"Average": (average_x, average_y)
-				}
+				# add to stake coordinates list
+				stake_intersections.append(coordinates)
 
-				cv2.imwrite(debug_directory + img_names[count], img_write)
+			# if stake isn't valid append empty dictionary
+			else:
+				stake_intersections.append(dict())
+
+		# if in debugging mode
+		if(debug):
+			# create temporary dictionary
+			stake_dict = dict()
+
+			# add data to output
+			for x in range(0, len(blob_coords)):
+				stake_dict['stake' + str(x)] = stake_intersections[x]
+
+			# add data to output
+			intersection_output[img_names[count]] = stake_dict
+
+			cv2.imwrite(debug_directory + img_names[count], img_write)
+
+		# add data to return dictionary
+		intersectionCoordinates[img_names[count]] = stake_intersections
 
 	# if in debugging mode
 	if(debug):
 		# output JSON file
 		file = open(debug_directory + 'stakes.json', 'w')
 		json.dump(intersection_output, file, sort_keys=True, indent=4, separators=(',', ': '))
+
+	# return dictionary
+	return intersectionCoordinates
