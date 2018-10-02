@@ -12,7 +12,8 @@ import sys
 import os
 from PIL import ImageTk, Image
 from order_points import orderPoints
-from get_intersection import getIntersections
+from get_intersection import lineIntersections
+from scipy import ndimage
 
 class GUI:
     def __init__(self, master):
@@ -909,16 +910,69 @@ class GUI:
                             blobs += 1
                             blob_area += cv2.contourArea(cnt)
 
+                # convert image to grayscale
+                img_gray = cv2.cvtColor(img_unmarked.copy(), cv2.COLOR_BGR2GRAY)
+
                 # determine intersection points for each stake
                 for stake in stakes_coords:
-                    bottom_box = stake[1]
-                    top_box = stake(len(stake) - 1)
+                    # get coordinates of top and bottom blobs on stake
+                    bottom_blob = [[stake[1][0][0]+10,stake[1][0][1]],
+                        [stake[1][1][0]-10, stake[1][1][1]]]
+                    top_index = len(stake) - 1
+                    top_blob = [[stake[top_index][0][0]+10,stake[top_index][0][1]],
+                        [stake[top_index][1][0]-10, stake[top_index][1][1]]]
 
-                    print "\n"
-                    print bottom_box
-                    print top_box
-                    print stake
-                    print "\n"
+                    # generate combinations
+                    coordinateCombinations = list()
+
+                    # determine middle of box
+                    middleBottom = ((bottom_blob[0][0] + bottom_blob[1][0]) / 2,
+                        (bottom_blob[0][1] + bottom_blob[1][1]) / 2)
+                    middleTop = ((top_blob[0][0] + top_blob[1][0]) / 2,
+                        (top_blob[0][1] + top_blob[1][1]) / 2)
+
+                    coordinateCombinations.append((middleTop, middleBottom)) # middle
+                    coordinateCombinations.append((top_blob[0], bottom_blob[0])) # Left
+                    coordinateCombinations.append((top_blob[1], bottom_blob[1])) # right
+
+                    # list for combination results
+                    combinationResults = list()
+
+                    for j, points in enumerate(coordinateCombinations):
+                        # get points
+                        x0, y0 = points[0][0], points[0][1]
+                        x1, y1 = points[1][0], points[1][1]
+
+                        # get endpoint for line
+                        # intersection of line between points on blob with line defining bottom of
+                        x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
+                            stake[0][1][1]), tuple(stake[0][1])))
+
+                        cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
+
+                        # make a line with "num" points
+                        num = 500
+                        x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+
+                        # extract values along the line
+                        lineVals = ndimage.map_coordinates(np.transpose(img_gray), np.vstack((x,y)))
+
+                        # get coordinates
+                        coords_thresh = [a for a, v in enumerate(lineVals) if v > 130]
+
+                        # filter to find intersection coordinate
+                        first_coord = 0
+                        for k, coord in enumerate(coords_thresh):
+                            if((coords_thresh[k+10] - coord) < 15):
+                                first_coord = coord
+                                break
+
+                        # add coordinates to list
+                        combinationResults.append((x[first_coord], y[first_coord]))
+
+                    stakes_intersect.append([sum(y) / len(y) for y in zip(*combinationResults)])
+
+                print stakes_intersect
 
                 # output boxes
                 for stake in stakes_coords:
@@ -929,6 +983,10 @@ class GUI:
                         else:
                             # draw blob
                             cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
+
+                    # output intersection points
+                    for point in stakes_intersect:
+                        cv2.circle(img_unmarked, (int(point[0]), int(point[1])), 5, (0,255,0), 2)
 
                 # output results of template generation
                 print("---------------------------------------")
