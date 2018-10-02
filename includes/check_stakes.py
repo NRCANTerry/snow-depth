@@ -14,7 +14,7 @@ dilate_kernel = (5,5)
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
-def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_border, debug, 
+def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_border, debug,
 	img_names, debug_directory):
 
 	# contains output data
@@ -123,7 +123,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
-						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border), 
+						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border),
 	                        (rectangle[1][0], rectangle[1][1]-upper_border), (0, 255, 0), 3)
 
 				# else add invalid blob
@@ -132,7 +132,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
-						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border), 
+						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border),
 	                        (rectangle[1][0], rectangle[1][1]-upper_border), (0, 0, 255), 3)
 
 			# determine number of valid blobs on stake
@@ -146,11 +146,11 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# if in debugging mode draw appropriate rectangle around stake
 			if(validStake and debug):
 				# green rectangle
-				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border), 
+				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border),
 					(stake[0][1][0], stake[0][1][1]-upper_border), (0, 255, 0), 3)
 			elif(debug):
 				# red rectangle
-				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border), 
+				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border),
 					(stake[0][1][0], stake[0][1][1]-upper_border), (0, 0, 255), 3)
 
 			# if more than 2 valid blobs list stake as valid
@@ -187,7 +187,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 			# add data to output
 			for x in range(0, len(coordinates)):
-				stake_dict['stake' + str(x)] = validStakes[x] 
+				stake_dict['stake' + str(x)] = validStakes[x]
 				stake_dict_coords['stake' + str(x)] = blobCoordsStake[x]
 
 			stake_output[img_names[count]] = {

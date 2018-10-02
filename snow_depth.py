@@ -88,7 +88,7 @@ paths_dict["template-overlay"] = path + "/template-overlay/"
 paths_dict["stake-check"] = path + "/stake-check/"
 paths_dict["intersection"] = path + "/intersection/"
 
-if(debug):    
+if(debug):
     os.mkdir(paths_dict["equalized"])
     os.mkdir(paths_dict["equalized-template"])
     os.mkdir(paths_dict["registered"])
@@ -119,7 +119,7 @@ for count, img_name in enumerate(images):
     img = cv2.imread(directory + img_name)
 
     # filter out night images
-    if(isDay(img, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2], 
+    if(isDay(img, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
         blob_size_lower, blob_size_upper)):
         # add to lists
         images_filtered.append(img)
@@ -215,11 +215,11 @@ if(debug):
             for i, rectangle in enumerate(stake):
                 # stake itself
                 if(i == 0):
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper),
                         (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 0, 255), 3)
                 # blobs
                 else:
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper), 
+                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper),
                         (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 255, 0), 3)
 
         cv2.imwrite(paths_dict["template-overlay"] + filtered_names[count], img_write)
@@ -361,7 +361,7 @@ for count, img_name in enumerate(images):
                 coords = cv2.boxPoints(rect)
                 coords = coords.tolist()
                 coords2 = coords.sort()
-               
+
                	# get top left coordinate
                	topLeft = (10000,100000)
                	for point in coords:
@@ -374,7 +374,7 @@ for count, img_name in enumerate(images):
                 # increase the size of the bounding boxes
                 horizontal_increase = 5
                 vertical_increase = 5
-                
+
                 # update output string
                 output_string += ("%s %s %s %s" % (topLeft[0] - horizontal_increase, (topLeft[1]) - vertical_increase, \
                                                    width + (horizontal_increase*2), height + vertical_increase))
