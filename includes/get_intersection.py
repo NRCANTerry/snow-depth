@@ -7,6 +7,7 @@ from order_points import orderPoints
 from progress_bar import progress
 import math
 import os
+import json
 
 # function that returns the intersection of lines defined by two points
 def lineIntersections(pt1, pt2, ptA, ptB):
@@ -87,6 +88,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 				coordinateCombinations.append((box[0], box[7])) # left
 				coordinateCombinations.append((box[1], box[6])) # right
 
+				# list containing coordinates
+				coordinates = list()
+
 				# iterate through combinations
 				for j, points in enumerate(coordinateCombinations):
 					# get points
@@ -126,4 +130,25 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
 					cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
 
+					# add coordinates to list
+					coordinates.append((x[first_coord], y[first_coord]))
+
+				# determine average coordinates
+				average_x = (coordinates[0][0] + coordinates[1][0] + coordinates[2][0]) / 3.0
+				average_y = (coordinates[0][1] + coordinates[1][1] + coordinates[2][1]) / 3.0
+
+				# add data to output
+				intersection_output[img_names[count]] = {
+					"Middle": coordinates[0],
+					"Left": coordinates[1],
+					"Right": coordinates[2],
+					"Average": (average_x, average_y)
+				}
+
 				cv2.imwrite(debug_directory + img_names[count], img_write)
+
+	# if in debugging mode
+	if(debug):
+		# output JSON file
+		file = open(debug_directory + 'stakes.json', 'w')
+		json.dump(intersection_output, file, sort_keys=True, indent=4, separators=(',', ': '))
