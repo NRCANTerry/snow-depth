@@ -12,6 +12,7 @@ import sys
 import os
 from PIL import ImageTk, Image
 from order_points import orderPoints
+from get_intersection import getIntersections
 
 class GUI:
     def __init__(self, master):
@@ -45,12 +46,14 @@ class GUI:
         	"Saved_Profiles": dict(),
         	"Colour_Options": list(),
         	"Profile_Options": list(),
-        	"Templates": dict(), 
+        	"Templates": dict(),
         	"Templates_Options": list(),
         	"Template_Paths": dict(),
+            "Template_Intersections": dict(),
         	"Current_Template_Name": "",
         	"Current_Template_Coords": list(),
         	"Current_Template_Path": "",
+            "Current_Template_Intersections": list(),
         	"Window_Closed": False
         }
 
@@ -58,7 +61,12 @@ class GUI:
         self.config = ConfigParser.ConfigParser()
 
         # open preferences file
-        self.systemParameters["Saved_Colours"], self.systemParameters["Saved_Profiles"], self.systemParameters["Templates"], self.systemParameters["Template_Paths"] = self.getPreferences()
+        updated_parameters = self.getPreferences()
+        self.systemParameters["Saved_Colours"] = updated_parameters[0]
+        self.systemParameters["Saved_Profiles"] = updated_parameters[1]
+        self.systemParameters["Templates"] = updated_parameters[2]
+        self.systemParameters["Template_Paths"] = updated_parameters[3]
+        self.systemParameters["Template_Intersections"] = updated_parameters[4]
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
@@ -209,7 +217,7 @@ class GUI:
         self.filemenu.add_command(label = "Exit", command = lambda: self.on_closing())
         self.menubar.add_cascade(label = "File", menu = self.filemenu)
 
-        # HSV menu 
+        # HSV menu
         self.HSVmenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
         self.HSVmenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
         self.menubar.add_cascade(label = "HSV Options", menu = self.HSVmenu)
@@ -383,7 +391,7 @@ class GUI:
 					self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"], self.systemParameters["Upper_Border"], \
 					self.systemParameters["Lower_Border"], self.systemParameters["Lower_Blob_Size"], self.systemParameters["Upper_Blob_Size"], \
 					self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
-					tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1)
+					tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections"]
 
         # return False if run button wasn't pressed
         else:
@@ -394,7 +402,7 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def updateSelections(self):
-        if (self.secondHSVFlag.get() == 1): 
+        if (self.secondHSVFlag.get() == 1):
             # update labels
             for label in self.grayLabels:
                 label.config(fg ='#000000')
@@ -404,7 +412,7 @@ class GUI:
         else:
             # update labels
             for label in self.grayLabels:
-                label.config(fg ='#D3D3D3')            
+                label.config(fg ='#D3D3D3')
             # update fields
             for field in self.entries2:
                 field.delete(0, tk.END)
@@ -420,14 +428,16 @@ class GUI:
             self.config.add_section('HSV Ranges')
             self.config.add_section('Profiles')
             self.config.add_section('Template Coordinates')
+            self.config.add_section('Template Intersections')
             self.config.add_section('Template Images')
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
 
         # load in preferences
-        return dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
-        	dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images'))
+        return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
+        	dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
+            dict(self.config.items('Template Intersections'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -447,7 +457,7 @@ class GUI:
 
     def change_HSV_dropdown(self, *args):
     	# if menu selection has changed
-        if(self.colourMenuVar.get() != 'Select HSV Range'):        
+        if(self.colourMenuVar.get() != 'Select HSV Range'):
             # create list from value stored in preferences
             hsvList = ast.literal_eval(self.systemParameters["Saved_Colours"][str(self.colourMenuVar.get())])
 
@@ -477,7 +487,7 @@ class GUI:
                 self.systemParameters["Upper_HSV_2"] = np.asarray(hsvList[3])
 
                 # enable second range
-                if (self.secondHSVFlag.get() != 1): 
+                if (self.secondHSVFlag.get() != 1):
                     self.secondHSVFlag.set(1)
                     self.updateSelections()
 
@@ -520,7 +530,7 @@ class GUI:
 
     def change_Preferences_dropdown(self, *args):
     	# if menu selection has changed
-        if(self.profileMenuVar.get() != 'Select Profile'):        
+        if(self.profileMenuVar.get() != 'Select Profile'):
             # create list from value stored in preferences
             optionsList = ast.literal_eval(self.systemParameters["Saved_Profiles"][str(self.profileMenuVar.get())])
 
@@ -532,8 +542,9 @@ class GUI:
             self.systemParameters["Current_Template_Name"] = str(optionsList[4])
             self.systemParameters["Current_Template_Coords"] = ast.literal_eval(self.systemParameters["Templates"][str(optionsList[4])])
             self.systemParameters["Current_Template_Path"] = self.systemParameters["Template_Paths"][str(optionsList[4])]
+            self.systemParameters["Current_Template_Intersections"] = self.systemParameters["Template_Intersections"][str(optionsList[4])]
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
-            self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]	
+            self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
     # ---------------------------------------------------------------------------------
     # Function to restart script to load changes
@@ -578,7 +589,7 @@ class GUI:
             newWindow = tk.Toplevel(self.root)
             newWindow.configure(bg='#ffffff')
             self.centre_window(newWindow, 300, 170)
-            
+
             # widgets
             nameLabel = tk.Label(newWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
             nameEntry = tk.Entry(newWindow,font=("Calibri Light", 14),textvariable = name,width = 20)
@@ -602,7 +613,7 @@ class GUI:
                 if(self.secondHSVFlag.get() == 1):
                     outputString += "," + np.array2string(self.systemParameters["Lower_HSV_2"], separator = ',').replace("[","(").replace("]", ")")
                     outputString += "," + np.array2string(self.systemParameters["Upper_HSV_2"], separator = ',').replace("[","(").replace("]", ")")
-                
+
                 outputString += "]"
 
                 # add to config file
@@ -641,7 +652,7 @@ class GUI:
 				for option in self.systemParameters["Colour_Options"]:
 					self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
 
-    	# create window 
+    	# create window
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
@@ -673,241 +684,251 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def createProfile(self):
-		# embedded function to allow for removal of template
-		def removeTemplate():
-			# function to close window
-			def closing():
-				# close window
-				removeTemplateWindow.destroy()
+        # embedded function to allow for removal of template
+        def removeTemplate():
+            # function to close window
+            def closing():
+                # close window
+                removeTemplateWindow.destroy()
 
-				# remove selected option from menu
-				if(removetemplateMenuVar.get() != 'Select Template to Remove'):
-					# delete saved template image
-					path = self.systemParameters["Template_Paths"][removetemplateMenuVar.get()]
-					os.remove(path)
+                # remove selected option from menu
+                if(removetemplateMenuVar.get() != 'Select Template to Remove'):
+                    # delete saved template image
+                    path = self.systemParameters["Template_Paths"][removetemplateMenuVar.get()]
+                    os.remove(path)
 
-					self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
-					self.config.remove_option("Template Images", removetemplateMenuVar.get())
-					self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
-					self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
-					self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
+                    self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
+                    self.config.remove_option("Template Images", removetemplateMenuVar.get())
+                    self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
+                    self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
+                    self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
 
+                    # update menu
+                    templateMenuVar.set('Select Template')
+                    templateMenu['menu'].delete(0, 'end')
 
+                    for option in self.systemParameters["Templates_Options"]:
+                        templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
 
-					# update menu 
-					templateMenuVar.set('Select Template')
-					templateMenu['menu'].delete(0, 'end')
+            # create window
+            removeTemplateWindow = tk.Toplevel(newWindow)
+            removeTemplateWindow.configure(bg='#ffffff')
+            self.centre_window(removeTemplateWindow, 300, 170)
 
-					for option in self.systemParameters["Templates_Options"]:
-						templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
+            # labels
+            nameLabel = tk.Label(removeTemplateWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
 
-			# create window
-			removeTemplateWindow = tk.Toplevel(newWindow)
-			removeTemplateWindow.configure(bg='#ffffff')
-			self.centre_window(removeTemplateWindow, 300, 170)	
+            # drop down menu used to select profile to delete
+            removetemplateMenuVar = tk.StringVar(self.root)
+            removetemplateMenuVar.set('Select Template to Remove')
+            removeTemplateMenu = tk.OptionMenu(removeTemplateWindow, removetemplateMenuVar, 'Select Template to Remove', *self.systemParameters["Templates_Options"])
+            removeTemplateMenu.config(font=("Calibri Light", 13))
+            removeTemplateMenu.config(bg='#ffffff')
 
-			# labels
-			nameLabel = tk.Label(removeTemplateWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
+            # button
+            nameButton = tk.Button(removeTemplateWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: closing(),
+                width = 20,font=("Calibri Light", 14))
 
-			# drop down menu used to select profile to delete
-			removetemplateMenuVar = tk.StringVar(self.root)
-			removetemplateMenuVar.set('Select Template to Remove')
-			removeTemplateMenu = tk.OptionMenu(removeTemplateWindow, removetemplateMenuVar, 'Select Template to Remove', *self.systemParameters["Templates_Options"])
-			removeTemplateMenu.config(font=("Calibri Light", 13))
-			removeTemplateMenu.config(bg='#ffffff')
+            # packing
+            nameLabel.pack(pady = (20,5))
+            removeTemplateMenu.pack(pady = 10)
+            nameButton.pack(pady = 5)
 
-			# button
-			nameButton = tk.Button(removeTemplateWindow,text = "Save",bg='#ffffff',fg='#000000',command = lambda: closing(),
-				width = 20,font=("Calibri Light", 14))
+            # wait until user selects template
+            newWindow.wait_window(removeTemplateWindow)
 
-			# packing
-			nameLabel.pack(pady = (20,5))
-			removeTemplateMenu.pack(pady = 10)
-			nameButton.pack(pady = 5)
-			
-			# wait until user selects template
-			newWindow.wait_window(removeTemplateWindow)
+        # embedded function to allow for creation of template
+        def createTemplate():
+            # embedded function to get template paths
+            def getImage(type):
+                filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + " template",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+                shortName = os.path.split(filename)[1]
+                if(type == "marked"):
+                    self.markedTemplate = filename
+                    directoryPathLabel1.config(text=shortName)
+                else:
+                    self.unmarkedTemplate = filename
+                    directoryPathLabel2.config(text=shortName)
 
-    	# embedded function to allow for creation of template
-		def createTemplate():
-			# embedded function to get template paths
-			def getImage(type):
-				filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + " template",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-				shortName = os.path.split(filename)[1]
-				if(type == "marked"):
-					self.markedTemplate = filename
-					directoryPathLabel1.config(text=shortName)
-				else:
-					self.unmarkedTemplate = filename
-					directoryPathLabel2.config(text=shortName)
+            # open new window
+            templateWindow = tk.Toplevel(newWindow)
+            templateWindow.configure(bg='#ffffff')
+            self.centre_window(templateWindow, 450, 750)
 
-			# open new window
-			templateWindow = tk.Toplevel(newWindow)
-			templateWindow.configure(bg='#ffffff')
-			self.centre_window(templateWindow, 450, 750)
+            # hide other windows
+            newWindow.withdraw()
+            self.root.withdraw()
 
-			# hide other windows
-			newWindow.withdraw()
-			self.root.withdraw()
+            # frames
+            lowerFrame = tk.Frame(templateWindow, bg='#ffffff')
+            upperFrame = tk.Frame(templateWindow, bg='#ffffff')
+            nameFrame = tk.Frame(templateWindow, bg='#ffffff')
 
-			# frames
-			lowerFrame = tk.Frame(templateWindow, bg='#ffffff')
-			upperFrame = tk.Frame(templateWindow, bg='#ffffff')
-			nameFrame = tk.Frame(templateWindow, bg='#ffffff')
+            # labels
+            titleLabel = tk.Label(templateWindow, text = "Generate Template", bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
+            directoryLabel1 = tk.Label(templateWindow, text = "Select Marked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            directoryPathLabel1 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+            directoryLabel2 = tk.Label(templateWindow, text = "Select Unmarked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            directoryPathLabel2 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+            parametersLabel = tk.Label(templateWindow, text = "Parameters",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            lowerSizeLabel = tk.Label(lowerFrame, text = "Lower Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+            upperSizeLabel = tk.Label(upperFrame, text = "Upper Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+            nameLabel = tk.Label(nameFrame, text = "Template Name",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
 
-			# labels
-			titleLabel = tk.Label(templateWindow, text = "Generate Template", bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
-			directoryLabel1 = tk.Label(templateWindow, text = "Select Marked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-			directoryPathLabel1 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
-			directoryLabel2 = tk.Label(templateWindow, text = "Select Unmarked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-			directoryPathLabel2 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
-			parametersLabel = tk.Label(templateWindow, text = "Parameters",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-			lowerSizeLabel = tk.Label(lowerFrame, text = "Lower Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
-			upperSizeLabel = tk.Label(upperFrame, text = "Upper Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
-			nameLabel = tk.Label(nameFrame, text = "Template Name",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+            # entries
+            name = tk.StringVar()
+            lowerSize = tk.IntVar()
+            upperSize = tk.IntVar()
+            nameEntry = tk.Entry(nameFrame, font=("Calibri Light", 14),textvariable=name, width=10)
+            lowerEntry = tk.Entry(lowerFrame, font=("Calibri Light", 14),textvariable=lowerSize, width=10)
+            upperEntry = tk.Entry(upperFrame, font=("Calibri Light", 14),textvariable=upperSize, width=10)
 
-			# entries
-			name = tk.StringVar()
-			lowerSize = tk.IntVar()
-			upperSize = tk.IntVar()
-			nameEntry = tk.Entry(nameFrame, font=("Calibri Light", 14),textvariable=name, width=10)
-			lowerEntry = tk.Entry(lowerFrame, font=("Calibri Light", 14),textvariable=lowerSize, width=10)
-			upperEntry = tk.Entry(upperFrame, font=("Calibri Light", 14),textvariable=upperSize, width=10)
+            # set default values
+            lowerEntry.insert(0,100)
+            upperEntry.insert(0,10000)
+            lowerSize.set(100)
+            upperSize.set(10000)
 
-			# set default values
-			lowerEntry.insert(0,100)
-			upperEntry.insert(0,10000)
-			lowerSize.set(100)
-			upperSize.set(10000)
+            # buttons
+            self.markedTemplate = ""
+            self.unmarkedTemplate = ""
 
-			# buttons
-			self.markedTemplate = ""
-			self.unmarkedTemplate = ""
+            nameButton = tk.Button(templateWindow, text="Generate",bg='#ffffff',fg='#000000',command = lambda: templateWindow.destroy(),
+                width=20,font=("Calibri Light",14))
+            dirButton1 = tk.Button(templateWindow, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
+                width=20,font=("Calibri Light",14))
+            dirButton2 = tk.Button(templateWindow, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
+                width=20,font=("Calibri Light",14))
 
-			nameButton = tk.Button(templateWindow, text="Generate",bg='#ffffff',fg='#000000',command = lambda: templateWindow.destroy(),
-				width=20,font=("Calibri Light",14))
-			dirButton1 = tk.Button(templateWindow, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
-				width=20,font=("Calibri Light",14))
-			dirButton2 = tk.Button(templateWindow, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
-				width=20,font=("Calibri Light",14))
+            # packing
+            titleLabel.pack(pady = 20)
+            directoryLabel1.pack(pady = 10)
+            directoryPathLabel1.pack(pady = 10)
+            dirButton1.pack(pady = 10)
+            directoryLabel2.pack(pady = (20, 10))
+            directoryPathLabel2.pack(pady = 10)
+            dirButton2.pack(pady = 10)
+            parametersLabel.pack(pady = (20,10))
+            lowerFrame.pack(pady = 10)
+            lowerSizeLabel.pack(side = tk.LEFT, padx = (20,5))
+            lowerEntry.pack(side = tk.LEFT, padx = (5, 20))
+            upperFrame.pack(pady = 10)
+            upperSizeLabel.pack(side = tk.LEFT, padx = (20,5))
+            upperEntry.pack(side = tk.LEFT, padx = (5, 20))
+            nameFrame.pack(pady = 10)
+            nameLabel.pack(side = tk.LEFT, padx = (20,5))
+            nameEntry.pack(side = tk.LEFT, padx = (5,20))
+            nameButton.pack(pady = (20,10))
 
-			# packing
-			titleLabel.pack(pady = 20)
-			directoryLabel1.pack(pady = 10)
-			directoryPathLabel1.pack(pady = 10)
-			dirButton1.pack(pady = 10)
-			directoryLabel2.pack(pady = (20, 10))
-			directoryPathLabel2.pack(pady = 10)
-			dirButton2.pack(pady = 10)
-			parametersLabel.pack(pady = (20,10))
-			lowerFrame.pack(pady = 10)
-			lowerSizeLabel.pack(side = tk.LEFT, padx = (20,5))
-			lowerEntry.pack(side = tk.LEFT, padx = (5, 20))
-			upperFrame.pack(pady = 10)
-			upperSizeLabel.pack(side = tk.LEFT, padx = (20,5))
-			upperEntry.pack(side = tk.LEFT, padx = (5, 20))			
-			nameFrame.pack(pady = 10)
-			nameLabel.pack(side = tk.LEFT, padx = (20,5))
-			nameEntry.pack(side = tk.LEFT, padx = (5,20))
-			nameButton.pack(pady = (20,10))
+            self.root.wait_window(templateWindow)
 
-			self.root.wait_window(templateWindow)
+            # if valid filename
+            if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
+                # hsv ranges
+                lower_pink = np.array([143, 198, 50])#np.array([125, 10, 50])
+                upper_pink = np.array([168, 255, 255])#np.array([160, 255, 255])
+                lower_green = np.array([60, 160, 130])
+                upper_green = np.array([70, 255, 255])
+                min_contour_area = lowerSize.get()
+                max_contour_area = upperSize.get()
 
-			# if valid filename
-			if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
-				# hsv ranges
-				lower_pink = np.array([143, 198, 50])#np.array([125, 10, 50])
-				upper_pink = np.array([168, 255, 255])#np.array([160, 255, 255])
-				lower_green = np.array([60, 160, 130])
-				upper_green = np.array([70, 255, 255])
-				min_contour_area = lowerSize.get()
-				max_contour_area = upperSize.get()
+                # import image
+                img = cv2.imread(self.markedTemplate)
+                img_unmarked = cv2.imread(self.unmarkedTemplate)
+                img_save = img_unmarked.copy()
 
-				# import image
-				img = cv2.imread(self.markedTemplate)
-				img_unmarked = cv2.imread(self.unmarkedTemplate)
-				img_save = img_unmarked.copy()
+                # convert to HSV colour space
+                hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-				# convert to HSV colour space
-				hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+                # create mask to find stakes
+                stake_mask = cv2.inRange(hsv, lower_pink, upper_pink)
 
-				# create mask to find stakes
-				stake_mask = cv2.inRange(hsv, lower_pink, upper_pink)
+                # remove noise
+                kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
+                stake_mask= cv2.morphologyEx(stake_mask, cv2.MORPH_OPEN, kernel)
 
-				# remove noise
-				kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
-				stake_mask= cv2.morphologyEx(stake_mask, cv2.MORPH_OPEN, kernel)
+                # find contours
+                stake_contours = cv2.findContours(stake_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
 
-				# find contours
-				stake_contours = cv2.findContours(stake_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+                # list containing stake coordinates
+                stakes_coords = list()
 
-				# list containing stake coordinates
-				stakes_coords = list()
+                # list containing stake intersection coordinates
+                stakes_intersect = list()
 
-				# variables for number of stakes and blobs found
-				stakes = 0
-				blobs = 0
-				blob_area = 0.0
-				stake_area = 0.0
+                # variables for number of stakes and blobs found
+                stakes = 0
+                blobs = 0
+                blob_area = 0.0
+                stake_area = 0.0
 
-				# iterate through stake contours
-				for cnt in stake_contours:
-					# get contour coordinates
-					rect = cv2.minAreaRect(cnt)
-					box = np.array(cv2.boxPoints(rect), dtype = "int")
+                # iterate through stake contours
+                for cnt in stake_contours:
+                    # get contour coordinates
+                    rect = cv2.minAreaRect(cnt)
+                    box = np.array(cv2.boxPoints(rect), dtype = "int")
 
-					# order points
-					points = orderPoints(box)
-					points_list = [[points[0], points[2]]]
-					stakes_coords.append(points_list)
+                    # order points
+                    points = orderPoints(box)
+                    points_list = [[points[0], points[2]]]
+                    stakes_coords.append(points_list)
 
-					# increment stake counter
-					stakes += 1
-					stake_area += cv2.contourArea(cnt)
+                    # increment stake counter
+                    stakes += 1
+                    stake_area += cv2.contourArea(cnt)
 
-				print(stakes)
+        		# find blobs pertaining to each stake
+        		for stake in stakes_coords:
+        			# choose roi to be stake bounding rectangle
+        			roi = hsv[stake[0][0][1]: stake[0][1][1], stake[0][0][0]: stake[0][1][0]]
 
-				# find blobs pertaining to each stake
-				for stake in stakes_coords:
-					# choose roi to be stake bounding rectangle
-					roi = hsv[stake[0][0][1]: stake[0][1][1], stake[0][0][0]: stake[0][1][0]]
+        			# apply mask
+        			blob_mask = cv2.inRange(roi, lower_green, upper_green)
 
-					# apply mask
-					blob_mask = cv2.inRange(roi, lower_green, upper_green)
+        			# remove noise
+        			blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_OPEN, kernel)
 
-					# remove noise
-					blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_OPEN, kernel)
+        			# find contours in roi
+        			blob_contours = cv2.findContours(blob_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset = (stake[0][0][0], stake[0][0][1]))[1]
 
-					# find contours in roi
-					blob_contours = cv2.findContours(blob_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset = (stake[0][0][0], stake[0][0][1]))[1]
+        			# iterate through contours
+        			for cnt in blob_contours:
+        				# filter contours by area
+        				if min_contour_area <= cv2.contourArea(cnt) <= max_contour_area:
+        					# get contour coordinates
+        					rect = cv2.minAreaRect(cnt)
+        					box = np.array(cv2.boxPoints(rect), dtype = "int")
 
-					# iterate through contours
-					for cnt in blob_contours:
-						# filter contours by area
-						if min_contour_area <= cv2.contourArea(cnt) <= max_contour_area:
-							# get contour coordinates
-							rect = cv2.minAreaRect(cnt)
-							box = np.array(cv2.boxPoints(rect), dtype = "int")
+        					# order points
+        					points  = orderPoints(box)
 
-							# order points
-							points  = orderPoints(box)
+        					# add blobs to stake list
+        					stake.append([points[0], points[2]])
 
-							# add blobs to stake list
-							stake.append([points[0], points[2]])
+        					# increment blob counter
+        					blobs += 1
+        					blob_area += cv2.contourArea(cnt)
 
-							# increment blob counter
-							blobs += 1
-							blob_area += cv2.contourArea(cnt)
+                # determine intersection points for each stake
+                for stake in stakes_coords:
+                    bottom_box = stake[1]
+                    top_box = stake(len(stake) - 1)
 
-				# output boxes
-				for stake in stakes_coords:
-					for count, blob in enumerate(stake):
-						if(count == 0):
-							# draw stake
-							cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,0,255),2)
-						else:
-							# draw blob
-							cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
+                    print "\n"
+                    print bottom_box
+                    print top_box
+                    print stake
+                    print "\n"
+
+                # output boxes
+                for stake in stakes_coords:
+                	for count, blob in enumerate(stake):
+                		if(count == 0):
+                			# draw stake
+                			cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,0,255),2)
+                		else:
+                			# draw blob
+                			cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
 
 				# output results of template generation
 				print("---------------------------------------")
@@ -952,7 +973,7 @@ class GUI:
 					templateMenuVar.set(name.get())
 
 					print("Template Saved Successfully: %s \n" % name.get())
-			
+
 			# reopen other windows
 			newWindow.deiconify()
 			self.root.deiconify()
@@ -996,7 +1017,7 @@ class GUI:
 					self.systemParameters["Saved_Profiles"][name.get()] = outputString
 					self.systemParameters["Profile_Options"].append(name.get())
 					self.profileMenuVar.set(name.get())
-									
+
 				# close windows
 				nameWindow.destroy()
 				newWindow.destroy()
@@ -1078,7 +1099,7 @@ class GUI:
 			fg = '#000000', font=("Calibri Light", 15), width = 17)
 		#createTemplateButton = tk.Button(buttonFrame, text = "Create Template", command = lambda: createTemplate(), bg = '#ffffff',
 		#	fg = '#000000', font=("Calibri Light", 15), width = 17)
-        
+
 		# packing
 		titleLabel.pack(pady = 20)
 		upperBorderFrame.pack(pady = 10)
@@ -1091,11 +1112,11 @@ class GUI:
 
 		lowerBlobFrame.pack(pady = 10)
 		lowerBlobLabel.pack(side = tk.LEFT, padx = 10)
-		lowerBlobEntry.pack(side = tk.LEFT, padx = 10)   
+		lowerBlobEntry.pack(side = tk.LEFT, padx = 10)
 
 		upperBlobFrame.pack(pady = 10)
 		upperBlobLabel.pack(side = tk.LEFT, padx = 10)
-		upperBlobEntry.pack(side = tk.LEFT, padx = 10)   
+		upperBlobEntry.pack(side = tk.LEFT, padx = 10)
 
 		templateFrame.pack(pady = 10)
 		templateLabel.pack(side = tk.LEFT, padx = 10)
@@ -1103,15 +1124,15 @@ class GUI:
 
 		clipLimitFrame.pack(pady = 10)
 		clipLimitLabel.pack(side = tk.LEFT, padx = 10)
-		clipLimitEntry.pack(side = tk.LEFT, padx = 10)    	
+		clipLimitEntry.pack(side = tk.LEFT, padx = 10)
 
 		tileSizeFrame.pack(pady = 10)
 		tileSizeLabel1.pack(side = tk.LEFT, padx = 10)
-		tileSizeLabel2.pack(side = tk.LEFT, padx = (5,0))    
-		tileSizeEntry1.pack(side = tk.LEFT)	
-		tileSizeLabel3.pack(side = tk.LEFT, padx = 0)    
-		tileSizeEntry2.pack(side = tk.LEFT)	
-		tileSizeLabel4.pack(side = tk.LEFT, padx = (0,5))    
+		tileSizeLabel2.pack(side = tk.LEFT, padx = (5,0))
+		tileSizeEntry1.pack(side = tk.LEFT)
+		tileSizeLabel3.pack(side = tk.LEFT, padx = 0)
+		tileSizeEntry2.pack(side = tk.LEFT)
+		tileSizeLabel4.pack(side = tk.LEFT, padx = (0,5))
 
 		buttonFrame.pack(pady = 20)
 		#createTemplateButton.pack(side = tk.LEFT, padx = (20, 5))
@@ -1143,7 +1164,7 @@ class GUI:
 				for option in self.systemParameters["Profile_Options"]:
 					self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))
 
-		# create window 
+		# create window
 		newWindow = tk.Toplevel(self.root)
 		newWindow.configure(bg='#ffffff')
 		self.centre_window(newWindow, 300, 170)
@@ -1195,7 +1216,7 @@ class GUI:
 
 			for label in labels:
 				label.config(bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
-	        
+
 			# packing
 			titleLabel.pack(pady = 20)
 			upperBorderLabel.pack(pady = 10)
@@ -1204,7 +1225,7 @@ class GUI:
 			upperBlobLabel.pack(pady = 10)
 			templateLabel.pack(pady = 10)
 			clipLimitLabel.pack(pady = 10)
-			tileSizeLabel.pack(pady = 10)  
+			tileSizeLabel.pack(pady = 10)
 
 			# wait until user closes window
 			self.root.wait_window(newWindow)
@@ -1234,7 +1255,7 @@ class GUI:
 	            s3 = S3Slider.get()
 	            s4 = S4Slider.get()
 	            v3 = V3Slider.get()
-	            v4 = V4Slider.get() 	
+	            v4 = V4Slider.get()
 
             # convert image to HSV
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -1261,7 +1282,7 @@ class GUI:
             # if second range selected
             if(previewsecondHSVFlag.get() == 1):
                 self.secondHSVFlag.set(1)
-                self.updateSelections()            	
+                self.updateSelections()
             	for field in self.entries2:
             		field.delete(0, tk.END)
 
@@ -1279,7 +1300,7 @@ class GUI:
             # second range
             if(previewsecondHSVFlag.get() == 1):
 				self.systemParameters["Lower_HSV_2"] = np.array([H3Slider.get(), S3Slider.get(), V3Slider.get()])
-				self.systemParameters["Upper_HSV_2"] = np.array([H4Slider.get(), S4Slider.get(), V4Slider.get()])     	
+				self.systemParameters["Upper_HSV_2"] = np.array([H4Slider.get(), S4Slider.get(), V4Slider.get()])
 
 				# update entries
 				for count, field in enumerate(self.entries2):
@@ -1303,7 +1324,7 @@ class GUI:
         	if(previewsecondHSVFlag.get() == 1):
         		# resize window
         		newWindow.geometry("900x650")
-        		
+
         		# pack second HSV widgets
         		for widget in secondRangeWidgets:
         			widget.pack(side = tk.LEFT, padx =(15,5))
@@ -1324,7 +1345,7 @@ class GUI:
         newWindow = tk.Toplevel(self.root)
         newWindow.configure(background='#ffffff')
         newWindow.withdraw()
-        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))   
+        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
 
         if(filename != ""):
 	        newWindow.deiconify()
@@ -1333,27 +1354,27 @@ class GUI:
 	        # create widgets
 	        HSVSlidersLabel = tk.Label(newWindow,text="HSV Sliders",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
 	        LowerLabel = tk.Label(newWindow,text="Lower",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))
-	        UpperLabel = tk.Label(newWindow,text="Upper",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))         
+	        UpperLabel = tk.Label(newWindow,text="Upper",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))
 
 	        # button
 	        savetoMain = tk.Button(newWindow, text = "Save Values",bg = '#ffffff',fg = '#000000',command = lambda: saveValuestoMain(),
 	            width = 20,font=("Calibri Light", 15))
 
 	        # frames
-	        Frame1 = tk.Frame(newWindow, background='#ffffff')    
-	        Frame2 = tk.Frame(newWindow, background='#ffffff')    
-	        Frame3 = tk.Frame(newWindow, background='#ffffff')    
-	        Frame4 = tk.Frame(newWindow, background='#ffffff')    
-	        Frame5 = tk.Frame(newWindow, background='#ffffff')    
-	        Frame6 = tk.Frame(newWindow, background='#ffffff')    
+	        Frame1 = tk.Frame(newWindow, background='#ffffff')
+	        Frame2 = tk.Frame(newWindow, background='#ffffff')
+	        Frame3 = tk.Frame(newWindow, background='#ffffff')
+	        Frame4 = tk.Frame(newWindow, background='#ffffff')
+	        Frame5 = tk.Frame(newWindow, background='#ffffff')
+	        Frame6 = tk.Frame(newWindow, background='#ffffff')
 
 	        # H, S, and V Labels
-	        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
 
 	        # sliders
 	        H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
@@ -1364,12 +1385,12 @@ class GUI:
 	        V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
 
 			# second range H, S, and V Labels
-	        H2Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        S2Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        V2Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        H2Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        S2Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
-	        V2Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))  
+	        H2Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        S2Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        V2Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        H2Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        S2Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+	        V2Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
 
 	        # second range sliders
 	        H3Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
@@ -1395,26 +1416,26 @@ class GUI:
 	            font=("Calibri Light", 14))
 
 	        # packing
-	        HSVSlidersLabel.pack(pady = (20,5))  
+	        HSVSlidersLabel.pack(pady = (20,5))
 	        LowerLabel.pack(pady = (5,0))
-	        Frame1.pack(pady = 2) 
-	        H1Lower.pack(side = tk.LEFT, padx = 5)    
+	        Frame1.pack(pady = 2)
+	        H1Lower.pack(side = tk.LEFT, padx = 5)
 	        H1Slider.pack(side = tk.LEFT, padx = 5)
-	        Frame2.pack(pady = 2) 
-	        S1Lower.pack(side = tk.LEFT, padx = 5) 
+	        Frame2.pack(pady = 2)
+	        S1Lower.pack(side = tk.LEFT, padx = 5)
 	        S1Slider.pack(side = tk.LEFT, padx = 5)
-	        Frame3.pack(pady = 2) 
-	        V1Lower.pack(side = tk.LEFT, padx = 5) 
+	        Frame3.pack(pady = 2)
+	        V1Lower.pack(side = tk.LEFT, padx = 5)
 	        V1Slider.pack(side = tk.LEFT, padx = 5)
 	        UpperLabel.pack(pady = (10,0))
-	        Frame4.pack(pady = 2) 
-	        H1Upper.pack(side = tk.LEFT, padx = 5) 
+	        Frame4.pack(pady = 2)
+	        H1Upper.pack(side = tk.LEFT, padx = 5)
 	        H2Slider.pack(side = tk.LEFT, padx = 5)
-	        Frame5.pack(pady = 2) 
-	        S1Upper.pack(side = tk.LEFT, padx = 5)         
+	        Frame5.pack(pady = 2)
+	        S1Upper.pack(side = tk.LEFT, padx = 5)
 	        S2Slider.pack(side = tk.LEFT, padx = 5)
-	        Frame6.pack(pady = 2) 
-	        V1Upper.pack(side = tk.LEFT, padx = 5)       
+	        Frame6.pack(pady = 2)
+	        V1Upper.pack(side = tk.LEFT, padx = 5)
 	        V2Slider.pack(side = tk.LEFT, padx = 5)
 	        previewCheckBox.pack(pady = (20, 10))
 	        savetoMain.pack(pady = (10,25))
