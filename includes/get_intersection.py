@@ -8,6 +8,7 @@ from progress_bar import progress
 import math
 import os
 import json
+import statistics
 
 # function that returns the intersection of lines defined by two points
 def lineIntersections(pt1, pt2, ptA, ptB):
@@ -139,8 +140,12 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					# add coordinates to dictionary
 					coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
 
-				# calculate average intersection point
-				coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
+				# calculate median intersection point
+				#coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
+				y_vals = [x[1] for x in [coordinates["left"], coordinates["right"], coordinates["middle"]]]
+				median_y = statistics.median(y_vals)
+				median_tuple = [item for item in [coordinates["left"], coordinates["right"], coordinates["middle"]] if item[1] == median_y]
+				coordinates["average"] = list(median_tuple[0])
 
 				# add to stake coordinates list
 				stake_intersections.append(coordinates)

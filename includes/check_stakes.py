@@ -52,8 +52,6 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# create bool list for blobs for each stake
 			validBlobs = list()
 
-			print stake
-
 			# lowest blob variable
 			lowestBlob = np.array([[0,0],[0,0],[0,0],[0,0]])
 

@@ -14,6 +14,7 @@ from PIL import ImageTk, Image
 from order_points import orderPoints
 from get_intersection import lineIntersections
 from scipy import ndimage
+import statistics
 
 class GUI:
     def __init__(self, master):
@@ -51,10 +52,12 @@ class GUI:
             "Templates_Options": list(),
             "Template_Paths": dict(),
             "Template_Intersections": dict(),
+            "Template_Tensors": dict()
             "Current_Template_Name": "",
             "Current_Template_Coords": list(),
             "Current_Template_Path": "",
             "Current_Template_Intersections": list(),
+            "Current_Template_Tensor": 0.0,
             "Window_Closed": False
         }
 
@@ -392,7 +395,8 @@ class GUI:
                     self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"], self.systemParameters["Upper_Border"], \
                     self.systemParameters["Lower_Border"], self.systemParameters["Lower_Blob_Size"], self.systemParameters["Upper_Blob_Size"], \
                     self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
-                    tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections"]
+                    tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections", \
+                    self.systemParameters["Current_Template_Tensor"]]
 
         # return False if run button wasn't pressed
         else:
@@ -431,6 +435,7 @@ class GUI:
             self.config.add_section('Template Coordinates')
             self.config.add_section('Template Intersections')
             self.config.add_section('Template Images')
+            self.config.add_section('Template Tensor')
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
@@ -438,7 +443,7 @@ class GUI:
         # load in preferences
         return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
             dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
-            dict(self.config.items('Template Intersections'))]
+            dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -544,6 +549,7 @@ class GUI:
             self.systemParameters["Current_Template_Coords"] = ast.literal_eval(self.systemParameters["Templates"][str(optionsList[4])])
             self.systemParameters["Current_Template_Path"] = self.systemParameters["Template_Paths"][str(optionsList[4])]
             self.systemParameters["Current_Template_Intersections"] = ast.literal_eval(self.systemParameters["Template_Intersections"][str(optionsList[4])])
+            self.systemParameters["Current_Template_Tensor"] = ast.literal_eval(self.systemParameters["Template_Tensors"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
             self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
@@ -925,7 +931,6 @@ class GUI:
                 img_gray = cv2.cvtColor(img_unmarked.copy(), cv2.COLOR_BGR2GRAY)
 
                 # determine intersection points for each stake
-
                 for stake in stakes_coords:
                     # get coordinates of top and bottom blobs on stake
                     bottom_blob = [[stake[1][0][0]+10,stake[1][0][1]+10],
@@ -982,10 +987,12 @@ class GUI:
                         # add coordinates to list
                         combinationResults.append((x[first_coord], y[first_coord]))
 
-                    stakes_intersect.append([sum(y) / len(y) for y in zip(*combinationResults)])
-
-                print "\n"
-                print stakes_intersect
+                    # calculate median
+                    #stakes_intersect.append([sum(y) / len(y) for y in zip(*combinationResults)])
+                    y_vals = [x[1] for x in combinationResults]
+                    median_y = statistics.median(y_vals)
+                    median_tuple = [item for item in combinationResults if item[1] == median_y]
+                    stakes_intersect.append(list(median_tuple[0]))
 
                 # output boxes
                 for stake_output in stakes_coords:
@@ -1022,9 +1029,13 @@ class GUI:
                     if(not os.path.isdir("./includes/templates")):
                         os.mkdir("./includes/templates")
 
-                    # write image to directory
-                    path = os.getcwd() + "\\includes\\templates\\" + os.path.split(self.unmarkedTemplate)[1]
-                    cv2.imwrite(path, img_save)
+                    # write images to directory
+                    current_dir = os.getcwd()
+                    filename, ext = os.path.splitext(os.path.split(self.unmarkedTemplate)[1])
+                    template_path = current_dir + "\\includes\\templates\\" + filename + ext
+                    marked_template_path = current_dir + "\\includes\\templates\\" + filename + "-marked" + ext
+                    cv2.imwrite(template_path, img_save)
+                    cv2.imwrite(marked_template_path, img_unmarked)
 
                     # create output strings
                     outputString = str(stakes_coords).replace("array(", "").replace(")", "")
@@ -1032,19 +1043,21 @@ class GUI:
 
                     # save to config file
                     self.config.set('Template Coordinates', name.get(), outputString)
-                    self.config.set('Template Images', name.get(), path)
+                    self.config.set('Template Images', name.get(), template_path)
                     self.config.set('Template Intersections', name.get(), intersectionString)
 
                     # update menu
                     templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
                     self.systemParameters["Templates"][name.get()] = outputString
                     self.systemParameters["Templates_Options"].append(name.get())
-                    self.systemParameters["Template_Paths"][name.get()] = path
+                    self.systemParameters["Template_Paths"][name.get()] = template_path
                     self.systemParameters["Current_Template_Name"] = name.get()
                     self.systemParameters["Current_Template_Coords"] = outputString
-                    self.systemParameters["Current_Template_Path"] = path
+                    self.systemParameters["Current_Template_Path"] = template_path
                     self.systemParameters["Template_Intersections"][name.get()] = intersectionString
+                    self.systemParameters["Template_Tensors"][name.get()] = 50.0
                     self.systemParameters["Current_Template_Intersections"] = intersectionString
+                    self.systemParameters["Current_Template_Tensor"] = 50.0
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())

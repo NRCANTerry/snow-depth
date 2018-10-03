@@ -238,8 +238,6 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
     blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names,
     paths_dict["stake-check"])
 
-print stake_validity
-
 # ---------------------------------------------------------------------------------
 # Determine Snow Intersection Point
 # ---------------------------------------------------------------------------------
@@ -247,7 +245,7 @@ print stake_validity
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 150, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 130, filtered_names, debug, paths_dict["intersection"])
 
 # test output
 for i, img_name in enumerate(filtered_names):
