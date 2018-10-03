@@ -34,6 +34,10 @@ start = time.time()
 # Get parameters from GUI
 # ---------------------------------------------------------------------------------
 
+# window closed without executing
+if(params == False):
+    sys.exit()
+
 # update parameters
 directory = params[0] + "/"
 lower_hsv1 = params[1]
@@ -49,13 +53,10 @@ template_path = params[10]
 clip_limit = params[11]
 tile_size = tuple(params[12])
 template_intersections = params[14]
+template_tensor = params[15]
 
 # flag to run program in debug mode
 debug = params[13]
-
-# window closed with executing
-if(params == False):
-    sys.exit()
 
 # other parameters
 median_kernal_size = 5
@@ -213,7 +214,11 @@ if(debug):
         progress(count + 1, num_images, status=filtered_names[count])
 
         # iterate through stakes
-        for stake in roi_coordinates:
+        for j, stake in enumerate(roi_coordinates):
+            # overaly template intersection point
+            cv2.circle(img_write, (int(template_intersections[j][0]),
+                int(template_intersections[j][1] - img_border_upper)), 5, (0,255,0), 3)
+
             # iterate through roi in each stake
             for i, rectangle in enumerate(stake):
                 # stake itself
@@ -245,7 +250,7 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 130, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 125, filtered_names, debug, paths_dict["intersection"])
 
 # test output
 for i, img_name in enumerate(filtered_names):
@@ -255,8 +260,9 @@ for i, img_name in enumerate(filtered_names):
     coords_stake = intersection_coords[img_name]
     for j,stake in enumerate(coords_stake):
         if stake_validity[img_name][j]:
-            cv2.circle(img_write2, (int(stake['average'][0]), int(stake['average'][1])), 5, (0,255,0), 3)
-            print "stake %s : %s" % (j, (stake['average'][1] - (template_intersections[j][1] - img_border_upper)))
+            cv2.circle(img_write2, (int(template_intersections[j][0]), int(template_intersections[j][1])-img_border_upper), 5, (255,0,0), 3)
+            cv2.circle(img_write2, (int(stake['average'][0]), int(stake['average'][1])), 5, (0,255,0), 2)
+            print "stake %s : %s mm" % (j, (((template_intersections[j][1] - img_border_upper)-stake['average'][1])*template_tensor[j]))
 
     cv2.imwrite(paths_dict["testing"] + img_name, img_write2)
 

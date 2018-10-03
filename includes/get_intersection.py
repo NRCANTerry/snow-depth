@@ -110,7 +110,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 						roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
 
 					# make a line with "num" points
-					num = 500
+					num = 750
 					x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
 					# extract values along the line
@@ -126,16 +126,26 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					#filename, file_extension = os.path.splitext(img_names[count])
 					#plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 
+					# get coordinates that have intensity greater than threshold
+					# and aren't a colour other than white
 					coords = [a for a, v in enumerate(lineVals) if v > threshold]
+
+					# further filter those values to get intersection point
+
+					#coords_filtered = [a for a, v in enumerate(lineVals) if (v > threshold and
+					#	img_[int(y[v]),int(x[v])][1] > 150 and \
+		 		#		abs(img_[int(y[v]),int(x[v])][0] - \
+				#		img_[int(y[v]),int(x[v])][2]) <= 50)]
+				#	print "Coords filtered ", coords_filtered
 
 					first_coord = 0
 					for k, coord in enumerate(coords):
-						if ((coords[k+10] - coord) < 15):# and (coord - coords[i-2]) > 40:
+						if ((len(coords) >= k+10) and (coords[k+10] - coord) < 15 and y[coord] > box[7][1]): #img_[int(y[coord]),int(x[coord])][1] > 150):# and (coord - coords[i-2]) > 40:
 							first_coord = coord
 							break
-
-					cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
-					cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
+					if(first_coord != 0):
+						cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
+						cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
 
 					# add coordinates to dictionary
 					coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
@@ -143,9 +153,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 				# calculate median intersection point
 				#coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
 				y_vals = [x[1] for x in [coordinates["left"], coordinates["right"], coordinates["middle"]]]
+				x_vals = [x[0] for x in [coordinates["left"], coordinates["right"], coordinates["middle"]]]
 				median_y = statistics.median(y_vals)
-				median_tuple = [item for item in [coordinates["left"], coordinates["right"], coordinates["middle"]] if item[1] == median_y]
-				coordinates["average"] = list(median_tuple[0])
+				median_x = statistics.median(x_vals)
+				coordinates["average"] = [median_x, median_y]#list(median_tuple[0])
 
 				# add to stake coordinates list
 				stake_intersections.append(coordinates)

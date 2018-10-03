@@ -23,7 +23,7 @@ def increase_brightness(img, val):
 	return img
 
 # function to apply adaptive histogram equalization
-def equalize_hist(img, clip_limit, tile_size):	
+def equalize_hist(img, clip_limit, tile_size):
 	# convert to LAB
 	lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
