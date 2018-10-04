@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import Tkinter as tk
 import tkFileDialog
+from matplotlib import pyplot as plt
 
 # global variables
 MAX_FEATURES = 500
@@ -23,7 +24,7 @@ class GUI:
 		# label
 		self.label = tk.Label(
 			self.root,
-			text = "Register Image to Template", 
+			text = "Register Image to Template",
 			background = '#ffffff',
 			foreground = '#000000',
 			font = ("Calibri Light", 18))
@@ -31,7 +32,7 @@ class GUI:
 		# buttons
 		self.image1Button = tk.Button(
 			self.root,
-			text = "Select Template", 
+			text = "Select Template",
 			background = '#ffffff',
 			foreground = '#000000',
 			command = lambda: self.selectFile("1"),
@@ -40,21 +41,21 @@ class GUI:
 
 		self.image2Button = tk.Button(
 			self.root,
-			text = "Select Image", 
+			text = "Select Image",
 			background = '#ffffff',
 			foreground = '#000000',
 			command = lambda: self.selectFile("2"),
 			width = 17,
-			font = ("Calibri Light", 14))	
+			font = ("Calibri Light", 14))
 
 		self.execute = tk.Button(
 			self.root,
-			text = "Register", 
+			text = "Register",
 			background = '#ffffff',
 			foreground = '#000000',
 			command = lambda: self.root.destroy(),
 			width = 17,
-			font = ("Calibri Light", 14))			
+			font = ("Calibri Light", 14))
 
 		# packing
 		self.label.pack(pady = 20, padx = 50)
@@ -75,31 +76,35 @@ class GUI:
 		return self.templateDir, self.inputDir
 
 # function to align image to template
-def alignImages(img1, img2):
+def alignImages(img1_, img2_):
+
+	# apply median blur to highlight foreground features
+	img1 = cv2.medianBlur(img1_, 5)
+	img2 = cv2.medianBlur(img2_, 5)
 
 	# convert images to grayscale
-	img1Gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-	img2Gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+	img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+	img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
 	# detect ORB features and compute descriptors
-	orb = cv2.ORB_create(MAX_FEATURES)
-	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
-	kp2, desc2 = orb.detectAndCompute(img2Gray, None)
+	orb = cv2.ORB_create(5000)
+	kp1, desc1 = orb.detectAndCompute(img1, None)
+	kp2, desc2 = orb.detectAndCompute(img2, None)
 
-	# match features
-	matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
-	matches = matcher.match(desc1, desc2, None)
+	# create brute-force matcher object
+	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
+
+	# match the descriptors
+	matches = bf.match(desc1, desc2)
 
 	# sort matches by score
-	matches.sort(key = lambda x: x.distance, reverse = False)
+	matches = sorted(matches, key = lambda x: x.distance)
 
 	# remove poor matches
-	numGoodMatches = int(len(matches) * GOOD_MATCH_PERCENT)
-	matches = matches[:numGoodMatches]
+	matches = matches[:int(len(matches)*GOOD_MATCH_PERCENT)]
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img1, kp1, img2, kp2, matches, None)
-	cv2.imwrite("matches.jpg", imgMatches)
 
 	# extract location of good matches
 	points1 = np.zeros((len(matches), 2), dtype = np.float32)
@@ -109,13 +114,30 @@ def alignImages(img1, img2):
 		points1[i, :] = kp1[match.queryIdx].pt
 		points2[i, :] = kp2[match.trainIdx].pt
 
+	# convert numpy arrays to list
+	points1 = points1.tolist()
+	points2 = points2.tolist()
+
+	# filter points to exclude poor point matching
+	# points which differ by more than 150 pixels in x or y domains
+	# are removed from the point lists
+	for i, point in enumerate(points1):
+		if(abs(point[0] - points2[i][0]) > 150 or abs(point[1] - points2[i][1]) > 150):
+			points1.pop(i)
+			points2.pop(i)
+
+	# convert lists to numpy arrays
+	points1 = np.asarray(points1)
+	points2 = np.asarray(points2)
+
 	# find homography
 	h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
 
 	# use homography
-	height, width, channels = img2.shape
-	img1Reg = cv2.warpPerspective(img1, h, (width, height))
+	height, width, channels = img2_.shape
+	img1Reg = cv2.warpPerspective(img1_, h, (width, height))
 
+	# return registered images and homography
 	return img1Reg, h
 
 # open GUI
