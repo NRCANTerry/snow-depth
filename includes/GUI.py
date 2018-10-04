@@ -987,10 +987,18 @@ class GUI:
                     # list for combination results
                     combinationResults = list()
 
+                    # iterate through combinations
                     for j, points in enumerate(coordinateCombinations):
                         # get points
                         x0, y0 = points[0][0], points[0][1]
                         x1, y1 = points[1][0], points[1][1]
+
+                        if j == 1:
+                        	x0 += 5
+                        	x1 += 5
+                        elif j == 2:
+                        	x0 -= 5
+                        	x1 -= 5
 
                         # get endpoint for line
                         # intersection of line between points on blob with line defining bottom of
@@ -1000,7 +1008,7 @@ class GUI:
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
 
                         # make a line with "num" points
-                        num = 750
+                        num = 2000
                         x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
                         # extract values along the line
@@ -1013,7 +1021,7 @@ class GUI:
                         # not inside blobs
                         first_coord = 0
                         for k, coord in enumerate(coords_thresh):
-                            if(len(coords_thresh) > k + 10 and(coords_thresh[k+10] - coord) < 15 and y[coord] > bottom_blob[1][1]):# and img_unmarked[int(y[coord]),int(x[coord])][1] > 150):
+                            if(len(coords_thresh) > k + 20 and(coords_thresh[k+20] - coord) <= 25 and y[coord] > bottom_blob[1][1]):# and img_unmarked[int(y[coord]),int(x[coord])][1] > 150):
                                 first_coord = coord
                                 break
 
