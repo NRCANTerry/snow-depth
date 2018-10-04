@@ -250,7 +250,7 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 125, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 130, filtered_names, debug, paths_dict["intersection"])
 
 # test output
 for i, img_name in enumerate(filtered_names):
