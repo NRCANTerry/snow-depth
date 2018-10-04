@@ -87,7 +87,7 @@ def alignImages(img1_, img2_):
 	img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
 	# detect ORB features and compute descriptors
-	orb = cv2.ORB_create(5000)
+	orb = cv2.ORB_create(2500)
 	kp1, desc1 = orb.detectAndCompute(img1, None)
 	kp2, desc2 = orb.detectAndCompute(img2, None)
 
@@ -105,6 +105,7 @@ def alignImages(img1_, img2_):
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img1, kp1, img2, kp2, matches, None)
+	cv2.imwrite("./matches.jpg", imgMatches)
 
 	# extract location of good matches
 	points1 = np.zeros((len(matches), 2), dtype = np.float32)
@@ -122,7 +123,8 @@ def alignImages(img1_, img2_):
 	# points which differ by more than 150 pixels in x or y domains
 	# are removed from the point lists
 	for i, point in enumerate(points1):
-		if(abs(point[0] - points2[i][0]) > 150 or abs(point[1] - points2[i][1]) > 150):
+		if(abs(point[1] - points2[i][1]) != 0 and abs(point[0] - points2[i][0]) > 100 and \
+		(abs(point[0] - points2[i][0]) / abs(point[1] - points2[i][1])) < 25):
 			points1.pop(i)
 			points2.pop(i)
 
@@ -164,4 +166,4 @@ print("Saving aligned image :", outputFile)
 cv2.imwrite(outputFile, imReg)
 
 # print estimated homography
-print("Estimated homography: \n", h)
+print "Estimated homography: \n", h
