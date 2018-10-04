@@ -104,27 +104,24 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					x0, y0 = points[0][0], points[0][1]
 					x1, y1 = points[1][0], points[1][1]
 
+					if j == 1:
+						x0 += 5
+						x1 += 5
+					elif j == 2:
+						x0 -= 5
+						x1 -= 5
+
 					# get endpoint for line
 					# intersection of line between points on blob with line defining bottom of stake
 					x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
 						roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
 
 					# make a line with "num" points
-					num = 750
+					num = 2000
 					x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
 					# extract values along the line
 					lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
-
-					# plot and save
-					#fig, axes = plt.subplots(nrows = 2)
-					#axes[0].imshow(img)
-					#axes[0].plot([x0, x1], [y0, y1], 'ro-')
-					#axes[0].axis('image')
-					#axes[1].plot(lineVals)
-
-					#filename, file_extension = os.path.splitext(img_names[count])
-					#plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 
 					# get coordinates that have intensity greater than threshold
 					# and aren't a colour other than white
@@ -140,7 +137,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 					first_coord = 0
 					for k, coord in enumerate(coords):
-						if ((len(coords) >= k+10) and (coords[k+10] - coord) < 15 and y[coord] > box[7][1]): #img_[int(y[coord]),int(x[coord])][1] > 150):# and (coord - coords[i-2]) > 40:
+						if ((len(coords) > k+20) and (coords[k+20] - coord) <= 25 and y[coord] > box[7][1]): #img_[int(y[coord]),int(x[coord])][1] > 150):# and (coord - coords[i-2]) > 40:
 							first_coord = coord
 							break
 					if(first_coord != 0):
@@ -149,6 +146,20 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 					# add coordinates to dictionary
 					coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
+
+					# if in debugging mode
+					if debug:
+						# plot and save
+						fig, axes = plt.subplots(nrows = 2)
+						axes[0].imshow(img)
+						axes[0].plot([x0, x1], [y0, y1], 'ro-')
+						axes[0].axis('image')
+						axes[1].plot(lineVals)
+						axes[1].axvline(x=first_coord,color='g')
+
+						filename, file_extension = os.path.splitext(img_names[count])
+						plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
+						plt.close()
 
 				# calculate median intersection point
 				#coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
