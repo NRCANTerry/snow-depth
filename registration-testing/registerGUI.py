@@ -5,9 +5,10 @@ import Tkinter as tk
 import tkFileDialog
 from matplotlib import pyplot as plt
 import statistics
+from register import alignImages3
 
 # global variables
-MAX_FEATURES = 500
+MAX_FEATURES = 5000
 GOOD_MATCH_PERCENT = 0.15
 
 # function to increase the brightness of an image
@@ -105,27 +106,22 @@ def alignImages(img1_, img2_):
 	img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 	img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
+	# denoise grayscale image
+	img1 = cv2.fastNlMeansDenoising(img1,None,5,10,7)
+
 	# detect ORB features and compute descriptors
-	#orb = cv2.ORB_create(10000)
-	orb = cv2.ORB_create(10000, 2, nlevels = 9, edgeThreshold = 5)
+	orb = cv2.ORB_create(nfeatures = 5000)
 	kp1, desc1 = orb.detectAndCompute(img1, None)
 	kp2, desc2 = orb.detectAndCompute(img2, None)
 
-	# create brute-force matcher object
+	# create brute-force matcher object and match descriptors
 	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
-
-	# match the descriptors
 	matches = bf.match(desc1, desc2)
 
-	# sort matches by score
+	# sort matches by score and remove poor matches
+	# matches with score of lower than 30 are removed
 	matches = sorted(matches, key = lambda x: x.distance)
-
 	matches = [x for x in matches if x.distance <= 30]
-	if(len(matches) > 100):
-		matches = matches[:100]
-
-	# remove poor matches
-	#matches = matches[:int(len(matches)*0.025)]
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img1, kp1, img2, kp2, matches, None)
@@ -139,70 +135,88 @@ def alignImages(img1_, img2_):
 		points1[i, :] = kp1[match.queryIdx].pt
 		points2[i, :] = kp2[match.trainIdx].pt
 
-	# convert numpy arrays to list
-	#points1 = points1.tolist()
-	#points2 = points2.tolist()
-
-	h, mask_new = cv2.findHomography(points1, points2, cv2.RANSAC)
+	h2, mask_new = cv2.findHomography(points1, points2, cv2.RANSAC)
 	h2, mask2 = cv2.findHomography(points1, points2, cv2.LMEDS, mask = mask_new)
 
-	# filter points to exclude poor point matching
-	# points which differ by more than 150 pixels in x or y domains
-	# are removed from the point lists
-	#for i, point in enumerate(points1):
-	#	if(abs(point[1] - points2[i][1]) != 0 and abs(point[0] - points2[i][0]) > 100 and \
-	#		abs(point[1] - points2[i][1]) > 100):
-	#	#(abs(point[0] - points2[i][0]) / abs(point[1] - points2[i][1])) < 25):
-	#		points1.pop(i)
-	#		points2.pop(i)
-	'''
-	thetas = list()
-
-	for i, point in enumerate(points1):
-		if(abs(point[0] - points2[i][0]) != 0):
-			diff = abs(point[1] - points2[i][1]) / abs(point[0] - points2[i][0])
-		else:
-			diff = 1e10
-		thetas.append(diff)
-
-	print thetas
-	d = np.abs(np.asarray(thetas) - np.median(np.asarray(thetas)))
-	mdev = np.median(d)
-	s = d/mdev if mdev else 0
-	thetas = np.asarray(thetas)[s<2]
-	points1 = np.asarray(points1)[s<2]
-	points2 = np.asarray(points2)[s<2]
-	print thetas
-	print statistics.median(thetas)
-	#median = statistics.median(thetas)
-	#median_low = median * 0.7
-	#median_high = median * 1.3
-
-	points1_filtered = list()
-	points2_filtered = list()
-
-	#thetas = np.asarray(thetas)
-
-	#thetas_index = np.where(np.logical_and(thetas >= median_low, thetas <= median_high))[0]
-	#thetas_index = thetas_index.tolist()
-
-	#for index in thetas_index:
-	#	points1_filtered.append(points1[index])
-	#	points2_filtered.append(points2[index])
-
-	# convert lists to numpy arrays
-	#points1 = np.asarray(points1_filtered)
-	#points2 = np.asarray(points2_filtered)
-
-	# find homography
-	h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
-	'''
 	# use homography
 	height, width, channels = img2_.shape
 	img1Reg = cv2.warpPerspective(img1_, h2, (width, height))
 
 	# return registered images and homography
 	return img1Reg, h2
+
+# function to align image to template
+def alignImages2(img, template):
+	# apply median blur to highlight foreground featurse
+	img_blur = cv2.medianBlur(img, 5)
+	template_blur = cv2.medianBlur(template, 5)
+
+	# convert images to grayscale
+	img1Gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	img2Gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
+	# denoise grayscale image
+	img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,5,10,7)
+
+	# detect ORB features and compute descriptors
+	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
+	kp1, desc1 = orb.detectAndCompute(img_blur, None)
+	kp2, desc2 = orb.detectAndCompute(template_blur, None)
+
+	# create brute-force matcher object and match descriptors
+	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
+	matches = bf.match(desc1, desc2)
+
+	# sort matches by score and remove poor matches
+	# matches with a score greater than 30 are removed
+	matches = sorted(matches, key = lambda x: x.distance)
+	matches = [x for x in matches if x.distance <= 30]
+
+	# draw top matches
+	imgMatches = cv2.drawMatches(img, kp1, template, kp2, matches, None)
+
+	# extract location of good matches
+	points1 = np.zeros((len(matches), 2), dtype = np.float32)
+	points2 = np.zeros((len(matches), 2), dtype = np.float32)
+
+	for i, match in enumerate(matches):
+		points1[i, :] = kp1[match.queryIdx].pt
+		points2[i, :] = kp2[match.trainIdx].pt
+
+	# determine homography
+	# apply RANSAC-based robust method first then Least-Median robust method
+	RANSAC_h, RANSAC_mask = cv2.findHomography(points1, points2, cv2.RANSAC)
+	LMEDS_h, LMEDS_mask = cv2.findHomography(points1, points2, cv2.LMEDS, mask = RANSAC_mask)
+
+	# use homography
+	height, width, channels = template.shape
+	imgReg = cv2.warpPerspective(img, LMEDS_h, (width, height))
+
+	# convert registered image to grayscale
+	imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
+
+	# define ECC motion model
+	warp_mode = cv2.MOTION_HOMOGRAPHY
+
+	# define 3x3 matrix
+	warp_matrix = np.eye(3, 3, dtype=np.float32)
+
+	# specify the number of iterations and threshold
+	number_iterations = 250
+	termination_thresh = 1e-3
+
+	# define termination criteria
+	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
+
+	# run ECC algorithm (results are stored in warp matrix)
+	warp_matrix = cv2.findTransformECC(img2Gray, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+
+	# align image
+	imgECCAligned = cv2.warpPerspective(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+
+	# return aligned image and matches
+	return imgECCAligned, imgMatches, warp_matrix
+
 
 # open GUI
 gui = GUI()
@@ -218,20 +232,21 @@ print("Reading image to be aligned :", image)
 img = cv2.imread(image)
 
 print("Aligning images ...")
+
 # Registered image stored in imReg
 # Estimated homography stored in h
-#imReg, h = alignImages(img, imReference)
+imReg, _, warp_matrix = alignImages3(img.copy(), imReference.copy())
 
-#############
+'''
 # Convert images to grayscale
 im1_gray = cv2.cvtColor(imReference,cv2.COLOR_BGR2GRAY)
-im2_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+im2_gray = cv2.cvtColor(imReg,cv2.COLOR_BGR2GRAY)
 
 # Find size of image1
 sz = imReference.shape
 
 # Define the motion model
-warp_mode = cv2.MOTION_TRANSLATION
+warp_mode = cv2.MOTION_HOMOGRAPHY
 
 # Define 2x3 or 3x3 matrices and initialize the matrix to identity
 if warp_mode == cv2.MOTION_HOMOGRAPHY :
@@ -240,11 +255,11 @@ else :
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
 # Specify the number of iterations.
-number_of_iterations = 5000;
+number_of_iterations = 250
 
 # Specify the threshold of the increment
 # in the correlation coefficient between two iterations
-termination_eps = 1e-10;
+termination_eps = 1e-2
 
 # Define termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_of_iterations,  termination_eps)
@@ -254,24 +269,17 @@ criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_of_iteration
 
 if warp_mode == cv2.MOTION_HOMOGRAPHY :
     # Use warpPerspective for Homography
-    im2_aligned = cv2.warpPerspective (img, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+    im2_aligned = cv2.warpPerspective (imReg, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
 else :
     # Use warpAffine for Translation, Euclidean and Affine
-    im2_aligned = cv2.warpAffine(img, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP);
-
-
-
-#print("Aligning images ...")
-# Registered image stored in imReg
-# Estimated homography stored in h
-#imReg, h = alignImages(img, imReference)
-
+    im2_aligned = cv2.warpAffine(imReg, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP);
+'''
 # write aligned image to disk
 outputFile = "aligned.jpg"
 #outputFile = "MFD.jpg"
 print("Saving aligned image :", outputFile)
-#cv2.imwrite(outputFile, imReg)
-cv2.imwrite(outputFile, im2_aligned)
+cv2.imwrite(outputFile, imReg)
+#cv2.imwrite(outputFile, im2_aligned)
 
 # print estimated homography
-#print "Estimated homography: \n", h
+print "Estimated homography: \n", warp_matrix
