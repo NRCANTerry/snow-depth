@@ -838,14 +838,14 @@ class GUI:
             # if valid filename
             if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
                 # hsv ranges
-                #lower_pink = np.array([145, 175, 68])#np.array([143, 198, 50])
-                lower_pink = np.array([143, 198, 50])
-                #upper_pink = np.array([161, 255, 255])#np.array([168, 255, 255])
-                upper_pink = np.array([168, 255, 255])
-                #lower_green = np.array([61, 154, 44])#np.array([0, 116, 35])
-                lower_green = np.array([0, 116, 35])
-                #upper_green = np.array([70, 255, 255])#np.array([65, 223, 255])
-                upper_green = np.array([65, 223, 255])
+                lower_pink = np.array([145, 175, 68])#np.array([143, 198, 50])
+                #lower_pink = np.array([143, 198, 50])
+                upper_pink = np.array([161, 255, 255])#np.array([168, 255, 255])
+                #upper_pink = np.array([168, 255, 255])
+                lower_green = np.array([61, 154, 44])#np.array([0, 116, 35])
+                #lower_green = np.array([0, 116, 35])
+                upper_green = np.array([70, 255, 255])#np.array([65, 223, 255])
+                #upper_green = np.array([65, 223, 255])
                 min_contour_area = lowerSize.get()
                 max_contour_area = upperSize.get()
 
