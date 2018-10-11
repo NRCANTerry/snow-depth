@@ -16,6 +16,7 @@ from filter_night import isDay
 from check_stakes import getValidStakes
 from GUI import GUI
 from get_intersection import getIntersections
+from calculate_depth import getDepths
 import Tkinter as tk
 import datetime
 import time
@@ -89,7 +90,7 @@ paths_dict["matches"] = path + "/matches/"
 paths_dict["template-overlay"] = path + "/template-overlay/"
 paths_dict["stake-check"] = path + "/stake-check/"
 paths_dict["intersection"] = path + "/intersection/"
-paths_dict["testing"] = path + "/testing/"
+paths_dict["overlay"] = path + "/overlay/"
 
 if(debug):
     os.mkdir(paths_dict["equalized"])
@@ -99,7 +100,7 @@ if(debug):
     os.mkdir(paths_dict["template-overlay"])
     os.mkdir(paths_dict["stake-check"])
     os.mkdir(paths_dict["intersection"])
-    os.mkdir(paths_dict["testing"])
+    os.mkdir(paths_dict["overlay"])
 
 # ---------------------------------------------------------------------------------
 # Filter Out Night Images
@@ -164,8 +165,8 @@ for count, img in enumerate(images_filtered):
 
 # equalize and crop template
 template = cv2.imread(template_path)
-h_temp, w_temp = template.shape[:2]
-template = template[img_border_upper:(h - img_border_lower), :, :]
+h_temp = template.shape[:2][0]
+template = template[img_border_upper:(h_temp - img_border_lower), :, :]
 template_eq = equalize_hist(template, clip_limit, tile_size)
 
 # if debugging write to directory
@@ -187,7 +188,7 @@ for count, img in enumerate(images_equalized):
     progress(count + 1, num_images, status=filtered_names[count])
 
     # align images
-    imgReg, h, imgMatch = alignImages(img, template_eq)
+    imgReg, imgMatch = alignImages(img, template_eq)
 
     # add to list
     images_registered.append(imgReg)
@@ -252,19 +253,14 @@ print("\n\nDetermining Intersection Points")
 # get intersection points
 intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 130, filtered_names, debug, paths_dict["intersection"])
 
-# test output
-for i, img_name in enumerate(filtered_names):
-    img_write2 = images_registered[i]
-    print "\n"
-    print img_name
-    coords_stake = intersection_coords[img_name]
-    for j,stake in enumerate(coords_stake):
-        if stake_validity[img_name][j]:
-            cv2.circle(img_write2, (int(template_intersections[j][0]), int(template_intersections[j][1])-img_border_upper), 5, (255,0,0), 3)
-            cv2.circle(img_write2, (int(stake['average'][0]), int(stake['average'][1])), 5, (0,255,0), 2)
-            print "stake %s : %s mm" % (j, (((template_intersections[j][1] - img_border_upper)-stake['average'][1])*template_tensor[j]))
+# ---------------------------------------------------------------------------------
+# Calculate Change in Snow Depth
+# ---------------------------------------------------------------------------------
 
-    cv2.imwrite(paths_dict["testing"] + img_name, img_write2)
+print("\n\nCalculating Change in Snow Depth")
+
+# get snow depths
+depths = getDepths(images_registered, filtered_names, intersection_coords, stake_validity, template_intersections, img_border_upper, template_tensor, debug, paths_dict["overlay"])
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
