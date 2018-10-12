@@ -115,6 +115,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					# intersection of line between points on blob with line defining bottom of stake
 					x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
 						roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
+					####
+					x0, y0 = points[1][0], points[1][1]
 
 					# make a line with "num" points
 					num = 2000
