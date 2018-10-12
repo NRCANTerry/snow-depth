@@ -16,7 +16,7 @@ from get_intersection import lineIntersections
 from scipy import ndimage
 import statistics
 from get_tensor import getTensor
-from equalize import equalize_hist
+from equalize import equalize_hist_colour
 import matplotlib
 
 class GUI:
@@ -773,20 +773,29 @@ class GUI:
             self.root.withdraw()
 
             # frames
-            lowerFrame = tk.Frame(templateWindow, bg='#ffffff')
-            upperFrame = tk.Frame(templateWindow, bg='#ffffff')
-            nameFrame = tk.Frame(templateWindow, bg='#ffffff')
+            # topFrame holds parameter widgets and bottomFrame HSV sliders
+            topFrame = tk.Frame(templateWindow, bg='#ffffff')
+            bottomFrame = tk.Frame(templateWindow, bg='#ffffff')
+
+            # subframes
+            lowerFrame = tk.Frame(topFrame, bg='#ffffff')
+            upperFrame = tk.Frame(topFrame, bg='#ffffff')
+            nameFrame = tk.Frame(topFrame, bg='#ffffff')
 
             # labels
             titleLabel = tk.Label(templateWindow, text = "Generate Template", bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
-            directoryLabel1 = tk.Label(templateWindow, text = "Select Marked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-            directoryPathLabel1 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
-            directoryLabel2 = tk.Label(templateWindow, text = "Select Unmarked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-            directoryPathLabel2 = tk.Label(templateWindow, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
-            parametersLabel = tk.Label(templateWindow, text = "Parameters",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            directoryLabel1 = tk.Label(topFrame, text = "Select Marked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            directoryPathLabel1 = tk.Label(topFrame, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+            directoryLabel2 = tk.Label(topFrame, text = "Select Unmarked Template",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            directoryPathLabel2 = tk.Label(topFrame, text = "No Template Selected",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 14))
+            parametersLabel = tk.Label(topFrame, text = "Parameters",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
             lowerSizeLabel = tk.Label(lowerFrame, text = "Lower Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
             upperSizeLabel = tk.Label(upperFrame, text = "Upper Blob Size",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
             nameLabel = tk.Label(nameFrame, text = "Template Name",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+
+            # lower frame labels
+            step1TemplateLabel = tk.Label(bottomFrame, text = "1. Set HSV Range for Stakes",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            step2TemplateLabel = tk.Label(bottomFrame, text = "2. Set HSV Range for Blobs",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
 
             # entries
             name = tk.StringVar()
@@ -795,6 +804,14 @@ class GUI:
             nameEntry = tk.Entry(nameFrame, font=("Calibri Light", 14),textvariable=name, width=10)
             lowerEntry = tk.Entry(lowerFrame, font=("Calibri Light", 14),textvariable=lowerSize, width=10)
             upperEntry = tk.Entry(upperFrame, font=("Calibri Light", 14),textvariable=upperSize, width=10)
+
+            # sliders
+            H1Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
+            S1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
+            V1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
+            H2Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
+            S2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
+            V2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
 
             # set default values
             lowerEntry.insert(0,100)
@@ -806,15 +823,17 @@ class GUI:
             self.markedTemplate = ""
             self.unmarkedTemplate = ""
 
-            nameButton = tk.Button(templateWindow, text="Generate",bg='#ffffff',fg='#000000',command = lambda: templateWindow.destroy(),
+            var = tk.IntVar()
+            nameButton = tk.Button(topFrame, text="Continue",bg='#ffffff',fg='#000000',command = lambda: var.set(1),
                 width=20,font=("Calibri Light",14))
-            dirButton1 = tk.Button(templateWindow, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
+            dirButton1 = tk.Button(topFrame, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
                 width=20,font=("Calibri Light",14))
-            dirButton2 = tk.Button(templateWindow, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
+            dirButton2 = tk.Button(topFrame, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
                 width=20,font=("Calibri Light",14))
 
             # packing
             titleLabel.pack(pady = 20)
+            topFrame.pack()
             directoryLabel1.pack(pady = 10)
             directoryPathLabel1.pack(pady = 10)
             dirButton1.pack(pady = 10)
@@ -833,6 +852,25 @@ class GUI:
             nameEntry.pack(side = tk.LEFT, padx = (5,20))
             nameButton.pack(pady = (20,10))
 
+            # bottom frame packing
+            step1TemplateLabel.pack(pady=10)
+            H1Slider.pack(pady=10)
+            S1Slider.pack(pady=10)
+            V1Slider.pack(pady=10)
+            step2TemplateLabel.pack(pady=10)
+            H2Slider.pack(pady=10)
+            S2Slider.pack(pady=10)
+            V2Slider.pack(pady=10)
+
+            # wait until button is pressed to present HSV sliders
+            nameButton.wait_variable(var)
+
+            # change button text and command (kill window)
+            nameButton.config(text="Run", command=lambda: templateWindow.destroy())
+            topFrame.pack_forget()
+            bottomFrame.pack()
+
+            # wait for button press to close window
             self.root.wait_window(templateWindow)
 
             # if valid filename
@@ -960,7 +998,7 @@ class GUI:
                     stakes_tensor.append(median_tensor)
 
                 # convert image to grayscale
-                img_gray = cv2.cvtColor(equalize_hist(img_unmarked.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
+                img_gray = cv2.cvtColor(equalize_hist_colour(img_unmarked.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
 
                 # determine intersection points for each stake
                 for stake in stakes_coords:
@@ -1046,8 +1084,8 @@ class GUI:
 
                             # add tensor
                             tensor_text = str(b) + ": " + str(format(stakes_tensor[b], '.2f')) + "mm/px"
-                            cv2.putText(img_unmarked, tensor_text, (blob[0][0], blob[0][1] - 50),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+                            cv2.putText(img_unmarked, tensor_text, (blob[0][0], blob[0][1]),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2, cv2.LINE_AA)
                         else:
                             # draw blob
                             cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
@@ -1376,6 +1414,11 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def runPreview(self):
+        # embedded function to handle window closing
+        def closeWindow():
+            cv2.destroyAllWindows()
+            newWindow.destroy()
+
         # embedded function to update HSV mask on slider movement
         def updateValues(event):
             # get slider positions
@@ -1481,13 +1524,20 @@ class GUI:
 
         # open new window
         newWindow = tk.Toplevel(self.root)
+        newWindow.geometry("500x650")
         newWindow.configure(background='#ffffff')
         newWindow.withdraw()
+
+        # configure window closing protocol
+        newWindow.protocol("WM_DELETE_WINDOW", closeWindow)
+
+        # get filename
         filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
 
+        # if valid file selected
         if(filename != ""):
             newWindow.deiconify()
-            newWindow.geometry("500x650") # window size of 500 x 650
+            #newWindow.geometry("500x650") # window size of 500 x 650
 
             # create widgets
             HSVSlidersLabel = tk.Label(newWindow,text="HSV Sliders",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
