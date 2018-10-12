@@ -22,7 +22,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     depths = dict()
 
     # create excel workbook and add worksheet
-    dest = str(debug_directory) + 'Depths.xlsx'
+    dest = str(debug_directory) + 'snow-depths.xlsx'
     workbook = xlsxwriter.Workbook(dest)
     worksheet = workbook.add_worksheet()
     worksheet.set_column(0, len(tensors) + 1, 20)
@@ -68,8 +68,8 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
         # iterate through stakes in image
         for i, stake in enumerate(coords_stake):
-            # if stake is valid
-            if stakeValidity[img_name][i]:
+            # if stake is valid and intersection point was found
+            if stakeValidity[img_name][i] and stake["average"][1] != False:
                 # add reference circles to output image if debugging
                 # shows intersection point of image with reference to template
                 if(debug):
@@ -82,18 +82,20 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
                 # write to excel file
                 worksheet.write(row, col + i, "%.2f" % depth_change, cell_format)
 
-                # output to command line
-                #print "stake %s : %s mm" % (j, depth_change)
-
                 # add to list
                 depths_stake.append(depth_change)
 
-            # else append false to array
+            # if stake wasn't valid or intersection point not found
             else:
-                depths_stake.append(False)
+                # if stake was valid
+                if stakeValidity[img_name][i]:
+                    worksheet.write(row, col + i, "Not Found", cell_format)
+                # invalid stake
+                else:
+                    worksheet.write(row, col + i, "Invalid Stake", cell_format)
 
-                # write to excel file
-                worksheet.write(row, col + i, "n/a", cell_format)
+                # append false to array
+                depths_stake.append(False)
 
         # output debug image
         if(debug):
@@ -104,13 +106,19 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
         # determine median depth
         valid_depths = [x for x in depths_stake if x != False]
-        median = statistics.median(valid_depths)
+        if(len(valid_depths) > 0):
+            median = statistics.median(valid_depths)
+        else:
+            median = False
 
         # add to median depth list
         median_depths.append(median)
 
         # write median to excel file
-        worksheet.write(row, len(tensors) + 1, "%.2f" % median, cell_format)
+        if median != False:
+            worksheet.write(row, len(tensors) + 1, "%.2f" % median, cell_format)
+        else:
+            worksheet.write(row, len(tensors) + 1, "n/a", cell_format)
 
         # increment row
         row += 1
@@ -122,8 +130,22 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     plt.plot(img_names, median_depths, color='g')
     plt.xlabel('Images')
     plt.xticks(rotation=90)
+
+    # determine spacing required to minimize overlap of x ticks
+    #tl = plt.gca().get_xticklabels()
+    #maxsize = max([t.get_window_extent().width for t in tl])
+    #m = 0.1 # margin
+    #s = maxsize/plt.gcf().dpi*(len(img_names)+2)*m
+    #margin = m/plt.gcf().get_size_inches()[0]
+
+    # set figure size accordingly
+    #plt.gcf().subplots_adjust(left=margin, right=1.0-margin)
+    #plt.gcf().set_size_inches(s, plt.gcf().get_size_inches()[1])
+
+    # apply labels and save figure
     plt.ylabel('Change (mm)')
     plt.title('Change in Snow Depth (mm)')
+    plt.tight_layout()
     plt.savefig(debug_directory + "depth-graph.jpg")
     plt.close()
 
