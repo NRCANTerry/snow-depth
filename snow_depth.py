@@ -17,6 +17,7 @@ from check_stakes import getValidStakes
 from GUI import GUI
 from get_intersection import getIntersections
 from calculate_depth import getDepths
+from equalize import equalize_hist_colour
 import Tkinter as tk
 import datetime
 import time
@@ -124,7 +125,7 @@ for count, img_name in enumerate(images):
     img = cv2.imread(directory + img_name)
 
     # filter out night images
-    if(isDay(img, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
+    if(isDay(img.copy(), [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
         blob_size_lower, blob_size_upper)):
         # add to lists
         images_filtered.append(img)
@@ -154,10 +155,14 @@ for count, img in enumerate(images_filtered):
     img = img[img_border_upper:(h - img_border_lower), :, :]
 
     # equalize image according to specified parameters
-    img_eq = equalize_hist(img, clip_limit, tile_size)
+    img_eq_gray = equalize_hist(img, clip_limit, tile_size)
+    img_eq = equalize_hist_colour(img, clip_limit, tile_size)
+
+    # replace image in list with equalized image
+    images_filtered[count] = img_eq
 
     # add to list
-    images_equalized.append(img_eq)
+    images_equalized.append(img_eq_gray)
 
     # if debugging write to directory
     if(debug):
@@ -188,7 +193,7 @@ for count, img in enumerate(images_equalized):
     progress(count + 1, num_images, status=filtered_names[count])
 
     # align images
-    imgReg, imgMatch = alignImages(img, template_eq)
+    imgReg, imgMatch = alignImages(img, template_eq, images_filtered[count])
 
     # add to list
     images_registered.append(imgReg)
