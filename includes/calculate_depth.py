@@ -127,25 +127,18 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     workbook.close()
 
     # generate plot
-    plt.plot(img_names, median_depths, color='g')
-    plt.xlabel('Images')
-    plt.xticks(rotation=90)
+    fig,ax = plt.subplots(1)
+    plt.plot(img_names, median_depths)
+    ax.set_xlabel("Images")
+    ax.set_ylabel("Change (mm)")
+    ax.set_title("Change in Snow Depth (mm)")
+    py.xticks(rotation=75)
+    py.tight_layout()
 
-    # determine spacing required to minimize overlap of x ticks
-    #tl = plt.gca().get_xticklabels()
-    #maxsize = max([t.get_window_extent().width for t in tl])
-    #m = 0.1 # margin
-    #s = maxsize/plt.gcf().dpi*(len(img_names)+2)*m
-    #margin = m/plt.gcf().get_size_inches()[0]
+    # only show ever 4th label
+    [label.set_visible(False) for (i,label) in enumerate(ax.get_xaxis().get_ticklabels()) if i % 4 != 0]
 
-    # set figure size accordingly
-    #plt.gcf().subplots_adjust(left=margin, right=1.0-margin)
-    #plt.gcf().set_size_inches(s, plt.gcf().get_size_inches()[1])
-
-    # apply labels and save figure
-    plt.ylabel('Change (mm)')
-    plt.title('Change in Snow Depth (mm)')
-    plt.tight_layout()
+    # save figure
     plt.savefig(debug_directory + "depth-graph.jpg")
     plt.close()
 
