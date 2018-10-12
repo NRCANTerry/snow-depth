@@ -23,7 +23,7 @@ def increase_brightness(img, val):
 	return img
 
 # function to apply adaptive histogram equalization
-def equalize_hist(img, clip_limit, tile_size):
+def equalize_hist_colour(img, clip_limit, tile_size):
 	# convert to LAB
 	lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
@@ -40,8 +40,23 @@ def equalize_hist(img, clip_limit, tile_size):
 	# convert to BGR
 	bgr = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
-	# increase brightness
+	# increase brigh#tness
 	bgr = increase_brightness(bgr, 50)
+
+	# return image
+	return bgr
+
+# function to apply adaptive histogram equalization
+def equalize_hist(img, clip_limit, tile_size):
+	# convert to grayscale
+	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+	# apply adaptive histogram equalization
+	clahe = cv2.createCLAHE(clipLimit = clip_limit, tileGridSize = tile_size)
+	l = clahe.apply(img)
+
+	# increase brigh#tness
+	bgr = np.where((255-l) < 50, 255, l + 50)
 
 	# return image
 	return bgr
