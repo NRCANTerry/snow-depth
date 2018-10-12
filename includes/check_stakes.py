@@ -47,6 +47,22 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 		# create list for blob coordinates on stakes
 		blobCoordsStake = list()
 
+		# reduce noise in image by local smoothing
+		img_blur = cv2.medianBlur(img, median_kernel_size)
+
+		# identify coloured regions in image
+		hsv = cv2.cvtColor(img_blur, cv2.COLOR_BGR2HSV)
+		mask_hsv = cv2.inRange(hsv, hsvRanges[0], hsvRanges[1])
+
+		# apply second mask if required
+		if(numRanges == 4):
+			mask_hsv2 = cv2.inRange(hsv, hsvRanges[2], hsvRanges[3])
+			mask_hsv = cv2.bitwise_or(mask_hsv, mask_hsv2)
+
+		# erosion followed by dilation to reduce noise
+		kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
+		mask_open = cv2.morphologyEx(mask_hsv, cv2.MORPH_OPEN, kernel)
+
 		# iterate through stakes
 		for j, stake in enumerate(coordinates):
 			# create bool list for blobs for each stake
@@ -68,7 +84,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 				num_blobs = 0
 
 				# create a zero image
-				mask = np.zeros(img.shape, np.uint8)
+				mask = np.zeros(mask_open.shape, np.uint8)
 
 				# get points
 				top_left = (rectangle[0][0], rectangle[0][1]-upper_border)
@@ -76,26 +92,11 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 
 				# copy ROI to zero image
 				mask[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]] = \
-					img[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
-
-				# reduce noise in image by local smoothing
-				img_blur = cv2.medianBlur(mask, median_kernel_size)
-
-				# identify coloured regions in image
-				hsv = cv2.cvtColor(img_blur, cv2.COLOR_BGR2HSV)
-				mask = cv2.inRange(hsv, hsvRanges[0], hsvRanges[1])
-
-				# apply second mask if required
-				if(numRanges == 4):
-					mask2 = cv2.inRange(hsv, hsvRanges[2], hsvRanges[3])
-					mask = cv2.bitwise_or(mask, mask2)
-
-				# erosion followed by dilation to reduce noise
-				kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
-				mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+					mask_open[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
 
 				# find final coloured polygon regions
-				contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+				#contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+				contours = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 				contour_index = 0
 
 				# iterate through contours
