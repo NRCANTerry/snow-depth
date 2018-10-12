@@ -139,7 +139,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 					first_coord = 0
 					for k, coord in enumerate(coords):
-						if ((len(coords) > k+100) and (coords[k+100] - coord) <= 105 and y[coord] > box[7][1]):
+						if ((len(coords) > k+100) and (coords[k+100] - coord) <= 115):
 							first_coord = coord
 							break
 					if(first_coord != 0):
