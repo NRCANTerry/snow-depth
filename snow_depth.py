@@ -91,8 +91,12 @@ paths_dict["matches"] = path + "/matches/"
 paths_dict["template-overlay"] = path + "/template-overlay/"
 paths_dict["stake-check"] = path + "/stake-check/"
 paths_dict["intersection"] = path + "/intersection/"
-paths_dict["overlay"] = path + "/overlay/"
+paths_dict["snow-depth"] = path + "/snow-depth/"
 
+# results directory
+os.mkdir(paths_dict["snow-depth"])
+
+# debug directories
 if(debug):
     os.mkdir(paths_dict["equalized"])
     os.mkdir(paths_dict["equalized-template"])
@@ -101,7 +105,6 @@ if(debug):
     os.mkdir(paths_dict["template-overlay"])
     os.mkdir(paths_dict["stake-check"])
     os.mkdir(paths_dict["intersection"])
-    os.mkdir(paths_dict["overlay"])
 
 # ---------------------------------------------------------------------------------
 # Filter Out Night Images
@@ -265,7 +268,7 @@ intersection_coords = getIntersections(images_registered, blob_coords, stake_val
 print("\n\nCalculating Change in Snow Depth")
 
 # get snow depths
-depths = getDepths(images_registered, filtered_names, intersection_coords, stake_validity, template_intersections, img_border_upper, template_tensor, debug, paths_dict["overlay"])
+depths = getDepths(images_registered, filtered_names, intersection_coords, stake_validity, template_intersections, img_border_upper, template_tensor, debug, paths_dict["snow-depth"])
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
