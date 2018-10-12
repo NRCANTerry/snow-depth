@@ -3,26 +3,23 @@ import cv2
 import numpy as np
 
 # global variables
-MAX_FEATURES = 5000
+MAX_FEATURES = 15000
 
 # function to align image to template
-def alignImages(img, template):
+# the first image and template are already grayscale from clahe application
+# the third image is unaltered and will be subjected to the warp
+def alignImages(img, template, img_apply):
 	# apply median blur to highlight foreground featurse
-	img_blur = cv2.medianBlur(img, 5)
-	template_blur = cv2.medianBlur(template, 5)
-
-	# convert images to grayscale
-	img1Gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	img2Gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+	img1Gray = cv2.medianBlur(img, 5)
+	img2Gray = cv2.medianBlur(template, 5)
 
 	# denoise grayscale image
-	img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,4,10,7)
+	img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,3,10,7)
 
 	# detect ORB features and compute descriptors
-	orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scaleFactor = 1.1,
-		nlevels = 10)
-	kp1, desc1 = orb.detectAndCompute(img_blur, None)
-	kp2, desc2 = orb.detectAndCompute(template_blur, None)
+	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
+	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
+	kp2, desc2 = orb.detectAndCompute(img2Gray, None)
 
 	# create brute-force matcher object and match descriptors
 	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
@@ -32,7 +29,6 @@ def alignImages(img, template):
 	# matches with a score greater than 30 are removed
 	matches = sorted(matches, key = lambda x: x.distance)
 	matches = [x for x in matches if x.distance <= 30]
-	matches = matches[:100] if len(matches)>100 else matches
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img, kp1, template, kp2, matches, None)
@@ -51,11 +47,9 @@ def alignImages(img, template):
 	LMEDS_h, LMEDS_mask = cv2.findHomography(points1, points2, cv2.LMEDS, mask = RANSAC_mask)
 
 	# use homography
-	height, width, channels = template.shape
-	imgReg = cv2.warpPerspective(img, LMEDS_h, (width, height))
-
-	# convert registered image to grayscale
-	imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
+	height, width = template.shape
+	imgReg = cv2.warpPerspective(img_apply, LMEDS_h, (width, height))
+	imgRegGray = cv2.warpPerspective(img1Gray, LMEDS_h, (width, height))
 
 	# define ECC motion model
 	warp_mode = cv2.MOTION_HOMOGRAPHY

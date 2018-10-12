@@ -6,6 +6,7 @@ import tkFileDialog
 from matplotlib import pyplot as plt
 import statistics
 from register import alignImages3
+import time
 
 # global variables
 MAX_FEATURES = 5000
@@ -231,11 +232,12 @@ imReference = cv2.imread(template)
 print("Reading image to be aligned :", image)
 img = cv2.imread(image)
 
+start = time.time()
 print("Aligning images ...")
 
 # Registered image stored in imReg
 # Estimated homography stored in h
-imReg, _, warp_matrix = alignImages3(img.copy(), imReference.copy())
+imReg, Matches, warp_matrix = alignImages3(img.copy(), imReference.copy())
 
 '''
 # Convert images to grayscale
@@ -276,10 +278,13 @@ else :
 '''
 # write aligned image to disk
 outputFile = "aligned.jpg"
+outputMatch = "matches.jpg"
 #outputFile = "MFD.jpg"
 print("Saving aligned image :", outputFile)
 cv2.imwrite(outputFile, imReg)
+cv2.imwrite(outputMatch, Matches)
 #cv2.imwrite(outputFile, im2_aligned)
 
 # print estimated homography
 print "Estimated homography: \n", warp_matrix
+print("\n\nRun Time: %.3f s" % (time.time() - start))

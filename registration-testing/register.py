@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # global variables
-MAX_FEATURES = 5000
+MAX_FEATURES = 15000
 
 # function to align image to template
 def alignImages3(img, template):
@@ -20,8 +20,8 @@ def alignImages3(img, template):
 
 	# detect ORB features and compute descriptors
 	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
-	kp1, desc1 = orb.detectAndCompute(img_blur, None)
-	kp2, desc2 = orb.detectAndCompute(template_blur, None)
+	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
+	kp2, desc2 = orb.detectAndCompute(img2Gray, None)
 
 	# create brute-force matcher object and match descriptors
 	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
@@ -62,8 +62,8 @@ def alignImages3(img, template):
 	warp_matrix = np.eye(3, 3, dtype=np.float32)
 
 	# specify the number of iterations and threshold
-	number_iterations = 250
-	termination_thresh = 1e-3
+	number_iterations = 100
+	termination_thresh = 1e-2
 
 	# define termination criteria
 	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
