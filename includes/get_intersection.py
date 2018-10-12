@@ -137,7 +137,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 					first_coord = 0
 					for k, coord in enumerate(coords):
-						if ((len(coords) > k+20) and (coords[k+20] - coord) <= 25 and y[coord] > box[7][1]): #img_[int(y[coord]),int(x[coord])][1] > 150):# and (coord - coords[i-2]) > 40:
+						if ((len(coords) > k+100) and (coords[k+100] - coord) <= 105 and y[coord] > box[7][1]):
 							first_coord = coord
 							break
 					if(first_coord != 0):
@@ -145,7 +145,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 						cv2.circle(img_write, (int(x[first_coord]), int(y[first_coord])), 5, (0,255,0), 3)
 
 					# add coordinates to dictionary
-					coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
+					if(first_coord != 0):
+						coordinates[combination_names[j]] = (x[first_coord], y[first_coord])
+					else:
+						coordinates[combination_names[j]] = (False, False)
 
 					# if in debugging mode
 					if debug:
@@ -161,13 +164,20 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 						plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 						plt.close()
 
-				# calculate median intersection point
-				#coordinates["average"] = ([sum(y) / len(y) for y in zip(*[coordinates["left"],coordinates["middle"],coordinates["right"]])])
+				# calculate median intersection point and filter out combinations where no intersection point was found
 				y_vals = [x[1] for x in [coordinates["left"], coordinates["right"], coordinates["middle"]]]
+				y_vals = [x for x in y_vals if x != False]
 				x_vals = [x[0] for x in [coordinates["left"], coordinates["right"], coordinates["middle"]]]
-				median_y = statistics.median(y_vals)
-				median_x = statistics.median(x_vals)
-				coordinates["average"] = [median_x, median_y]#list(median_tuple[0])
+				x_vals = [x for x in x_vals if x != False]
+
+				# append to dictionary
+				if(len(x_vals) > 0 and len(y_vals) > 0):
+					median_y = statistics.median(y_vals)
+					median_x = statistics.median(x_vals)
+					coordinates["average"] = [median_x, median_y]
+				# if no intersection point append False to dictionary
+				else:
+					coordinates["average"] = [False, False]
 
 				# add to stake coordinates list
 				stake_intersections.append(coordinates)
