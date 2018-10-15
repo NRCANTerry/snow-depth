@@ -763,6 +763,29 @@ class GUI:
                     self.unmarkedTemplate = filename
                     directoryPathLabel2.config(text=shortName)
 
+            # embedded function to provide thresholding preview
+            def updateValues(event):
+                # get slider positions
+                h1 = H1Slider.get()
+                h2 = H2Slider.get()
+                s1 = S1Slider.get()
+                s2 = S2Slider.get()
+                v1 = V1Slider.get()
+                v2 = V2Slider.get()
+
+                # convert image to HSV
+                hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+                # apply HSV mask
+                mask = cv2.inRange(hsv, np.array([h1, s1, v1]), np.array([h2, s2, v2]))
+                mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+                # create horizontal stack
+                numpy_horizontal = np.hstack((img, mask))
+
+                # display image to user
+                cv2.imshow("Comparison", numpy_horizontal)
+
             # open new window
             templateWindow = tk.Toplevel(newWindow)
             templateWindow.configure(bg='#ffffff')
@@ -794,8 +817,9 @@ class GUI:
             nameLabel = tk.Label(nameFrame, text = "Template Name",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
 
             # lower frame labels
-            step1TemplateLabel = tk.Label(bottomFrame, text = "1. Set HSV Range for Stakes",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
-            step2TemplateLabel = tk.Label(bottomFrame, text = "2. Set HSV Range for Blobs",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            TemplateRangeLabel = tk.Label(bottomFrame, text = "Set HSV Range for Stakes",bg = "#ffffff", fg = "#000000", font=("Calibri Light", 18))
+            TemplateLowerHSVLabel = tk.Label(bottomFrame, text = "Lower", bg='#ffffff',fg="#000000",font=("Calibri Light", 16))
+            TemplateUpperHSVLabel = tk.Label(bottomFrame, text = "Upper", bg='#ffffff',fg="#000000",font=("Calibri Light", 16))
 
             # entries
             name = tk.StringVar()
@@ -806,12 +830,12 @@ class GUI:
             upperEntry = tk.Entry(upperFrame, font=("Calibri Light", 14),textvariable=upperSize, width=10)
 
             # sliders
-            H1Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
-            S1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
-            V1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14))#, command = updateValues)
-            H2Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
-            S2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
-            V2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), state = "disabled")#, command = updateValues)
+            H1Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V1Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            H2Slider = tk.Scale(bottomFrame, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V2Slider = tk.Scale(bottomFrame, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
 
             # set default values
             lowerEntry.insert(0,100)
@@ -829,6 +853,10 @@ class GUI:
             dirButton1 = tk.Button(topFrame, text="Select Marked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("marked"),
                 width=20,font=("Calibri Light",14))
             dirButton2 = tk.Button(topFrame, text="Select Unmarked Template",bg='#ffffff',fg='#000000',command = lambda: getImage("unmarked"),
+                width=20,font=("Calibri Light",14))
+
+            # lower frame button
+            templateHSVRunButton = tk.Button(bottomFrame, text="Next", bg='#ffffff',fg='#000000',command = lambda: var.set(1),
                 width=20,font=("Calibri Light",14))
 
             # packing
@@ -853,37 +881,73 @@ class GUI:
             nameButton.pack(pady = (20,10))
 
             # bottom frame packing
-            step1TemplateLabel.pack(pady=10)
+            TemplateRangeLabel.pack(pady=(5,5))
+            TemplateLowerHSVLabel.pack(pady=(10,5))
             H1Slider.pack(pady=10)
             S1Slider.pack(pady=10)
             V1Slider.pack(pady=10)
-            step2TemplateLabel.pack(pady=10)
+            TemplateUpperHSVLabel.pack(pady=(15,5))
             H2Slider.pack(pady=10)
             S2Slider.pack(pady=10)
             V2Slider.pack(pady=10)
+            templateHSVRunButton.pack(pady=10)
 
             # wait until button is pressed to present HSV sliders
             nameButton.wait_variable(var)
 
-            # change button text and command (kill window)
-            nameButton.config(text="Run", command=lambda: templateWindow.destroy())
+            # import image
+            cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+            img = cv2.imread(self.markedTemplate)
+            img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+
+            # present bottom frame
             topFrame.pack_forget()
             bottomFrame.pack()
 
-            # wait for button press to close window
-            self.root.wait_window(templateWindow)
+            # reset variable
+            var.set(0)
+
+            # wait until button is pressed to present second set of HSV sliders
+            nameButton.wait_variable(var)
+
+            # get slider values
+            lower_stake = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+            upper_stake = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+            # change button and label text
+            templateHSVRunButton.config(text="Generate")
+            TemplateRangeLabel.config(text="Set HSV Range for Blobs")
+
+            # reset sliders
+            H1Slider.set(0)
+            S1Slider.set(0)
+            V1Slider.set(0)
+            H2Slider.set(0)
+            S2Slider.set(0)
+            V2Slider.set(0)
+
+            # reset variable
+            var.set(0)
+
+            # wait until button is pressed
+            templateHSVRunButton.wait_variable(var)
+
+            # get slider values
+            lower_blob = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+            upper_blob = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+            # close window
+            templateWindow.destroy()
+            cv2.destroyAllWindows()
+
+            print lower_stake
+            print upper_stake
+            print lower_blob
+            print upper_blob
 
             # if valid filename
             if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
-                # hsv ranges
-                lower_pink = np.array([145, 175, 68])#np.array([143, 198, 50])
-                #lower_pink = np.array([143, 198, 50])
-                upper_pink = np.array([161, 255, 255])#np.array([168, 255, 255])
-                #upper_pink = np.array([168, 255, 255])
-                lower_green = np.array([61, 154, 44])#np.array([0, 116, 35])
-                #lower_green = np.array([0, 116, 35])
-                upper_green = np.array([70, 255, 255])#np.array([65, 223, 255])
-                #upper_green = np.array([65, 223, 255])
+                # get contour areas
                 min_contour_area = lowerSize.get()
                 max_contour_area = upperSize.get()
 
@@ -896,7 +960,7 @@ class GUI:
                 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
                 # create mask to find stakes
-                stake_mask = cv2.inRange(hsv, lower_pink, upper_pink)
+                stake_mask = cv2.inRange(hsv, lower_stake, upper_stake)
 
                 # remove noise
                 kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
@@ -946,7 +1010,7 @@ class GUI:
                     roi = hsv[stake[0][0][1]: stake[0][1][1], stake[0][0][0]: stake[0][1][0]]
 
                     # apply mask
-                    blob_mask = cv2.inRange(roi, lower_green, upper_green)
+                    blob_mask = cv2.inRange(roi, lower_blob, upper_blob)
 
                     # remove noise
                     blob_mask= cv2.morphologyEx(blob_mask, cv2.MORPH_OPEN, kernel)
