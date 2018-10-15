@@ -132,8 +132,8 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     ax.set_xlabel("Images")
     ax.set_ylabel("Change (mm)")
     ax.set_title("Change in Snow Depth (mm)")
-    py.xticks(rotation=75)
-    py.tight_layout()
+    plt.xticks(rotation=75)
+    plt.tight_layout()
 
     # only show ever 4th label
     [label.set_visible(False) for (i,label) in enumerate(ax.get_xaxis().get_ticklabels()) if i % 4 != 0]
