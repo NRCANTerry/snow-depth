@@ -18,6 +18,7 @@ from GUI import GUI
 from get_intersection import getIntersections
 from calculate_depth import getDepths
 from equalize import equalize_hist_colour
+from overlay_roi import overlay
 import Tkinter as tk
 import datetime
 import time
@@ -214,32 +215,8 @@ for count, img in enumerate(images_equalized):
 if(debug):
     print("\n\nOverlaying ROI")
 
-    # iterate through images
-    for count, img in enumerate(images_registered):
-        # create copy
-        img_write = img.copy()
-
-        # update progress bar
-        progress(count + 1, num_images, status=filtered_names[count])
-
-        # iterate through stakes
-        for j, stake in enumerate(roi_coordinates):
-            # overaly template intersection point
-            cv2.circle(img_write, (int(template_intersections[j][0]),
-                int(template_intersections[j][1] - img_border_upper)), 5, (0,255,0), 3)
-
-            # iterate through roi in each stake
-            for i, rectangle in enumerate(stake):
-                # stake itself
-                if(i == 0):
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper),
-                        (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 0, 255), 3)
-                # blobs
-                else:
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-img_border_upper),
-                        (rectangle[1][0], rectangle[1][1]-img_border_upper), (0, 255, 0), 3)
-
-        cv2.imwrite(paths_dict["template-overlay"] + filtered_names[count], img_write)
+    overlay(images_registered, template_intersections, roi_coordinates, img_border_upper,
+        filtered_names, paths_dict["template-overlay"])
 
 # ---------------------------------------------------------------------------------
 # Get Valid Stakes
@@ -259,7 +236,7 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 130, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 100, filtered_names, debug, paths_dict["intersection"])
 
 # ---------------------------------------------------------------------------------
 # Calculate Change in Snow Depth
