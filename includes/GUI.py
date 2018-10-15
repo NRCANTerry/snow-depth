@@ -83,6 +83,7 @@ class GUI:
 
         if(len(self.systemParameters["Last_Template_Range"]) != 0):
             self.systemParameters["Last_Template_Range"] = ast.literal_eval(updated_parameters[6].values()[0])
+            
         # window closing protocol
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
