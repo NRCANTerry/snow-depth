@@ -940,11 +940,6 @@ class GUI:
             templateWindow.destroy()
             cv2.destroyAllWindows()
 
-            print lower_stake
-            print upper_stake
-            print lower_blob
-            print upper_blob
-
             # if valid filename
             if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
                 # get contour areas
@@ -1106,6 +1101,7 @@ class GUI:
                         # intersection of line between points on blob with line defining bottom of
                         x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
                             stake[0][1][1]), tuple(stake[0][1])))
+                        x0, y0 = points[1][0], points[1][1]
 
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
 
@@ -1117,13 +1113,13 @@ class GUI:
                         lineVals = ndimage.map_coordinates(np.transpose(img_gray), np.vstack((x,y)))
 
                         # get coordinates
-                        coords_thresh = [a for a, v in enumerate(lineVals) if v > 130]
+                        coords_thresh = [a for a, v in enumerate(lineVals) if v > 100]#130
 
                         # filter to find intersection coordinate
                         # not inside blobs
                         first_coord = 0
                         for k, coord in enumerate(coords_thresh):
-                            if(len(coords_thresh) > k + 20 and(coords_thresh[k+20] - coord) <= 25 and y[coord] > bottom_blob[1][1]):# and img_unmarked[int(y[coord]),int(x[coord])][1] > 150):
+                            if(len(coords_thresh) > k + 100 and(coords_thresh[k+100] - coord) <= 115):# and y[coord] > bottom_blob[1][1]):# and img_unmarked[int(y[coord]),int(x[coord])][1] > 150):
                                 first_coord = coord
                                 break
 
