@@ -129,17 +129,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					# and aren't a colour other than white
 					coords = [a for a, v in enumerate(lineVals) if v > threshold]
 
-					# further filter those values to get intersection point
-
-					#coords_filtered = [a for a, v in enumerate(lineVals) if (v > threshold and
-					#	img_[int(y[v]),int(x[v])][1] > 150 and \
-		 		#		abs(img_[int(y[v]),int(x[v])][0] - \
-				#		img_[int(y[v]),int(x[v])][2]) <= 50)]
-				#	print "Coords filtered ", coords_filtered
-
+					# get intersection index
 					first_coord = 0
 					for k, coord in enumerate(coords):
-						if ((len(coords) > k+100) and (coords[k+100] - coord) <= 115):
+						if ((len(coords) > k+100) and (coords[k+100] - coord) <= 115 and k != 0):
 							first_coord = coord
 							break
 					if(first_coord != 0):
