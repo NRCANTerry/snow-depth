@@ -61,7 +61,8 @@ class GUI:
             "Current_Template_Path": "",
             "Current_Template_Intersections": list(),
             "Current_Template_Tensor": list(),
-            "Window_Closed": False
+            "Window_Closed": False,
+            "Last_Template_Range": list()
         }
 
         # ConfigParser object
@@ -75,10 +76,13 @@ class GUI:
         self.systemParameters["Template_Paths"] = updated_parameters[3]
         self.systemParameters["Template_Intersections"] = updated_parameters[4]
         self.systemParameters["Template_Tensors"] = updated_parameters[5]
+        self.systemParameters["Last_Template_Range"] = updated_parameters[6].values()
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
 
+        if(len(self.systemParameters["Last_Template_Range"]) != 0):
+            self.systemParameters["Last_Template_Range"] = ast.literal_eval(updated_parameters[6].values()[0])
         # window closing protocol
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -440,6 +444,7 @@ class GUI:
             self.config.add_section('Template Intersections')
             self.config.add_section('Template Images')
             self.config.add_section('Template Tensor')
+            self.config.add_section('Last Template Range')
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
@@ -447,7 +452,8 @@ class GUI:
         # load in preferences
         return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
             dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
-            dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor'))]
+            dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor')),
+            dict(self.config.items('Last Template Range'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -726,7 +732,7 @@ class GUI:
             # create window
             removeTemplateWindow = tk.Toplevel(newWindow)
             removeTemplateWindow.configure(bg='#ffffff')
-            self.centre_window(removeTemplateWindow, 300, 170)
+            self.centre_window(removeTemplateWindow, 300, 190)
 
             # labels
             nameLabel = tk.Label(removeTemplateWindow,text="Name",bg='#ffffff',fg='#000000',font=("Calibri Light", 20))
@@ -752,16 +758,29 @@ class GUI:
 
         # embedded function to allow for creation of template
         def createTemplate():
+            # embedded function to handle closing of template top level window
+            def onTemplateClosing():
+                # close window
+                templateWindow.destroy()
+                cv2.destroyAllWindows()
+
+                # reopen other windows
+                newWindow.deiconify()
+                self.root.deiconify()
+
             # embedded function to get template paths
             def getImage(type):
                 filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + " template",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
                 shortName = os.path.split(filename)[1]
-                if(type == "marked"):
-                    self.markedTemplate = filename
-                    directoryPathLabel1.config(text=shortName)
-                else:
-                    self.unmarkedTemplate = filename
-                    directoryPathLabel2.config(text=shortName)
+
+                # if valid filename
+                if(filename != ""):
+                    if(type == "marked"):
+                        self.markedTemplate = filename
+                        directoryPathLabel1.config(text=shortName)
+                    else:
+                        self.unmarkedTemplate = filename
+                        directoryPathLabel2.config(text=shortName)
 
             # embedded function to provide thresholding preview
             def updateValues(event):
@@ -789,7 +808,8 @@ class GUI:
             # open new window
             templateWindow = tk.Toplevel(newWindow)
             templateWindow.configure(bg='#ffffff')
-            self.centre_window(templateWindow, 450, 750)
+            self.centre_window(templateWindow, 450, 800)
+            templateWindow.protocol("WM_DELETE_WINDOW", onTemplateClosing)
 
             # hide other windows
             newWindow.withdraw()
@@ -859,6 +879,11 @@ class GUI:
             templateHSVRunButton = tk.Button(bottomFrame, text="Next", bg='#ffffff',fg='#000000',command = lambda: var.set(1),
                 width=20,font=("Calibri Light",14))
 
+            # checkbox
+            usePreviousRange = tk.IntVar()
+            usePreviewRangeCheckbox = tk.Checkbutton(topFrame, text = "Use Previous Range", variable = usePreviousRange, bg='#ffffff',
+                fg='#000000',font=("Calibri Light", 14))
+
             # packing
             titleLabel.pack(pady = 20)
             topFrame.pack()
@@ -879,69 +904,89 @@ class GUI:
             nameLabel.pack(side = tk.LEFT, padx = (20,5))
             nameEntry.pack(side = tk.LEFT, padx = (5,20))
             nameButton.pack(pady = (20,10))
+            usePreviewRangeCheckbox.pack(pady = 20)
 
             # bottom frame packing
             TemplateRangeLabel.pack(pady=(5,5))
-            TemplateLowerHSVLabel.pack(pady=(10,5))
+            TemplateLowerHSVLabel.pack(pady=(10,0))
             H1Slider.pack(pady=10)
             S1Slider.pack(pady=10)
             V1Slider.pack(pady=10)
-            TemplateUpperHSVLabel.pack(pady=(15,5))
+            TemplateUpperHSVLabel.pack(pady=(15,0))
             H2Slider.pack(pady=10)
             S2Slider.pack(pady=10)
             V2Slider.pack(pady=10)
-            templateHSVRunButton.pack(pady=10)
+            templateHSVRunButton.pack(pady=(20,10))
 
             # wait until button is pressed to present HSV sliders
             nameButton.wait_variable(var)
 
-            # import image
-            cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
-            img = cv2.imread(self.markedTemplate)
-            img = cv2.resize(img, (0,0), None, 0.25, 0.25)
-
-            # present bottom frame
-            topFrame.pack_forget()
-            bottomFrame.pack()
-
-            # reset variable
-            var.set(0)
-
-            # wait until button is pressed to present second set of HSV sliders
-            nameButton.wait_variable(var)
-
-            # get slider values
-            lower_stake = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
-            upper_stake = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
-
-            # change button and label text
-            templateHSVRunButton.config(text="Generate")
-            TemplateRangeLabel.config(text="Set HSV Range for Blobs")
-
-            # reset sliders
-            H1Slider.set(0)
-            S1Slider.set(0)
-            V1Slider.set(0)
-            H2Slider.set(0)
-            S2Slider.set(0)
-            V2Slider.set(0)
-
-            # reset variable
-            var.set(0)
-
-            # wait until button is pressed
-            templateHSVRunButton.wait_variable(var)
-
-            # get slider values
-            lower_blob = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
-            upper_blob = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
-
-            # close window
-            templateWindow.destroy()
-            cv2.destroyAllWindows()
-
             # if valid filename
             if(self.markedTemplate != "" and self.unmarkedTemplate != "" and name.get() != ""):
+                if(usePreviousRange.get() != 1 or len(self.systemParameters["Last_Template_Range"]) < 4):
+                    # import image
+                    cv2.namedWindow("Comparison", cv2.WINDOW_NORMAL)
+                    img = cv2.imread(self.markedTemplate)
+                    img = cv2.resize(img, (0,0), None, 0.25, 0.25)
+
+                    # present bottom frame
+                    topFrame.pack_forget()
+                    bottomFrame.pack()
+
+                    # reset variable
+                    var.set(0)
+
+                    # wait until button is pressed to present second set of HSV sliders
+                    nameButton.wait_variable(var)
+
+                    # get slider values
+                    lower_stake = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+                    upper_stake = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+                    # change button and label text
+                    templateHSVRunButton.config(text="Generate")
+                    TemplateRangeLabel.config(text="Set HSV Range for Blobs")
+
+                    # reset sliders
+                    H1Slider.set(0)
+                    S1Slider.set(0)
+                    V1Slider.set(0)
+                    H2Slider.set(0)
+                    S2Slider.set(0)
+                    V2Slider.set(0)
+
+                    # reset variable
+                    var.set(0)
+
+                    # wait until button is pressed
+                    templateHSVRunButton.wait_variable(var)
+
+                    # get slider values
+                    lower_blob = np.array([H1Slider.get(), S1Slider.get(), V1Slider.get()])
+                    upper_blob = np.array([H2Slider.get(), S2Slider.get(), V2Slider.get()])
+
+                    # write current ranges to preferences file
+                    outputString = "[" + np.array2string(lower_stake, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                        np.array2string(upper_stake, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                        np.array2string(lower_blob, separator = ',').replace("[","(").replace("]", ")") + "," + \
+                        np.array2string(upper_blob, separator = ',').replace("[","(").replace("]", ")") + "]"
+
+                    self.config.set("Last Template Range", "last", outputString)
+
+                # else use previous ranges from preferences file
+                else:
+                    lower_stake = np.asarray(self.systemParameters["Last_Template_Range"][0])
+                    upper_stake = np.asarray(self.systemParameters["Last_Template_Range"][1])
+                    lower_blob = np.asarray(self.systemParameters["Last_Template_Range"][2])
+                    upper_blob = np.asarray(self.systemParameters["Last_Template_Range"][3])
+
+                # close window
+                templateWindow.destroy()
+                cv2.destroyAllWindows()
+
+                # output to command line
+                print "Generating Template...\n"
+
                 # get contour areas
                 min_contour_area = lowerSize.get()
                 max_contour_area = upperSize.get()
@@ -963,6 +1008,26 @@ class GUI:
 
                 # find contours
                 stake_contours = cv2.findContours(stake_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+
+                # filter stake contours by area
+                # stake must be larger than blob
+                stake_contours = [x for x in stake_contours if cv2.contourArea(x) > min_contour_area]
+
+                # check to ensure that all stakes were detected
+                stake_num = tkMessageBox.askyesno("Question", ("Please confirm that there are %d stakes" % len(stake_contours)))
+
+                # end template generation if incorrect number of stakes detected
+                if(not stake_num):
+                    # reopen other windows
+                    newWindow.deiconify()
+                    self.root.deiconify()
+
+                    # close cv2 windows
+                    cv2.destroyAllWindows()
+
+                    # output to user and close
+                    print "Stopping Template Generation..."
+                    return
 
                 # sort contours from left to right
                 boundingBoxes = [cv2.boundingRect(c) for c in stake_contours]
@@ -1209,6 +1274,9 @@ class GUI:
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())
+            else:
+                tkMessageBox.showinfo("Error", "Not All Fields Populated")
+                templateWindow.destroy()
 
             # reopen other windows
             newWindow.deiconify()
@@ -1333,8 +1401,6 @@ class GUI:
         # button
         createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg = '#ffffff',
             fg = '#000000', font=("Calibri Light", 15), width = 17)
-        #createTemplateButton = tk.Button(buttonFrame, text = "Create Template", command = lambda: createTemplate(), bg = '#ffffff',
-        #    fg = '#000000', font=("Calibri Light", 15), width = 17)
 
         # packing
         titleLabel.pack(pady = 20)
