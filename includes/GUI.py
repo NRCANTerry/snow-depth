@@ -83,7 +83,7 @@ class GUI:
 
         if(len(self.systemParameters["Last_Template_Range"]) != 0):
             self.systemParameters["Last_Template_Range"] = ast.literal_eval(updated_parameters[6].values()[0])
-            
+
         # window closing protocol
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -1185,7 +1185,7 @@ class GUI:
                         # not inside blobs
                         first_coord = 0
                         for k, coord in enumerate(coords_thresh):
-                            if(len(coords_thresh) > k + 100 and(coords_thresh[k+100] - coord) <= 115):# and y[coord] > bottom_blob[1][1]):# and img_unmarked[int(y[coord]),int(x[coord])][1] > 150):
+                            if(len(coords_thresh) > k + 100 and(coords_thresh[k+100] - coord) <= 115 and k != 0):
                                 first_coord = coord
                                 break
 
