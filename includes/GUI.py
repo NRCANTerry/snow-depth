@@ -17,7 +17,9 @@ from scipy import ndimage
 import statistics
 from get_tensor import getTensor
 from equalize import equalize_hist_colour
+from equalize import increase_brightness
 import matplotlib
+from matplotlib import pyplot as plt
 
 class GUI:
     def __init__(self, master):
@@ -334,6 +336,7 @@ class GUI:
 
             except ValueError:
                 return False
+
     # ---------------------------------------------------------------------------------
     # Function to confirm that required fields are filled in
     # ---------------------------------------------------------------------------------
@@ -352,6 +355,17 @@ class GUI:
                 and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
                 and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
                 and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile")
+
+    # ---------------------------------------------------------------------------------
+    # Function to confirm that required HSV fields are filled in
+    # ---------------------------------------------------------------------------------
+
+    def fieldsFilledHSV(self):
+        return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
+            and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
+            and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
+            and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
+            and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1))
 
     # ---------------------------------------------------------------------------------
     # Function to allow selection of directory/file where images are stored
@@ -601,7 +615,7 @@ class GUI:
 
     def saveRanges(self):
         # if required fields are filled in
-        if(self.fieldsFilled(False)):
+        if(self.fieldsFilledHSV()):
             # ask for name
             name = tk.StringVar()
             newWindow = tk.Toplevel(self.root)
@@ -713,7 +727,10 @@ class GUI:
                 if(removetemplateMenuVar.get() != 'Select Template to Remove'):
                     # delete saved template image
                     path = self.systemParameters["Template_Paths"][removetemplateMenuVar.get()]
+                    filename, ext = os.path.splitext(os.path.split(path)[1])
+                    path_marked = os.path.split(path)[0] + "\\" + filename + "-marked" + ext
                     os.remove(path)
+                    os.remove(path_marked)
 
                     self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
                     self.config.remove_option("Template Images", removetemplateMenuVar.get())
@@ -974,6 +991,9 @@ class GUI:
 
                     self.config.set("Last Template Range", "last", outputString)
 
+                    # update system parameters
+                    self.systemParameters["Last_Template_Range"] = [lower_stake, upper_stake, lower_blob, upper_blob]
+
                 # else use previous ranges from preferences file
                 else:
                     lower_stake = np.asarray(self.systemParameters["Last_Template_Range"][0])
@@ -1004,7 +1024,7 @@ class GUI:
                 stake_mask = cv2.inRange(hsv, lower_stake, upper_stake)
 
                 # remove noise
-                kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5,5))
+                kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
                 stake_mask= cv2.morphologyEx(stake_mask, cv2.MORPH_OPEN, kernel)
 
                 # find contours
@@ -1178,28 +1198,64 @@ class GUI:
                         # extract values along the line
                         lineVals = ndimage.map_coordinates(np.transpose(img_gray), np.vstack((x,y)))
 
-                        # get coordinates
-                        coords_thresh = [a for a, v in enumerate(lineVals) if v > 100]#130
+                        # find the maximum intensity along the line and from that determine the
+                        # threshold for finding snow intersection
+                        snow_threshold = float(max(lineVals)) * 0.5
+
+                        # get coordinates of snow
+                        coords_thresh = [a for a, v in enumerate(lineVals) if v > snow_threshold]
+
+                        # get coordinates of stake
+                        # stake intensity is considered to be 3/4 that of minimum snow intensity
+                        coords_thresh_stake = [a for a, v in enumerate(lineVals) if v > snow_threshold*0.65]
 
                         # filter to find intersection coordinate
-                        # not inside blobs
+                        # intersection coordinate must have intensity greater than threshold and
+                        # have continuous snow after it
                         first_coord = 0
                         for k, coord in enumerate(coords_thresh):
-                            if(len(coords_thresh) > k + 100 and(coords_thresh[k+100] - coord) <= 115 and k != 0):
-                                first_coord = coord
+                            if(len(coords_thresh) > k + 200 and (coords_thresh[k+200] - coord) <= 205 and k != 0):
+                                if((len(coords_thresh) > k + 500 and (coords_thresh[k+500] - coord) <= 505) or len(coords_thresh) < k + 500):
+                                    first_coord = coord
+                                    break
+
+                        # filter along stake to find last point resembling a stake (low intensity) before
+                        # previously determined intersection point
+                        first_coord2 = 0
+                        for k, coord in enumerate(reversed(coords_thresh_stake)):
+                            if(coord < first_coord):
+                                first_coord2 = coord
                                 break
+
+                        # if no suitable point found
+                        if(first_coord2 == 0):
+                            first_coord2 = first_coord
 
                         # add coordinates to list
                         if(first_coord != 0):
-                            combinationResults.append((x[first_coord], y[first_coord]))
+                            combinationResults.append((x[first_coord2], y[first_coord2]))
 
                     # calculate median
-                    #stakes_intersect.append([sum(y) / len(y) for y in zip(*combinationResults)])
-                    y_vals = [x[1] for x in combinationResults]
-                    x_vals = [x[0] for x in combinationResults]
-                    median_y = statistics.median(y_vals)
-                    median_x = statistics.median(x_vals)
-                    stakes_intersect.append([median_x, median_y])
+                    if(len(combinationResults) > 0):
+                        y_vals = [x[1] for x in combinationResults]
+                        x_vals = [x[0] for x in combinationResults]
+                        median_y = statistics.median(y_vals)
+                        median_x = statistics.median(x_vals)
+                        stakes_intersect.append([median_x, median_y])
+
+                    # if no data stop template generation
+                    else:
+                        # reopen other windows
+                        newWindow.deiconify()
+                        self.root.deiconify()
+
+                        # close cv2 windows
+                        cv2.destroyAllWindows()
+
+                        # output to user and close
+                        print "No Intersection Point Found"
+                        print "Stopping Template Generation..."
+                        return
 
                 # output boxes
                 for b, stake_output in enumerate(stakes_coords):
@@ -1244,8 +1300,8 @@ class GUI:
                     # write images to directory
                     current_dir = os.getcwd()
                     filename, ext = os.path.splitext(os.path.split(self.unmarkedTemplate)[1])
-                    template_path = current_dir + "\\includes\\templates\\" + filename + ext
-                    marked_template_path = current_dir + "\\includes\\templates\\" + filename + "-marked" + ext
+                    template_path = current_dir + "\\includes\\templates\\" + filename + "-" +  str(name.get()) + ext
+                    marked_template_path = current_dir + "\\includes\\templates\\" + filename + "-" +  str(name.get()) + "-marked" + ext
                     cv2.imwrite(template_path, img_save)
                     cv2.imwrite(marked_template_path, img_unmarked)
 
