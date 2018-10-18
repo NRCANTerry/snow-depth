@@ -832,6 +832,17 @@ class GUI:
                 # display image to user
                 cv2.imshow("Comparison", numpy_horizontal)
 
+
+            # embedded function to adjust intersection lines towards the centre of
+            # the stake preventing incorrect snow depth measurements
+            def adjustCoords(x0, x1, degree, status):
+                if(status == 1):
+                    return x0+5, x1+5
+                elif(status == 2):
+                    return x0-5, x1-5
+                else:
+                    return x0, x1
+
             # open new window
             templateWindow = tk.Toplevel(newWindow)
             templateWindow.configure(bg='#ffffff')
@@ -1147,9 +1158,9 @@ class GUI:
                     blob_area += blob_area_stake
                     blobs += blobs_on_stake
 
-                    # determine blob ranges for stake (70% to 110% of avg size)
+                    # determine blob ranges for stake (70% to 130% of avg size)
                     avg_blob_size = float(blob_area_stake) / float(blobs_on_stake)
-                    blob_size_ranges.append([avg_blob_size*0.7, avg_blob_size*1.10])
+                    blob_size_ranges.append([avg_blob_size*0.7, avg_blob_size*1.30])
 
                     # determine tensor
                     # get list with only blobs (remove coordinates of stake)
@@ -1207,78 +1218,96 @@ class GUI:
                     # iterate through combinations
                     for j, points in enumerate(coordinateCombinations):
                         # get points
-                        x0, y0 = points[0][0], points[0][1]
-                        x1, y1 = points[1][0], points[1][1]
-                        if j == 1:
-                        	x0 += 5
-                        	x1 += 5
-                        elif j == 2:
-                        	x0 -= 5
-                        	x1 -= 5
+    					x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
+    					y0, y1 = points[0][1], points[1][1]
 
                         # get endpoint for line
                         # intersection of line between points on blob with line defining bottom of
                         x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
                             stake[0][1][1]), tuple(stake[0][1])))
-                        x0, y0 = points[1][0], points[1][1]
-                        if j == 1:
-                        	x0 += 5
-                        	x1 += 5
-                        elif j == 2:
-                        	x0 -= 5
-                        	x1 -= 5
+                        y0 = points[1][1]
+    					x0, x1 = adjustCoords(points[1][0], x1, 5, j)
 
+                        # draw line on output image
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
 
                         # make a line with "num" points
-                        num = 2000
+                        num = 1000
                         x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
                         # extract values along the line
-                        lineVals = ndimage.map_coordinates(np.transpose(img_gray), np.vstack((x,y)))
+                        lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
 
-                        # find the maximum intensity along the line and from that determine the
-                        # threshold for finding snow intersection
-                        maxVal = float(max(lineVals))
-                        snow_threshold = maxVal * 0.55
-                        percent_bright = maxVal/225.0
+                        # apply gaussian filter to smooth line
+                        lineVals_smooth = ndimage.filters.gaussian_filter1d(lineVals, 10)
 
-                        # restrict threshold
-                        if(snow_threshold < 80):
-                            snow_threshold = 80
+                        # append zero to signal to create peak
+                        lineVals_smooth = np.append(lineVals_smooth, 0)
 
-                        # get coordinates of snow
-                        coords_thresh = [a for a, v in enumerate(lineVals) if v > snow_threshold]
+                        # determine peaks and properties
+                        peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=10)
 
-                        # get coordinates of stake
-                        # stake intensity is considered to be 3/4 that of minimum snow intensity
-                        coords_thresh_stake = [a for a, v in enumerate(lineVals) if v < snow_threshold * percent_bright]
+                        # get sorted indexes (decreasing distance down the line)
+                        sorted_index = np.argsort(peaks)
+                        sorted_index = sorted_index[::-1]
 
-                        # filter to find intersection coordinate
-                        # intersection coordinate must have intensity greater than threshold and
-                        # have continuous snow after it
-                        first_coord = 0
-                        for k, coord in enumerate(coords_thresh):
-                            if(len(coords_thresh) > k + 200 and (coords_thresh[k+200] - coord) <= 205 and k != 0):
-                                if((len(coords_thresh) > k + 500 and (coords_thresh[k+500] - coord) <= 505) or len(coords_thresh) < k + 500):
-                                    first_coord = coord
+                        # index of selected peak in sorted list of peaks
+                        selected_peak = -1
+
+                        # iterate through peaks from bottom to top
+                        for index in sorted_index:
+                        	# only check if there is more than 1 peak remaining
+                        	if(index > 0):
+                        		# check that peak is isolated (doesn't have peak immediately next to it
+                        		# of similar size)
+                        		if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
+                        			or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5):
+                        			selected_peak = index
+                        			break
+                        	# else select the only peak remaining
+                        	else:
+                        		# determine if this is a no snow case
+                        		# must see mostly snow after peak (50% coverage)
+                        		# snow threshold is 75% of peak
+                        		peak_index = peaks[index]
+                        		peak_intensity = lineVals[peak_index]
+                        		peak_range = lineVals[peak_index:]
+                        		snow_cover = float(len(np.where(peak_range > peak_intensity * 0.75)[0])) / float(len(peak_range)) if \
+                        			peak_intensity * 0.75 < 140 else float(len(np.where(peak_range > 140)[0])) / float(len(peak_range))
+
+                        		if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
+                        			selected_peak = 0
+                        		else:
+                        			selected_peak = -1
+                        		break
+
+                        # if a snow peak was found
+                        if(selected_peak != -1):
+                            # determine peak index in lineVals array
+                            peak_index_line = peaks[selected_peak]
+
+                            # determine threshold for finding stake
+                            # average of intensity at left edge of peak and intensity at base of peak
+                            left_edge_index = properties["left_ips"][selected_peak]
+                            left_edge_intensity = lineVals[int(left_edge_index)]
+                            left_base_index = properties["left_bases"][selected_peak]
+                            left_base_intensity = lineVals[int(left_base_index)]
+                            stake_threshold = (float(left_edge_intensity) - float(left_base_intensity)) / 2.0 + \
+                                                float(left_base_intensity)
+
+                            # restrict stake threshold
+                            stake_threshold = 65 if stake_threshold < 65 else stake_threshold
+                            stake_threshold = 115 if stake_threshold > 115 else stake_threshold
+
+                            # determine index of intersection point
+                            intersection_index = 0
+                            for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
+                                if(intensity < stake_threshold):
+                                    intersection_index = int(peak_index_line-t)
                                     break
-
-                        # filter along stake to find last point resembling a stake (low intensity) before
-                        # previously determined intersection point
-                        first_coord2 = 0
-                        if(first_coord != 0):
-                            for k, coord in enumerate(reversed(coords_thresh_stake)):
-                                if(coord < first_coord and img_hsv[int(y[coord]-2), int(x[coord])] > 40):
-                                    first_coord2 = coord
-                                    break
-
-                        # if no suitable point found
-                        if(first_coord2 == 0 and first_coord != 0):
-                            first_coord2 = first_coord
 
                         # add coordinates to list
-                        if(first_coord != 0):
+                        if(selected_peak != -1 adn intersection_index != 0):
                             combinationResults.append((x[first_coord2], y[first_coord2]))
 
                     # calculate median
