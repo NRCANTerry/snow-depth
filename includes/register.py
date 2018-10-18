@@ -3,15 +3,15 @@ import cv2
 import numpy as np
 
 # global variables
-MAX_FEATURES = 15000
+MAX_FEATURES = 5000 #15000
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
 # the third image is unaltered and will be subjected to the warp
 def alignImages(img, template, img_apply):
 	# apply median blur to highlight foreground featurse
-	img1Gray = cv2.medianBlur(img, 5)
-	img2Gray = cv2.medianBlur(template, 5)
+	img1Gray = cv2.medianBlur(img, 3)
+	img2Gray = cv2.medianBlur(template, 3)
 
 	# denoise grayscale image
 	img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,3,10,7)
@@ -29,6 +29,8 @@ def alignImages(img, template, img_apply):
 	# matches with a score greater than 30 are removed
 	matches = sorted(matches, key = lambda x: x.distance)
 	matches = [x for x in matches if x.distance <= 30]
+	if len(matches) > 100:
+		matches = matches[:100]
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img, kp1, template, kp2, matches, None)
