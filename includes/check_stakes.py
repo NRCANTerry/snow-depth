@@ -14,7 +14,7 @@ dilate_kernel = (5,5)
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
-def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_border, debug,
+def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 	img_names, debug_directory):
 
 	# contains output data
@@ -74,6 +74,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 			# highest blob variable
 			highestBlob = np.array([[1e5,1e5],[1e5,1e5],[1e5,1e5],[1e5,1e5]])
 
+			# get blob size range for stake
+			blob_size_range = blobSizes[j]
+
 			# iterate through roi in each stake
 			for i, rectangle in enumerate(stake):
 				# skip stakes
@@ -102,7 +105,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, min_area, max_area, upper_borde
 				# iterate through contours
 				for k, cnt in enumerate(contours):
 					# filter by area
-					if(min_area <= cv2.contourArea(cnt) <= max_area):
+					if(blob_size_range[0] <= cv2.contourArea(cnt) <= blob_size_range[1]):
 						# increment blob counter
 						num_blobs += 1
 						contour_index = k
