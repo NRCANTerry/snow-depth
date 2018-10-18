@@ -3,3 +3,7 @@ measure-depth/
 
 # ignore template files
 includes/templates
+
+# ignore images in registration-testing
+registration-testing/**/*.jpg
+registration-testing/**/*.JPG
