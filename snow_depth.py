@@ -22,6 +22,7 @@ from overlay_roi import overlay
 import Tkinter as tk
 import datetime
 import time
+from colour_balance import balanceColour
 
 root = tk.Tk()
 gui = GUI(root)
@@ -57,6 +58,7 @@ clip_limit = params[11]
 tile_size = tuple(params[12])
 template_intersections = params[14]
 template_tensor = params[15]
+template_blob_sizes = params[16]
 
 # flag to run program in debug mode
 debug = params[13]
@@ -130,9 +132,9 @@ for count, img_name in enumerate(images):
 
     # filter out night images
     if(isDay(img.copy(), [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
-        blob_size_lower, blob_size_upper)):
+        template_blob_sizes)):
         # add to lists
-        images_filtered.append(img)
+        images_filtered.append(balanceColour(img, 1))
         filtered_names.append(img_name)
 
 # ---------------------------------------------------------------------------------
@@ -226,7 +228,7 @@ print("\n\nValidating Stakes")
 
 # check stakes in image
 stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
-    blob_size_lower, blob_size_upper, img_border_upper, debug, filtered_names,
+    template_blob_sizes, img_border_upper, debug, filtered_names,
     paths_dict["stake-check"])
 
 # ---------------------------------------------------------------------------------
