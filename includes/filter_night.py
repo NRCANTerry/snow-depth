@@ -8,7 +8,7 @@ dilate_kernel = (5,5)
 min_pixel_count = 100
 
 # function to determine if an image was taken at night
-def isDay(img, hsvRanges, min_area, max_area):
+def isDay(img, hsvRanges, blobSizes):
 	# determine whether single or double HSV range
 	numRanges = len(hsvRanges)
 
@@ -34,6 +34,10 @@ def isDay(img, hsvRanges, min_area, max_area):
 	# find final coloured polygon regions
 	mask_filtered = np.zeros((h,w), dtype=np.uint8)
 	contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+
+	# set range as smallest to largest blob sizes
+	min_area = min(blobSizes, key = lambda y: y[0])[0]
+	max_area = max(blobSizes, key = lambda y: y[1])[1]
 
 	# filter by area
 	for cnt in contours:
