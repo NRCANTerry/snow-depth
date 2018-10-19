@@ -20,6 +20,9 @@ from equalize import equalize_hist_colour
 import matplotlib
 from matplotlib import pyplot as plt
 from progress_bar import progress
+from scipy.signal import find_peaks
+from scipy import signal
+from scipy import ndimage
 
 class GUI:
     def __init__(self, master):
@@ -59,12 +62,14 @@ class GUI:
             "Template_Intersections": dict(),
             "Template_Tensors": dict(),
             "Template_Blob_Sizes": dict(),
+            "Template_Datasets": dict(),
             "Current_Template_Name": "",
             "Current_Template_Coords": list(),
             "Current_Template_Path": "",
             "Current_Template_Intersections": list(),
             "Current_Template_Tensor": list(),
             "Current_Template_Blob_Sizes": list(),
+            "Current_Template_Dataset": list(),
             "Window_Closed": False,
             "Last_Template_Range": list()
         }
@@ -82,6 +87,7 @@ class GUI:
         self.systemParameters["Template_Tensors"] = updated_parameters[5]
         self.systemParameters["Last_Template_Range"] = updated_parameters[6].values()
         self.systemParameters["Template_Blob_Sizes"] = updated_parameters[7]
+        self.systemParameters["Template_Datasets"] = updated_parameters[8]
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
@@ -422,7 +428,8 @@ class GUI:
                     self.systemParameters["Lower_Border"], self.systemParameters["Lower_Blob_Size"], self.systemParameters["Upper_Blob_Size"], \
                     self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
                     tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections"], \
-                    self.systemParameters["Current_Template_Tensor"], self.systemParameters["Current_Template_Blob_Sizes"]
+                    self.systemParameters["Current_Template_Tensor"], self.systemParameters["Current_Template_Blob_Sizes"], \
+                    self.systemParameters["Current_Template_Dataset"], self.systemParameters["Current_Template_Name"]
 
         # return False if run button wasn't pressed
         else:
@@ -462,7 +469,8 @@ class GUI:
             self.config.add_section('Template Intersections')
             self.config.add_section('Template Images')
             self.config.add_section('Template Tensor')
-            self.conifg.add_section('Template Blob Sizes')
+            self.config.add_section('Template Blob Sizes')
+            self.config.add_section('Template Registration Dataset')
             self.config.add_section('Last Template Range')
         # else read in existing file
         else:
@@ -472,7 +480,8 @@ class GUI:
         return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
             dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
             dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor')),
-            dict(self.config.items('Last Template Range')), dict(self.config.items('Template Blob Sizes'))]
+            dict(self.config.items('Last Template Range')), dict(self.config.items('Template Blob Sizes')),
+            dict(self.config.items('Template Registration Dataset'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -580,6 +589,7 @@ class GUI:
             self.systemParameters["Current_Template_Intersections"] = ast.literal_eval(self.systemParameters["Template_Intersections"][str(optionsList[4])])
             self.systemParameters["Current_Template_Tensor"] = ast.literal_eval(self.systemParameters["Template_Tensors"][str(optionsList[4])])
             self.systemParameters["Current_Template_Blob_Sizes"] = ast.literal_eval(self.systemParameters["Template_Blob_Sizes"][str(optionsList[4])])
+            self.systemParameters["Current_Template_Dataset"] = ast.literal_eval(self.systemParameters["Template_Datasets"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
             self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
@@ -742,12 +752,14 @@ class GUI:
                     self.config.remove_option("Template Intersections", removetemplateMenuVar.get())
                     self.config.remove_option("Template Tensor", removetemplateMenuVar.get())
                     self.config.remove_option("Template Blob Sizes", removetemplateMenuVar.get())
+                    self.config.remove_option("Template Registration Dataset", removetemplateMenuVar.get())
                     self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
                     self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Intersections"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Tensors"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Blob_Sizes"].pop(removetemplateMenuVar.get())
+                    self.systemParameters["Template_Datasets"].pop(removetemplateMenuVar.get())
 
                     # update menu
                     templateMenuVar.set('Select Template')
@@ -1158,9 +1170,9 @@ class GUI:
                     blob_area += blob_area_stake
                     blobs += blobs_on_stake
 
-                    # determine blob ranges for stake (70% to 130% of avg size)
+                    # determine blob ranges for stake (70% to 150% of avg size)
                     avg_blob_size = float(blob_area_stake) / float(blobs_on_stake)
-                    blob_size_ranges.append([avg_blob_size*0.7, avg_blob_size*1.30])
+                    blob_size_ranges.append([avg_blob_size*0.7, avg_blob_size*1.50])
 
                     # determine tensor
                     # get list with only blobs (remove coordinates of stake)
@@ -1188,7 +1200,6 @@ class GUI:
 
                 # convert image to grayscale
                 img_gray = cv2.cvtColor(equalize_hist_colour(img_unmarked.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
-                img_hsv = cv2.split(cv2.cvtColor(img_unmarked.copy(), cv2.COLOR_BGR2HSV))[1]
 
                 # determine intersection points for each stake
                 for stake in stakes_coords:
@@ -1218,15 +1229,15 @@ class GUI:
                     # iterate through combinations
                     for j, points in enumerate(coordinateCombinations):
                         # get points
-    					x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
-    					y0, y1 = points[0][1], points[1][1]
+                        x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
+                        y0, y1 = points[0][1], points[1][1]
 
                         # get endpoint for line
                         # intersection of line between points on blob with line defining bottom of
                         x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
                             stake[0][1][1]), tuple(stake[0][1])))
                         y0 = points[1][1]
-    					x0, x1 = adjustCoords(points[1][0], x1, 5, j)
+                        x0, x1 = adjustCoords(points[1][0], x1, 5, j)
 
                         # draw line on output image
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
@@ -1236,7 +1247,7 @@ class GUI:
                         x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
                         # extract values along the line
-                        lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
+                        lineVals = ndimage.map_coordinates(np.transpose(img_gray), np.vstack((x,y)))
 
                         # apply gaussian filter to smooth line
                         lineVals_smooth = ndimage.filters.gaussian_filter1d(lineVals, 10)
@@ -1256,30 +1267,30 @@ class GUI:
 
                         # iterate through peaks from bottom to top
                         for index in sorted_index:
-                        	# only check if there is more than 1 peak remaining
-                        	if(index > 0):
-                        		# check that peak is isolated (doesn't have peak immediately next to it
-                        		# of similar size)
-                        		if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
-                        			or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5):
-                        			selected_peak = index
-                        			break
-                        	# else select the only peak remaining
-                        	else:
-                        		# determine if this is a no snow case
-                        		# must see mostly snow after peak (50% coverage)
-                        		# snow threshold is 75% of peak
-                        		peak_index = peaks[index]
-                        		peak_intensity = lineVals[peak_index]
-                        		peak_range = lineVals[peak_index:]
-                        		snow_cover = float(len(np.where(peak_range > peak_intensity * 0.75)[0])) / float(len(peak_range)) if \
-                        			peak_intensity * 0.75 < 140 else float(len(np.where(peak_range > 140)[0])) / float(len(peak_range))
+                            # only check if there is more than 1 peak remaining
+                            if(index > 0):
+                                # check that peak is isolated (doesn't have peak immediately next to it
+                                # of similar size)
+                                if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
+                                    or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5):
+                                    selected_peak = index
+                                    break
+                            # else select the only peak remaining
+                            else:
+                                # determine if this is a no snow case
+                                # must see mostly snow after peak (50% coverage)
+                                # snow threshold is 75% of peak
+                                peak_index = peaks[index]
+                                peak_intensity = lineVals[peak_index]
+                                peak_range = lineVals[peak_index:]
+                                snow_cover = float(len(np.where(peak_range > peak_intensity * 0.75)[0])) / float(len(peak_range)) if \
+                                    peak_intensity * 0.75 < 140 else float(len(np.where(peak_range > 140)[0])) / float(len(peak_range))
 
-                        		if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
-                        			selected_peak = 0
-                        		else:
-                        			selected_peak = -1
-                        		break
+                                if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
+                                    selected_peak = 0
+                                else:
+                                    selected_peak = -1
+                                break
 
                         # if a snow peak was found
                         if(selected_peak != -1):
@@ -1307,8 +1318,8 @@ class GUI:
                                     break
 
                         # add coordinates to list
-                        if(selected_peak != -1 adn intersection_index != 0):
-                            combinationResults.append((x[first_coord2], y[first_coord2]))
+                        if(selected_peak != -1 and intersection_index != 0):
+                            combinationResults.append((x[intersection_index], y[intersection_index]))
 
                     # calculate median
                     if(len(combinationResults) > 0):
@@ -1391,6 +1402,7 @@ class GUI:
                     intersectionString = str(stakes_intersect).replace("array(", "").replace(")", "")
                     tensorString = str(stakes_tensor).replace("array(", "").replace(")", "")
                     blobSizeString = str(blob_size_ranges).replace("array(", "").replace(")", "")
+                    templateDataString = str([[0,0,0],[]]).replace("array(", "").replace(")", "")
 
                     # save to config file
                     self.config.set('Template Coordinates', name.get(), outputString)
@@ -1398,6 +1410,7 @@ class GUI:
                     self.config.set('Template Intersections', name.get(), intersectionString)
                     self.config.set('Template Tensor', name.get(), tensorString)
                     self.config.set('Template Blob Sizes', name.get(), blobSizeString)
+                    self.config.set('Template Registration Dataset', name.get(), templateDataString)
 
                     # update menu
                     templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
@@ -1410,9 +1423,11 @@ class GUI:
                     self.systemParameters["Template_Intersections"][name.get()] = intersectionString
                     self.systemParameters["Template_Tensors"][name.get()] = tensorString
                     self.systemParameters["Template_Blob_Sizes"][name.get()] = blobSizeString
+                    self.systemParameters["Template_Datasets"][name.get()] = [[0,0,0],[]]
                     self.systemParameters["Current_Template_Intersections"] = intersectionString
                     self.systemParameters["Current_Template_Tensor"] = stakes_tensor
                     self.systemParameters["Current_Template_Blob_Sizes"] = blob_size_ranges
+                    self.systemParameters["Current_Template_Dataset"] = [[0,0,0],[]]
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())
