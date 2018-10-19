@@ -47,7 +47,7 @@ def lineIntersections(pt1, pt2, ptA, ptB):
 	yi = (y1 + r*dy1 + yA + s*dy)/2.0
 	return xi, yi
 
-# function to adjust move intersection lines towards the centre of the stake
+# function to adjust intersection lines towards the centre of the stake
 # preventing incorrect snow depth measurements
 def adjustCoords(x0, x1, degree, status):
 	if(status == 1):
@@ -60,7 +60,7 @@ def adjustCoords(x0, x1, degree, status):
 # function to determine the intersection point of stakes
 # returns a dictionary indicating the coordinates of the
 # intersection points for each stake
-def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, img_names, debug, debug_directory):
+def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, debug, debug_directory):
 
 	# contains output data for JSON file
 	intersection_output = {}
@@ -118,6 +118,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
 					y0, y1 = points[0][1], points[1][1]
 
+					# calculate line length
+					num = 1000 + ((roiCoordinates[i][1][1][1]-y1) * 4)
+
 					# get endpoint for line
 					# intersection of line between points on blob with line defining bottom of stake
 					x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
@@ -126,11 +129,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					x0, x1 = adjustCoords(points[1][0], x1, 5, j)
 
 					# make a line with "num" points
-					num = 1000
 					x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
 					# extract values along the line
-					lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y)))
+					lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y))).astype(np.float32)
 
 					# apply gaussian filter to smooth line
 					lineVals_smooth = ndimage.filters.gaussian_filter1d(lineVals, 10)
@@ -154,8 +156,12 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 						if(index > 0):
 							# check that peak is isolated (doesn't have peak immediately next to it
 							# of similar size)
+							current_width = properties["right_ips"][index] - properties["left_ips"][index]
+							next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
+
 							if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
-								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5):
+								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5
+								or (current_width > (next_width*3) and index-1 == 0)):
 								selected_peak = index
 								break
 						# else select the only peak remaining
@@ -178,7 +184,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 					# if a snow case was found
 					if(selected_peak != -1):
 						# determine peak index in lineVals array
-						peak_index_line = peaks[selected_peak]
+						peak_index_line = np.uint32(peaks[selected_peak])
 
 						# determine threshold for finding stake
 						# average of intensity at left edge of peak and intensity at base of peak
@@ -195,9 +201,16 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, threshold, 
 
 						# determine index of intersection point
 						intersection_index = 0
+
+						# calculate gradients
+						line_gradients = np.gradient(lineVals)[0:peak_index_line][::-1]
+
+						# iterate through points prior to peak
 						for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
-							if(intensity < stake_threshold):
-								intersection_index = int(peak_index_line-t)
+							# if below threshold or large drop
+							if(intensity < stake_threshold or (line_gradients[t] > 20 and \
+								lineVals[peak_index_line-t-25] < stake_threshold+25)):
+								intersection_index = peak_index_line-t
 								break
 
 						# overlay debugging points
