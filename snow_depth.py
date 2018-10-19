@@ -23,6 +23,7 @@ import Tkinter as tk
 import datetime
 import time
 from colour_balance import balanceColour
+from update_dataset import createDataset
 
 root = tk.Tk()
 gui = GUI(root)
@@ -59,6 +60,18 @@ tile_size = tuple(params[12])
 template_intersections = params[14]
 template_tensor = params[15]
 template_blob_sizes = params[16]
+template_data_set = params[17]
+template_name = params[18]
+
+# determine if the dataset for the template is established
+# must have registered at least 50 images to the template
+dataset_enabled = True if template_data_set[0][2] != 0 else False
+
+# output to user the status of the dataset
+print "\nStatus:"
+print "Dataset is %s" % ("Enabled" if dataset_enabled else "Disabled")
+if(not dataset_enabled):
+    print "Number of images required: %d" % (50-len(template_data_set[1]))
 
 # flag to run program in debug mode
 debug = params[13]
@@ -188,26 +201,14 @@ if(debug):
 # Register Images to Template
 # ---------------------------------------------------------------------------------
 
-# list to hold registered images
-images_registered = list()
-
 print("\n\nRegistering Images")
 
-# iterate through equalized images
-for count, img in enumerate(images_equalized):
-    # update progress bar
-    progress(count + 1, num_images, status=filtered_names[count])
+# get registered images
+images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
+    images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled)
 
-    # align images
-    imgReg, imgMatch = alignImages(img, template_eq, images_filtered[count])
-
-    # add to list
-    images_registered.append(imgReg)
-
-    # if debugging write to directory
-    if(debug):
-        cv2.imwrite((paths_dict["registered"] + filtered_names[count]), imgReg)
-        cv2.imwrite((paths_dict["matches"] + filtered_names[count]), imgMatch)
+# update registration dataset
+createDataset(template_name, template_data_set, dataset_enabled)
 
 # ---------------------------------------------------------------------------------
 # Overlay ROI from template onto images
@@ -218,7 +219,7 @@ if(debug):
     print("\n\nOverlaying ROI")
 
     overlay(images_registered, template_intersections, roi_coordinates, img_border_upper,
-        filtered_names, paths_dict["template-overlay"])
+        filtered_names_reg, paths_dict["template-overlay"])
 
 # ---------------------------------------------------------------------------------
 # Get Valid Stakes
@@ -227,9 +228,8 @@ if(debug):
 print("\n\nValidating Stakes")
 
 # check stakes in image
-stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2],
-    template_blob_sizes, img_border_upper, debug, filtered_names,
-    paths_dict["stake-check"])
+stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1,
+    lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"])
 
 # ---------------------------------------------------------------------------------
 # Determine Snow Intersection Point
@@ -238,7 +238,8 @@ stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates,
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates, 100, filtered_names, debug, paths_dict["intersection"])
+intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
+    filtered_names_reg, debug, paths_dict["intersection"])
 
 # ---------------------------------------------------------------------------------
 # Calculate Change in Snow Depth
@@ -247,7 +248,8 @@ intersection_coords = getIntersections(images_registered, blob_coords, stake_val
 print("\n\nCalculating Change in Snow Depth")
 
 # get snow depths
-depths = getDepths(images_registered, filtered_names, intersection_coords, stake_validity, template_intersections, img_border_upper, template_tensor, debug, paths_dict["snow-depth"])
+depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
+    template_intersections, img_border_upper, template_tensor, debug, paths_dict["snow-depth"])
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
