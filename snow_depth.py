@@ -24,6 +24,7 @@ import datetime
 import time
 from colour_balance import balanceColour
 from update_dataset import createDataset
+from update_dataset import createDatasetTensor
 
 root = tk.Tk()
 gui = GUI(root)
@@ -62,6 +63,7 @@ template_tensor = params[15]
 template_blob_sizes = params[16]
 template_data_set = params[17]
 template_name = params[18]
+tensor_data_set = params[19]
 
 # determine if the dataset for the template is established
 # must have registered at least 50 images to the template
@@ -69,9 +71,24 @@ dataset_enabled = True if template_data_set[0][2] != 0 else False
 
 # output to user the status of the dataset
 print "\nStatus:"
-print "Dataset is %s" % ("Enabled" if dataset_enabled else "Disabled")
+print "Registration Dataset is %s" % ("ENABLED" if dataset_enabled else "DISABLED")
 if(not dataset_enabled):
     print "Number of images required: %d" % (50-len(template_data_set[1]))
+
+# determine if tensor dataset for the template is established
+# must have calculated at least 50 tensors
+print "\n"
+dataset_tensor_enabled = list()
+for x in tensor_data_set:
+    if(x[0][2] != 0): dataset_tensor_enabled.append(True)
+    else: dataset_tensor_enabled.append(False)
+
+# output to user the status of the tensor dataset
+for k, stake in enumerate(tensor_data_set):
+    print "Stake %d Dataset is %s" % (k, "ENABLED" if dataset_tensor_enabled[k] else "DISABLED")
+
+    if(not dataset_tensor_enabled[k]):
+        print "Number of images required: %d" % (50-len(stake[1]))
 
 # flag to run program in debug mode
 debug = params[13]
@@ -228,8 +245,12 @@ if(debug):
 print("\n\nValidating Stakes")
 
 # check stakes in image
-stake_validity, blob_coords = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1,
-    lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"])
+stake_validity, blob_coords, tensor_data_set = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1,
+    lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
+    tensor_data_set, dataset_tensor_enabled)
+
+# update tensor dataset
+createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
 
 # ---------------------------------------------------------------------------------
 # Determine Snow Intersection Point
