@@ -5,17 +5,22 @@ import json
 from progress_bar import progress
 from order_points import orderPoints
 import os
+from get_tensor import getTensor
+import statistics
 
 # parameters
 median_kernel_size = 5
 dilate_kernel = (5,5)
+
+# number of standard deviations away from the mean the tensor can be
+NUM_STD_DEV = 5
 
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
-	img_names, debug_directory):
+	img_names, debug_directory, dataset, dataset_enabled):
 
 	# contains output data
 	stake_output = {}
@@ -77,6 +82,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			# get blob size range for stake
 			blob_size_range = blobSizes[j]
 
+			# list to store actual coordinates of blobs
+			actualCoords = list()
+
 			# iterate through roi in each stake
 			for i, rectangle in enumerate(stake):
 				# skip stakes
@@ -119,6 +127,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					coords = cv2.boxPoints(rect)
 					box = np.array(coords, dtype = "int")
 
+					# add to list of points for stake
+					actualCoords.append(orderPoints(box))
+
 					if box[0][1] > lowestBlob[0][1]:
 						lowestBlob = box
 
@@ -134,6 +145,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				else:
 					validBlobs.append(False)
 
+					# add empty list to list of points
+					actualCoords.append(list())
+
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
 						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border),
@@ -142,9 +156,81 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
 
+			# determine tensor for stake
+			tensors_low = list()
+			tensors_high = list()
+
+			# mean tensor
+			mean_tensor = 0
+
+			# get top and bottom tensor
+			# if more than 2 blobs on bottom part of stake
+			if(validBlobs[0:3].count(True) >= 2):
+				for x in range(0, 4):
+					for y in range(x+1, 4):
+						# if valid blob, calculate tensor
+						if(validBlobs[x] and validBlobs[y]):
+							tensors_low.append(getTensor(actualCoords[x][1], actualCoords[y][1],
+								((y-x) * (80+56))))
+
+				# get median
+				if(len(tensors_low) > 0):
+					median_tensor_low = statistics.median(tensors_low)
+					mean_tensor += median_tensor_low
+
+			if(len(validBlobs) >= 6 and validBlobs[4:7].count(True) >= 2):
+				# determine number of blobs on stake
+				num_blobs_on_stake = len(validBlobs)
+				if(len(validBlobs) > 8): num_blobs_on_stake = 8
+
+				for x in range(4, num_blobs_on_stake):
+					for y in range(x+1, num_blobs_on_stake):
+						# if valid blob, calculate tensor
+						if(validBlobs[x] and validBlobs[y]):
+							tensors_high.append(getTensor(actualCoords[x][1], actualCoords[y][1],
+								((y-x) * (80+56))))
+
+				# get median
+				if(len(tensors_high) > 0):
+					median_tensor_high = statistics.median(tensors_high)
+
+					if(mean_tensor != 0):
+						mean_tensor = (mean_tensor + median_tensor_high) / 2.0
+					else:
+						mean_tensor += median_tensor_high
+
+			# flag to indicate whether stake is valid based on tensor comparison
+			tensorValid = True
+
+			# update dataset
+			# if dataset isn't enabled, append tensor to dataset
+			if(not dataset_enabled[j]):
+				dataset[j][1].append(mean_tensor)
+
+			# if dataset is enabled, compare tensor to mean
+			else:
+				# get mean and standard deviation from dataset
+				mean = dataset[j][0][0]
+				std_dev = dataset[j][0][1]
+
+				# if tensor measurement is within defined range
+				if((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
+					mean_tensor <= (mean+(std_dev*NUM_STD_DEV))):
+					# update data set
+					num_vals_dataset = dataset[j][0][2]
+					new_vals_dataset = num_vals_dataset + 1
+					new_mean = ((mean * num_vals_dataset) + mean_tensor) / new_vals_dataset
+					new_std_dev = np.sqrt(pow(std_dev, 2) + ((((mean_tensor - mean) * (mean_tensor - new_mean)) - \
+					 			pow(std_dev, 2)) / new_vals_dataset))
+					dataset[j] = np.array([[new_mean, new_std_dev, new_vals_dataset], []])
+
+				# update flag to indicate bad tensor match
+				else:
+					tensorValid = False
+
 			# determine if stake is valid
 			# need at minimum 2 blobs for stake to be valid
-			validStake = (validBlobsOnStake >= 2)
+			validStake = (validBlobsOnStake >= 2 and tensorValid)
 
 			# if in debugging mode draw appropriate rectangle around stake
 			if(validStake and debug):
@@ -209,4 +295,4 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return list of valid stakes
-	return validImages, blobCoords
+	return validImages, blobCoords, dataset
