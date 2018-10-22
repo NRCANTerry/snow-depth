@@ -63,6 +63,7 @@ class GUI:
             "Template_Tensors": dict(),
             "Template_Blob_Sizes": dict(),
             "Template_Datasets": dict(),
+            "Tensor_Datasets": dict(),
             "Current_Template_Name": "",
             "Current_Template_Coords": list(),
             "Current_Template_Path": "",
@@ -70,6 +71,7 @@ class GUI:
             "Current_Template_Tensor": list(),
             "Current_Template_Blob_Sizes": list(),
             "Current_Template_Dataset": list(),
+            "Current_Tensor_Dataset": list(),
             "Window_Closed": False,
             "Last_Template_Range": list()
         }
@@ -88,6 +90,7 @@ class GUI:
         self.systemParameters["Last_Template_Range"] = updated_parameters[6].values()
         self.systemParameters["Template_Blob_Sizes"] = updated_parameters[7]
         self.systemParameters["Template_Datasets"] = updated_parameters[8]
+        self.systemParameters["Tensor_Datasets"] = updated_parameters[9]
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
@@ -429,7 +432,8 @@ class GUI:
                     self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], self.systemParameters["Clip_Limit"], \
                     tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections"], \
                     self.systemParameters["Current_Template_Tensor"], self.systemParameters["Current_Template_Blob_Sizes"], \
-                    self.systemParameters["Current_Template_Dataset"], self.systemParameters["Current_Template_Name"]
+                    self.systemParameters["Current_Template_Dataset"], self.systemParameters["Current_Template_Name"], \
+                    self.systemParameters["Current_Tensor_Dataset"]
 
         # return False if run button wasn't pressed
         else:
@@ -472,6 +476,8 @@ class GUI:
             self.config.add_section('Template Blob Sizes')
             self.config.add_section('Template Registration Dataset')
             self.config.add_section('Last Template Range')
+            self.config.add_section('Tensor Dataset')
+
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
@@ -481,7 +487,7 @@ class GUI:
             dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
             dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor')),
             dict(self.config.items('Last Template Range')), dict(self.config.items('Template Blob Sizes')),
-            dict(self.config.items('Template Registration Dataset'))]
+            dict(self.config.items('Template Registration Dataset')), dict(self.config.items('Tensor Dataset'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -590,6 +596,7 @@ class GUI:
             self.systemParameters["Current_Template_Tensor"] = ast.literal_eval(self.systemParameters["Template_Tensors"][str(optionsList[4])])
             self.systemParameters["Current_Template_Blob_Sizes"] = ast.literal_eval(self.systemParameters["Template_Blob_Sizes"][str(optionsList[4])])
             self.systemParameters["Current_Template_Dataset"] = ast.literal_eval(self.systemParameters["Template_Datasets"][str(optionsList[4])])
+            self.systemParameters["Current_Tensor_Dataset"] = ast.literal_eval(self.systemParameters["Tensor_Datasets"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
             self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
@@ -760,6 +767,7 @@ class GUI:
                     self.systemParameters["Template_Tensors"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Blob_Sizes"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Datasets"].pop(removetemplateMenuVar.get())
+                    self.systemParameters["Tensor_Datasets"].pop(removetemplateMenuVar.get())
 
                     # update menu
                     templateMenuVar.set('Select Template')
@@ -1143,6 +1151,11 @@ class GUI:
                     # find contours in roi
                     blob_contours = cv2.findContours(blob_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset = (stake[0][0][0], stake[0][0][1]))[1]
 
+                    # sort contours from bottom to top
+                    boundingBoxesBlobs = [cv2.boundingRect(c) for c in blob_contours]
+                    blob_contours = zip(*sorted(zip(blob_contours, boundingBoxesBlobs),
+                        key = lambda b:b[1][1], reverse = True))[0]
+
                     # track average blob area on each stake
                     blob_area_stake = 0.0
                     blobs_on_stake = 0
@@ -1177,9 +1190,6 @@ class GUI:
                     # determine tensor
                     # get list with only blobs (remove coordinates of stake)
                     blobs_filtered = stake[1:]
-
-                    # sort from bottom to top
-                    blobs_filtered = sorted(blobs_filtered, key = lambda x: x[1][1], reverse = True)
 
                     # list to hold tensors
                     tensors = list()
@@ -1403,6 +1413,8 @@ class GUI:
                     tensorString = str(stakes_tensor).replace("array(", "").replace(")", "")
                     blobSizeString = str(blob_size_ranges).replace("array(", "").replace(")", "")
                     templateDataString = str([[0,0,0],[]]).replace("array(", "").replace(")", "")
+                    tensorDataArray = [[[0,0,0], []]] * stakes
+                    tensorDataString = str(tensorDataArray).replace("array(", "").replace(")", "")
 
                     # save to config file
                     self.config.set('Template Coordinates', name.get(), outputString)
@@ -1411,6 +1423,7 @@ class GUI:
                     self.config.set('Template Tensor', name.get(), tensorString)
                     self.config.set('Template Blob Sizes', name.get(), blobSizeString)
                     self.config.set('Template Registration Dataset', name.get(), templateDataString)
+                    self.config.set('Tensor Dataset', name.get(), tensorDataString)
 
                     # update menu
                     templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
@@ -1424,10 +1437,12 @@ class GUI:
                     self.systemParameters["Template_Tensors"][name.get()] = tensorString
                     self.systemParameters["Template_Blob_Sizes"][name.get()] = blobSizeString
                     self.systemParameters["Template_Datasets"][name.get()] = [[0,0,0],[]]
+                    self.systemParameters["Tensor_Datasets"][name.get()] = tensorDataArray
                     self.systemParameters["Current_Template_Intersections"] = intersectionString
                     self.systemParameters["Current_Template_Tensor"] = stakes_tensor
                     self.systemParameters["Current_Template_Blob_Sizes"] = blob_size_ranges
                     self.systemParameters["Current_Template_Dataset"] = [[0,0,0],[]]
+                    self.systemParameters["Current_Tensor_Dataset"] = tensorDataArray
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())
