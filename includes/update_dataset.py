@@ -33,7 +33,7 @@ def createDataset(template_name, dataset, dataset_enabled):
         print "Number of Values: %d" % num_filtered_values
 
     # convert from numpy to list
-    else: dataset = dataset.tolist()
+    elif dataset_enabled: dataset = dataset.tolist()
 
     # write changes to config file
     config = ConfigParser.ConfigParser()
