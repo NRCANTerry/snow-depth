@@ -595,6 +595,7 @@ class GUI:
             self.systemParameters["Current_Template_Intersections"] = ast.literal_eval(self.systemParameters["Template_Intersections"][str(optionsList[4])])
             self.systemParameters["Current_Template_Tensor"] = ast.literal_eval(self.systemParameters["Template_Tensors"][str(optionsList[4])])
             self.systemParameters["Current_Template_Blob_Sizes"] = ast.literal_eval(self.systemParameters["Template_Blob_Sizes"][str(optionsList[4])])
+
             self.systemParameters["Current_Template_Dataset"] = ast.literal_eval(self.systemParameters["Template_Datasets"][str(optionsList[4])])
             self.systemParameters["Current_Tensor_Dataset"] = ast.literal_eval(self.systemParameters["Tensor_Datasets"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
@@ -760,6 +761,7 @@ class GUI:
                     self.config.remove_option("Template Tensor", removetemplateMenuVar.get())
                     self.config.remove_option("Template Blob Sizes", removetemplateMenuVar.get())
                     self.config.remove_option("Template Registration Dataset", removetemplateMenuVar.get())
+                    self.config.remove_option('Tensor Dataset', removetemplateMenuVar.get())
                     self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
                     self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
@@ -1192,18 +1194,41 @@ class GUI:
                     blobs_filtered = stake[1:]
 
                     # list to hold tensors
-                    tensors = list()
+                    tensors_low = list()
+                    tensors_high = list()
 
-                    # iterate through bottom four blobs
+                    # mean tensor
+                    mean_tensor = 0
+
+                    # get bottom tensor
                     for x in range(0, 4):
                         for y in range(x+1, 4):
                             # calculate tensor
-                            tensors.append(getTensor(blobs_filtered[x][1], blobs_filtered[y][1],
+                            tensors_low.append(getTensor(blobs_filtered[x][1], blobs_filtered[y][1],
                                 ((y-x) * (80+56))))
 
-                    # append median tensor to list
-                    median_tensor = statistics.median(tensors)
-                    stakes_tensor.append(median_tensor)
+                    # get median
+                    median_tensor_low = statistics.median(tensors_low)
+                    mean_tensor += median_tensor_low
+
+                    # get upper tensor
+                    if(len(blobs_filtered) >= 6):
+                        # determine number of blobs on stake
+                        num_blobs_on_stake = len(blobs_filtered)
+                        if(len(blobs_filtered) > 8): num_blobs_on_stake = 8
+
+                        for x in range(4, num_blobs_on_stake):
+                            for y in range(x+1, num_blobs_on_stake):
+                                # calculate tensor
+                                tensors_high.append(getTensor(blobs_filtered[x][1], blobs_filtered[y][1],
+                                    ((y-x) * (80+56))))
+
+                        # get median
+                        median_tensor_high = statistics.median(tensors_high)
+                        mean_tensor = (mean_tensor + median_tensor_high) / 2.0
+
+                    # append mean tensor to list
+                    stakes_tensor.append(mean_tensor)
 
                 # update progress bar
                 progress(3, num_steps, status="Getting intersection points")
@@ -1242,6 +1267,9 @@ class GUI:
                         x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
                         y0, y1 = points[0][1], points[1][1]
 
+                        # calculate line length
+                        num = 1000 + ((stake[1][1][1]-y1) * 4)
+
                         # get endpoint for line
                         # intersection of line between points on blob with line defining bottom of
                         x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
@@ -1253,7 +1281,6 @@ class GUI:
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
 
                         # make a line with "num" points
-                        num = 1000
                         x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 
                         # extract values along the line
@@ -1281,8 +1308,12 @@ class GUI:
                             if(index > 0):
                                 # check that peak is isolated (doesn't have peak immediately next to it
                                 # of similar size)
+                                current_width = properties["right_ips"][index] - properties["left_ips"][index]
+                                next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
+
                                 if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
-                                    or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5):
+                                    or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5
+                                    or (current_width > (next_width*3) and index-1 == 0)):
                                     selected_peak = index
                                     break
                             # else select the only peak remaining
@@ -1305,7 +1336,7 @@ class GUI:
                         # if a snow peak was found
                         if(selected_peak != -1):
                             # determine peak index in lineVals array
-                            peak_index_line = peaks[selected_peak]
+                            peak_index_line = np.uint32(peaks[selected_peak])
 
                             # determine threshold for finding stake
                             # average of intensity at left edge of peak and intensity at base of peak
@@ -1322,14 +1353,21 @@ class GUI:
 
                             # determine index of intersection point
                             intersection_index = 0
+
+                            # calculate gradients
+                            line_gradients = np.gradient(lineVals.astype(np.float32))[0:peak_index_line][::-1]
+
+                            # iterate through points prior to peak
                             for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
-                                if(intensity < stake_threshold):
-                                    intersection_index = int(peak_index_line-t)
+                                # if below threshold or large drop
+                                if(intensity < stake_threshold or (line_gradients[t] > 25 and \
+                                    lineVals[peak_index_line-t-10] < stake_threshold+10)):
+                                    intersection_index = peak_index_line-t
                                     break
 
                         # add coordinates to list
                         if(selected_peak != -1 and intersection_index != 0):
-                            combinationResults.append((x[intersection_index], y[intersection_index]))
+                            combinationResults.append((x[int(intersection_index)], y[int(intersection_index)]))
 
                     # calculate median
                     if(len(combinationResults) > 0):
@@ -1436,8 +1474,8 @@ class GUI:
                     self.systemParameters["Template_Intersections"][name.get()] = intersectionString
                     self.systemParameters["Template_Tensors"][name.get()] = tensorString
                     self.systemParameters["Template_Blob_Sizes"][name.get()] = blobSizeString
-                    self.systemParameters["Template_Datasets"][name.get()] = [[0,0,0],[]]
-                    self.systemParameters["Tensor_Datasets"][name.get()] = tensorDataArray
+                    self.systemParameters["Template_Datasets"][name.get()] = templateDataString
+                    self.systemParameters["Tensor_Datasets"][name.get()] = tensorDataString
                     self.systemParameters["Current_Template_Intersections"] = intersectionString
                     self.systemParameters["Current_Template_Tensor"] = stakes_tensor
                     self.systemParameters["Current_Template_Blob_Sizes"] = blob_size_ranges
