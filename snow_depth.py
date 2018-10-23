@@ -26,6 +26,7 @@ from colour_balance import balanceColour
 from update_dataset import createDataset
 from update_dataset import createDatasetTensor
 
+# create GUI window
 root = tk.Tk()
 gui = GUI(root)
 root.mainloop()
@@ -64,6 +65,7 @@ template_blob_sizes = params[16]
 template_data_set = params[17]
 template_name = params[18]
 tensor_data_set = params[19]
+blob_distances_template = params[20]
 
 # determine if the dataset for the template is established
 # must have registered at least 50 images to the template
@@ -73,11 +75,10 @@ dataset_enabled = True if template_data_set[0][2] != 0 else False
 print "\nStatus:"
 print "Registration Dataset is %s" % ("ENABLED" if dataset_enabled else "DISABLED")
 if(not dataset_enabled):
-    print "Number of images required: %d" % (50-len(template_data_set[1]))
+    print "Number of images required: %d\n" % (50-len(template_data_set[1]))
 
 # determine if tensor dataset for the template is established
 # must have calculated at least 50 tensors
-print "\n"
 dataset_tensor_enabled = list()
 for x in tensor_data_set:
     if(x[0][2] != 0): dataset_tensor_enabled.append(True)
@@ -245,8 +246,8 @@ if(debug):
 print("\n\nValidating Stakes")
 
 # check stakes in image
-stake_validity, blob_coords, tensor_data_set = getValidStakes(images_registered, roi_coordinates, [lower_hsv1, upper_hsv1,
-    lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
+stake_validity, blob_coords, tensor_data_set, blob_indexes = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
+    upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
     tensor_data_set, dataset_tensor_enabled)
 
 # update tensor dataset
@@ -259,7 +260,7 @@ createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
 print("\n\nDetermining Intersection Points")
 
 # get intersection points
-intersection_coords = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
+intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
     filtered_names_reg, debug, paths_dict["intersection"])
 
 # ---------------------------------------------------------------------------------
@@ -270,7 +271,8 @@ print("\n\nCalculating Change in Snow Depth")
 
 # get snow depths
 depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
-    template_intersections, img_border_upper, template_tensor, debug, paths_dict["snow-depth"])
+    template_intersections, img_border_upper, template_tensor, intersection_dist, blob_indexes,
+    blob_distances_template, debug, paths_dict["snow-depth"])
 
 # display run time
 print("\n\nRun Time: %.2f s" % (time.time() - start))
