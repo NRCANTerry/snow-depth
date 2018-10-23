@@ -104,7 +104,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			ORB_aligned_flag = True
 
 		# if dataset is enabled, compare matrix to mean
-		elif mean_squared_error <= 10000:
+		elif mean_squared_error <= 1e4:
 			# get mean and standard deviation from dataset
 			mean = dataset[0][0]
 			std_dev = dataset[0][1]
@@ -140,7 +140,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# specify the number of iterations and threshold
 		number_iterations = 250
-		termination_thresh = 1e-6 if mean_squared_error <= 10000 else 1e-8
+		termination_thresh = 1e-6 if mean_squared_error <= 1e4 else 1e-8
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
