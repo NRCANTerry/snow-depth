@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error
 import json
 
 # global variables
-MAX_FEATURES = 50000 #15000 #5000
+MAX_FEATURES = 500000 #15000 #5000
 
 # number of standard deviations away from the mean the mean squared error
 # of the affine transformation matrix and average can be
@@ -93,7 +93,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# update dataset
 		# if dataset isn't enabled, append mean squared error to dataset
-		if(not dataset_enabled):
+		if(not dataset_enabled and mean_squared_error <= 10000):
 			dataset[1].append(mean_squared_error)
 
 			# apply registration
@@ -104,7 +104,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			ORB_aligned_flag = True
 
 		# if dataset is enabled, compare matrix to mean
-		else:
+		elif mean_squared_error <= 10000:
 			# get mean and standard deviation from dataset
 			mean = dataset[0][0]
 			std_dev = dataset[0][1]
@@ -126,6 +126,12 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 				# update flag
 				ORB_aligned_flag = True
 
+		# overly large mean squared error
+		else:
+			# use unaligned images
+			imgReg = img_apply
+			imgRegGray = img1Gray
+
 		# define ECC motion model
 		warp_mode = cv2.MOTION_AFFINE
 
@@ -134,7 +140,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# specify the number of iterations and threshold
 		number_iterations = 250
-		termination_thresh = 1e-6
+		termination_thresh = 1e-6 if mean_squared_error <= 10000 else 1e-8
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
