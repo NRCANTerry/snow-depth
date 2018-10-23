@@ -2,6 +2,8 @@
 import cv2
 import numpy as np
 from operator import attrgetter
+import math
+from scipy import ndimage
 
 # global variables
 MAX_FEATURES = 50000
@@ -9,13 +11,12 @@ MAX_FEATURES = 50000
 # function to align image to template
 def alignImages3(img, template):
 	# apply median blur to highlight foreground features
-	img_blur = cv2.medianBlur(img, 5)
-	template_blur = cv2.medianBlur(template, 5)
+	img_blur = cv2.medianBlur(img, 49)
+	template_blur = cv2.medianBlur(template, 49)
 
 	# convert images to grayscale
-	img1Gray = cv2.cvtColor(img_blur, cv2.COLOR_BGR2GRAY)
-	img2Gray = cv2.cvtColor(template_blur, cv2.COLOR_BGR2GRAY)
-	img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,5,10,7)
+	img1Gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	img2Gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
 	# detect ORB features and compute descriptors
 	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
@@ -32,7 +33,7 @@ def alignImages3(img, template):
 	#min_match = min(matches, key=attrgetter('distance')).distance
 	#max_match = max(matches, key=attrgetter('distance')).distance
 	#matches = [x for x in matches if x.distance <= min_match*1.5]
-	matches = matches[:100]
+	matches = matches[:4]
 
 	# draw top matches
 	imgMatches = cv2.drawMatches(img1Gray, kp1, img2Gray, kp2, matches, None)
@@ -49,7 +50,7 @@ def alignImages3(img, template):
 	# apply RANSAC-based robust method first then Least-Median robust method
 	#RANSAC_h, RANSAC_mask = cv2.findHomography(points1, points2, cv2.RANSAC)
 	#LMEDS_h, LMEDS_mask = cv2.findHomography(points1, points2, cv2.LMEDS, mask = RANSAC_mask)
-	test, _ = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC)
+	test, _ = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC, confidence = 0.999)
 
 	# use homography
 	height, width, channels = template.shape
@@ -69,19 +70,19 @@ def alignImages3(img, template):
 
 	# specify the number of iterations and threshold
 	number_iterations = 250
-	termination_thresh = 1e6
+	termination_thresh = 1e-10
 
 	# define termination criteria
 	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
 	# run ECC algorithm (results are stored in warp matrix)
-	warp_matrix = cv2.findTransformECC(img2Gray, imgRegGray, warp_matrix, warp_mode, criteria)[1]
-	#warp_matrix = cv2.findTransformECC(img2Gray, img1Gray, warp_matrix, warp_mode, criteria)[1]
+	#warp_matrix = cv2.findTransformECC(img2Gray, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+	warp_matrix = cv2.findTransformECC(img2Gray, img1Gray, warp_matrix, warp_mode, criteria)[1]
 
 	# align image
 	#imgECCAligned = cv2.warpPerspective(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
 	#imgECCAligned = cv2.warpPerspective(img, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
-	imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+	imgECCAligned = cv2.warpAffine(img, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
 
 	# return aligned image and matches
 	return imgECCAligned, imgMatches, test
