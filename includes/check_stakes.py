@@ -34,6 +34,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 	# dictionary for blob coordinates
 	blobCoords = dict()
 
+	# dictionary for blob indexes
+	blobIndexes = dict()
+
 	# iterate through images
 	for count, img_ in enumerate(imgs):
 		# update progress bar
@@ -51,6 +54,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 		# create list for blob coordinates on stakes
 		blobCoordsStake = list()
+
+		# create list for blob indexes on stakes
+		blobIndexesStake = list()
 
 		# reduce noise in image by local smoothing
 		img_blur = cv2.medianBlur(img, median_kernel_size)
@@ -78,6 +84,10 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 			# highest blob variable
 			highestBlob = np.array([[1e5,1e5],[1e5,1e5],[1e5,1e5],[1e5,1e5]])
+
+			# low and high index variables
+			lowIndex = 0
+			highIndex = 0
 
 			# get blob size range for stake
 			blob_size_range = blobSizes[j]
@@ -132,14 +142,16 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 					if box[0][1] > lowestBlob[0][1]:
 						lowestBlob = box
+						lowIndex = i
 
 					if box[0][1] < highestBlob[0][1]:
 						highestBlob = box
+						highIndex = i
 
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
-						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border),
-	                        (rectangle[1][0], rectangle[1][1]-upper_border), (0, 255, 0), 3)
+						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
+	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 255, 0), 3)
 
 				# else add invalid blob
 				else:
@@ -150,8 +162,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
-						cv2.rectangle(img, (rectangle[0][0], rectangle[0][1]-upper_border),
-	                        (rectangle[1][0], rectangle[1][1]-upper_border), (0, 0, 255), 3)
+						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
+	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
 
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
@@ -235,12 +247,12 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			# if in debugging mode draw appropriate rectangle around stake
 			if(validStake and debug):
 				# green rectangle
-				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border),
-					(stake[0][1][0], stake[0][1][1]-upper_border), (0, 255, 0), 3)
+				cv2.rectangle(img, (int(stake[0][0][0]), int(stake[0][0][1])-upper_border),
+					(int(stake[0][1][0]), int(stake[0][1][1])-upper_border), (0, 255, 0), 3)
 			elif(debug):
 				# red rectangle
-				cv2.rectangle(img, (stake[0][0][0], stake[0][0][1]-upper_border),
-					(stake[0][1][0], stake[0][1][1]-upper_border), (0, 0, 255), 3)
+				cv2.rectangle(img, (int(stake[0][0][0]), int(stake[0][0][1])-upper_border),
+					(int(stake[0][1][0]), int(stake[0][1][1])-upper_border), (0, 0, 255), 3)
 
 			# if more than 2 valid blobs list stake as valid
 			validStakes.append(validStake)
@@ -251,6 +263,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				ordered_coordinates_low = orderPoints(lowestBlob, False)
 				ordered_coordinates_high = orderPoints(highestBlob, False)
 				blobCoordsStake.append(list(ordered_coordinates_high + ordered_coordinates_low))
+				blobIndexesStake.append([highIndex, lowIndex])
 
 				# write labelled image if in debugging mode
 				if(debug):
@@ -262,6 +275,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			else:
 				# if stake is invalid add zero box
 				blobCoordsStake.append([0,0,0,0,0,0,0,0])
+				blobIndexesStake.append([0,0])
 
 		# if in debugging mode
 		if(debug):
@@ -272,21 +286,28 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 			# create temporary dictionary
 			stake_dict = dict()
-			stake_dict_coords = dict()
+			stake_dict_coords_low = dict()
+			stake_dict_coords_high = dict()
+			stake_dict_indexes = dict()
 
 			# add data to output
 			for x in range(0, len(coordinates)):
 				stake_dict['stake' + str(x)] = validStakes[x]
-				stake_dict_coords['stake' + str(x)] = blobCoordsStake[x]
+				stake_dict_coords_low['stake' + str(x)] = blobCoordsStake[x][0:4]
+				stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
+				stake_dict_indexes['stake' + str(x)] = blobIndexesStake[x]
 
 			stake_output[img_names[count]] = {
 				"validity": stake_dict,
-				"lowest blob": stake_dict_coords
+				"lower blob": stake_dict_coords_low,
+				"upper blob": stake_dict_coords_high,
+				"blob indexes": stake_dict_indexes
 			}
 
 		# add data to return dictionaries
 		validImages[img_names[count]] = validStakes
 		blobCoords[img_names[count]] = blobCoordsStake
+		blobIndexes[img_names[count]] = blobIndexesStake
 
 	# if in debugging mode
 	if(debug):
@@ -295,4 +316,4 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return list of valid stakes
-	return validImages, blobCoords, dataset
+	return validImages, blobCoords, dataset, blobIndexes
