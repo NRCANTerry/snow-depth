@@ -64,6 +64,7 @@ class GUI:
             "Template_Blob_Sizes": dict(),
             "Template_Datasets": dict(),
             "Tensor_Datasets": dict(),
+            "Blob_Distances": dict(),
             "Current_Template_Name": "",
             "Current_Template_Coords": list(),
             "Current_Template_Path": "",
@@ -72,6 +73,7 @@ class GUI:
             "Current_Template_Blob_Sizes": list(),
             "Current_Template_Dataset": list(),
             "Current_Tensor_Dataset": list(),
+            "Current_Blob_Distances": list(),
             "Window_Closed": False,
             "Last_Template_Range": list()
         }
@@ -91,6 +93,7 @@ class GUI:
         self.systemParameters["Template_Blob_Sizes"] = updated_parameters[7]
         self.systemParameters["Template_Datasets"] = updated_parameters[8]
         self.systemParameters["Tensor_Datasets"] = updated_parameters[9]
+        self.systemParameters["Blob_Distances"] = updated_parameters[10]
         self.systemParameters["Colour_Options"] = list(self.systemParameters["Saved_Colours"].keys())
         self.systemParameters["Profile_Options"] = list(self.systemParameters["Saved_Profiles"].keys())
         self.systemParameters["Templates_Options"] = list(self.systemParameters["Templates"].keys())
@@ -433,7 +436,7 @@ class GUI:
                     tuple(self.systemParameters["Tile_Size"]), (self.debug.get() == 1), self.systemParameters["Current_Template_Intersections"], \
                     self.systemParameters["Current_Template_Tensor"], self.systemParameters["Current_Template_Blob_Sizes"], \
                     self.systemParameters["Current_Template_Dataset"], self.systemParameters["Current_Template_Name"], \
-                    self.systemParameters["Current_Tensor_Dataset"]
+                    self.systemParameters["Current_Tensor_Dataset"], self.systemParameters["Current_Blob_Distances"]
 
         # return False if run button wasn't pressed
         else:
@@ -475,19 +478,21 @@ class GUI:
             self.config.add_section('Template Tensor')
             self.config.add_section('Template Blob Sizes')
             self.config.add_section('Template Registration Dataset')
-            self.config.add_section('Last Template Range')
             self.config.add_section('Tensor Dataset')
+            self.config.add_section('Template Blob Distances')
+            self.config.add_section('Last Template Range')
 
         # else read in existing file
         else:
             self.config.read('./preferences.cfg')
 
         # load in preferences
-        return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')), \
+        return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')),
             dict(self.config.items('Template Coordinates')), dict(self.config.items('Template Images')),
             dict(self.config.items('Template Intersections')), dict(self.config.items('Template Tensor')),
             dict(self.config.items('Last Template Range')), dict(self.config.items('Template Blob Sizes')),
-            dict(self.config.items('Template Registration Dataset')), dict(self.config.items('Tensor Dataset'))]
+            dict(self.config.items('Template Registration Dataset')), dict(self.config.items('Tensor Dataset')),
+            dict(self.config.items('Template Blob Distances'))]
 
     # ---------------------------------------------------------------------------------
     # Function that is run when user closes window
@@ -595,9 +600,9 @@ class GUI:
             self.systemParameters["Current_Template_Intersections"] = ast.literal_eval(self.systemParameters["Template_Intersections"][str(optionsList[4])])
             self.systemParameters["Current_Template_Tensor"] = ast.literal_eval(self.systemParameters["Template_Tensors"][str(optionsList[4])])
             self.systemParameters["Current_Template_Blob_Sizes"] = ast.literal_eval(self.systemParameters["Template_Blob_Sizes"][str(optionsList[4])])
-
             self.systemParameters["Current_Template_Dataset"] = ast.literal_eval(self.systemParameters["Template_Datasets"][str(optionsList[4])])
             self.systemParameters["Current_Tensor_Dataset"] = ast.literal_eval(self.systemParameters["Tensor_Datasets"][str(optionsList[4])])
+            self.systemParameters["Current_Blob_Distances"] = ast.literal_eval(self.systemParameters["Blob_Distances"][str(optionsList[4])])
             self.systemParameters["Clip_Limit"] = int(optionsList[5])
             self.systemParameters["Tile_Size"] = [int(optionsList[6]), int(optionsList[7])]
 
@@ -770,6 +775,7 @@ class GUI:
                     self.systemParameters["Template_Blob_Sizes"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Template_Datasets"].pop(removetemplateMenuVar.get())
                     self.systemParameters["Tensor_Datasets"].pop(removetemplateMenuVar.get())
+                    self.systemParameters["Blob_Distances"].pop(removetemplateMenuVar.get())
 
                     # update menu
                     templateMenuVar.set('Select Template')
@@ -1102,6 +1108,11 @@ class GUI:
 
                 # list containing stake coordinates
                 stakes_coords = list()
+                raw_stakes_coords = list()
+
+                # list containing distances from bottom of blobs to intersection
+                # point in template
+                intersection_distances = list()
 
                 # list containing stake intersection coordinates
                 stakes_intersect = list()
@@ -1126,8 +1137,11 @@ class GUI:
 
                     # order points
                     points = orderPoints(box)
-                    points_list = [[points[0], points[2]]]
-                    stakes_coords.append(points_list)
+                    stakes_coords.append([[points[0], points[2]]])
+                    raw_stakes_coords.append([[points[0], points[2]]])
+
+                    # add blank list (one for each stake) to intersection distance list
+                    intersection_distances.append(list())
 
                     # increment stake counter
                     stakes += 1
@@ -1137,7 +1151,7 @@ class GUI:
                 progress(2, num_steps, status="Getting blobs and tensors")
 
                 # find blobs pertaining to each stake
-                for stake in stakes_coords:
+                for w, stake in enumerate(stakes_coords):
                     # choose roi to be stake bounding rectangle
                     roi = hsv[stake[0][0][1]: stake[0][1][1], stake[0][0][0]: stake[0][1][0]]
 
@@ -1173,9 +1187,18 @@ class GUI:
                             # order points
                             points = orderPoints(box)
 
+                            # add undilated coordinates to raw list
+                            raw_stakes_coords[w].append([[points[0][0], points[0][1]], \
+                                [points[2][0], points[2][1]]])
+
+                            # add lower coordinate (bottom y coordinate) to intersection list
+                            intersection_distances[w].append(points[2][1])
+
                             # add blobs to stake list
-                            # dilate blobs slightly
-                            stake.append([[points[0][0]-10,points[0][1]-10], [points[2][0]+10,points[2][1]+10]])
+                            # dilate blobs by 33% of size
+                            dilate_px = abs(float(points[0][0] - points[2][0]) * 0.33)
+                            stake.append([[int(points[0][0]-dilate_px), int(points[0][1]-dilate_px)], \
+                                [int(points[2][0]+dilate_px), int(points[2][1]+dilate_px)]])
 
                             # increment blob counter
                             blobs_on_stake += 1.0
@@ -1191,7 +1214,7 @@ class GUI:
 
                     # determine tensor
                     # get list with only blobs (remove coordinates of stake)
-                    blobs_filtered = stake[1:]
+                    blobs_filtered = raw_stakes_coords[w][1:]
 
                     # list to hold tensors
                     tensors_low = list()
@@ -1237,13 +1260,13 @@ class GUI:
                 img_gray = cv2.cvtColor(equalize_hist_colour(img_unmarked.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
 
                 # determine intersection points for each stake
-                for stake in stakes_coords:
+                for w, raw_stake in enumerate(raw_stakes_coords): # stakes_coords
                     # get coordinates of top and bottom blobs on stake
-                    bottom_blob = [[stake[1][0][0]+10,stake[1][0][1]+10],
-                        [stake[1][1][0]-10,stake[1][1][1]-10]]
-                    top_index = len(stake) - 1
-                    top_blob = [[stake[top_index][0][0]+10,stake[top_index][0][1]+10],
-                        [stake[top_index][1][0]-10,stake[top_index][1][1]-10]]
+                    bottom_blob = [[raw_stake[1][0][0],raw_stake[1][0][1]],
+                        [raw_stake[1][1][0],raw_stake[1][1][1]]]
+                    top_index = len(raw_stake) - 1
+                    top_blob = [[raw_stake[top_index][0][0],raw_stake[top_index][0][1]],
+                        [raw_stake[top_index][1][0],raw_stake[top_index][1][1]]]
 
                     # generate combinations
                     coordinateCombinations = list()
@@ -1264,18 +1287,18 @@ class GUI:
                     # iterate through combinations
                     for j, points in enumerate(coordinateCombinations):
                         # get points
-                        x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
-                        y0, y1 = points[0][1], points[1][1]
+                        x0, x1 = adjustCoords(points[0][0], points[1][0], 3, j)
+                        y0, y1 = adjustCoords(points[0][1], points[1][1], 3, j)
 
                         # calculate line length
-                        num = 1000 + ((stake[1][1][1]-y1) * 4)
+                        num = 1000 + ((raw_stake[1][1][1]-y1) * 4)
 
                         # get endpoint for line
                         # intersection of line between points on blob with line defining bottom of
-                        x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
-                            stake[0][1][1]), tuple(stake[0][1])))
+                        x1, y1 = (lineIntersections((x0,y0), (x1,y1), (raw_stake[0][0][0],
+                            raw_stake[0][1][1]), tuple(raw_stake[0][1])))
                         y0 = points[1][1]
-                        x0, x1 = adjustCoords(points[1][0], x1, 5, j)
+                        x0 = points[1][0] #adjustCoords(points[1][0], x1, 3, j)
 
                         # draw line on output image
                         cv2.line(img_unmarked, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
@@ -1377,6 +1400,10 @@ class GUI:
                         median_x = statistics.median(x_vals)
                         stakes_intersect.append([median_x, median_y])
 
+                        # update intersection distance measurements for that stake
+                        for g, y_coordinate in enumerate(intersection_distances[w]):
+                            intersection_distances[w][g] = y_coordinate - median_y
+
                     # if no data stop template generation
                     else:
                         # reopen other windows
@@ -1399,15 +1426,17 @@ class GUI:
                     for k, blob in enumerate(stake_output):
                         if(k == 0):
                             # draw stake
-                            cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,0,255),2)
+                            cv2.rectangle(img_unmarked, (int(blob[0][0]), int(blob[0][1])), (int(blob[1][0]), \
+                                int(blob[1][1])),(0,0,255),2)
 
                             # add tensor
                             tensor_text = str(b) + ": " + str(format(stakes_tensor[b], '.2f')) + "mm/px"
-                            cv2.putText(img_unmarked, tensor_text, (blob[0][0], blob[0][1]),
+                            cv2.putText(img_unmarked, tensor_text, (int(blob[0][0]), int(blob[0][1])),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1.25, (255, 255, 255), 2, cv2.LINE_AA)
                         else:
                             # draw blob
-                            cv2.rectangle(img_unmarked, tuple(blob[0]), tuple(blob[1]), (0,255,0), 2)
+                            cv2.rectangle(img_unmarked, (int(blob[0][0]), int(blob[0][1])), (int(blob[1][0]), \
+                                int(blob[1][1])),(0,255,0),2)
 
                     # output intersection points
                     for point in stakes_intersect:
@@ -1453,6 +1482,7 @@ class GUI:
                     templateDataString = str([[0,0,0],[]]).replace("array(", "").replace(")", "")
                     tensorDataArray = [[[0,0,0], []]] * stakes
                     tensorDataString = str(tensorDataArray).replace("array(", "").replace(")", "")
+                    intersectionDistanceString = str(intersection_distances).replace("array(", "").replace(")", "")
 
                     # save to config file
                     self.config.set('Template Coordinates', name.get(), outputString)
@@ -1462,6 +1492,7 @@ class GUI:
                     self.config.set('Template Blob Sizes', name.get(), blobSizeString)
                     self.config.set('Template Registration Dataset', name.get(), templateDataString)
                     self.config.set('Tensor Dataset', name.get(), tensorDataString)
+                    self.config.set('Template Blob Distances', name.get(), intersectionDistanceString)
 
                     # update menu
                     templateMenu['menu'].add_command(label = name.get(), command = tk._setit(templateMenuVar, name.get()))
@@ -1476,11 +1507,13 @@ class GUI:
                     self.systemParameters["Template_Blob_Sizes"][name.get()] = blobSizeString
                     self.systemParameters["Template_Datasets"][name.get()] = templateDataString
                     self.systemParameters["Tensor_Datasets"][name.get()] = tensorDataString
+                    self.systemParameters["Blob_Distances"][name.get()] = intersectionDistanceString
                     self.systemParameters["Current_Template_Intersections"] = intersectionString
                     self.systemParameters["Current_Template_Tensor"] = stakes_tensor
                     self.systemParameters["Current_Template_Blob_Sizes"] = blob_size_ranges
                     self.systemParameters["Current_Template_Dataset"] = [[0,0,0],[]]
                     self.systemParameters["Current_Tensor_Dataset"] = tensorDataArray
+                    self.systemParameters["Current_Blob_Distances"] = intersection_distances
                     templateMenuVar.set(name.get())
 
                     print("Template Saved Successfully: %s \n" % name.get())
