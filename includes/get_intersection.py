@@ -62,14 +62,22 @@ def adjustCoords(x0, x1, degree, status):
 # intersection points for each stake
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, debug, debug_directory):
 
+	# create directory for pyplot images
+	if(debug):
+		signal_dir = debug_directory + "signals/"
+		os.mkdir(signal_dir)
+
 	# contains output data for JSON file
 	intersection_output = {}
 
 	# number of images
 	num_images = len(imgs)
 
-	# create output dictionary for images
+	# create output dictionaries for images
+	# first dictionary holds intersection coordinates and second the distances
+	# from the intersection coordinates to the upper and lower reference blobs
 	intersectionCoordinates = dict()
+	intersectionDistances = dict()
 
 	# iterate through images
 	for count, img_ in enumerate(imgs):
@@ -86,6 +94,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 		# create list for coordinates on stakes
 		stake_intersections = list()
+
+		# create list for distanes between reference blobs and intersection point
+		stake_distances = list()
 
 		# iterate through stakes
 		for i, box in enumerate(blob_coords):
@@ -141,7 +152,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 					lineVals_smooth = np.append(lineVals_smooth, 0)
 
 					# determine peaks and properties
-					peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=10)
+					peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=5)
+					minLineVal = min(lineVals)
 
 					# get sorted indexes (decreasing distance down the line)
 					sorted_index = np.argsort(peaks)
@@ -158,22 +170,24 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							# of similar size)
 							current_width = properties["right_ips"][index] - properties["left_ips"][index]
 							next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
+							minimum = lineVals[properties["left_bases"][index]]
 
-							if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
+							if((properties["left_ips"][index] - properties["right_ips"][index-1] > 100
 								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5
-								or (current_width > (next_width*3) and index-1 == 0)):
+								or (current_width > (next_width*3) and index-1 == 0)) and float(minimum) / float(minLineVal) < 6.0):
 								selected_peak = index
 								break
+
 						# else select the only peak remaining
 						else:
 							# determine if this is a no snow case
 							# must see mostly snow after peak (50% coverage)
-							# snow threshold is 75% of peak
+							# snow threshold is 60% of peak
 							peak_index = peaks[index]
 							peak_intensity = lineVals[peak_index]
 							peak_range = lineVals[peak_index:]
-							snow_cover = float(len(np.where(peak_range > peak_intensity * 0.75)[0])) / float(len(peak_range)) if \
-								peak_intensity * 0.75 < 140 else float(len(np.where(peak_range > 140)[0])) / float(len(peak_range))
+							snow_threshold = peak_intensity * 0.60 if peak_intensity * 0.60 < 140 else 140
+							snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
 
 							if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
 								selected_peak = 0
@@ -204,12 +218,22 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 						# calculate gradients
 						line_gradients = np.gradient(lineVals)[0:peak_index_line][::-1]
+						line_gradients_full = np.gradient(lineVals)
+
+						# determine threshold for drop in intensity
+						# varies based on lighting conditions
+						maximum_drop = np.amax(line_gradients_full)
+						drop_threshold = maximum_drop * 0.333
 
 						# iterate through points prior to peak
 						for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
+							# calculate maximum drop near point
+							max_drop = max(line_gradients.tolist()[t-20:t+20]) if (t>20 and t<(len(line_gradients)-20)) \
+								else 0
+
 							# if below threshold or large drop
-							if(intensity < stake_threshold or (line_gradients[t] > 20 and \
-								lineVals[peak_index_line-t-25] < stake_threshold+25)):
+							if((intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0)) \
+							 	or (line_gradients[t] > 20 and lineVals[peak_index_line-t-25] < stake_threshold+25)):
 								intersection_index = peak_index_line-t
 								break
 
@@ -227,12 +251,13 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 					# if in debugging mode
 					if debug:
 						# plot and save
-						fig, axes = plt.subplots(nrows = 2)
+						fig, axes = plt.subplots(nrows = 3)
 						axes[0].imshow(img)
 						axes[0].plot([x0, x1], [y0, y1], 'ro-')
 						axes[0].axis('image')
 						axes[1].plot(lineVals)
 						axes[1].plot(peak_index_line, lineVals[peak_index_line], "x")
+						axes[2].plot(line_gradients_full)
 
 						# only show if valid intersction point found
 						if selected_peak != -1:
@@ -245,7 +270,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							axes[1].axvline(x=intersection_index,color='r')
 
 						filename, file_extension = os.path.splitext(img_names[count])
-						plt.savefig((debug_directory + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
+						plt.savefig((signal_dir + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
 						plt.close()
 
 				# calculate median intersection point and filter out combinations where no intersection point was found
@@ -266,26 +291,39 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 				# add to stake coordinates list
 				stake_intersections.append(coordinates)
 
-			# if stake isn't valid append empty dictionary
+				# add distances to list
+				distance_high = box[2][1] - coordinates["average"][1]
+				distance_low = box[6][1] - coordinates["average"][1]
+				stake_distances.append([distance_high, distance_low])
+
+			# if stake isn't valid append empty dictionary and list
 			else:
 				stake_intersections.append(dict())
+				stake_distances.append(list())
 
 		# if in debugging mode
 		if(debug):
-			# create temporary dictionary
+			# create temporary dictionaries
 			stake_dict = dict()
+			stake_dict_dist = dict()
 
 			# add data to output
 			for x in range(0, len(blob_coords)):
 				stake_dict['stake' + str(x)] = stake_intersections[x]
+				stake_dict_dist['stake' + str(x)] = stake_distances[x]
 
 			# add data to output
-			intersection_output[img_names[count]] = stake_dict
+			intersection_output[img_names[count]] = {
+				"Coordinates": stake_dict,
+				"Measurements": stake_dict_dist
+			}
 
+			# output image to debug directory
 			cv2.imwrite(debug_directory + img_names[count], img_write)
 
-		# add data to return dictionary
+		# add data to return dictionaries
 		intersectionCoordinates[img_names[count]] = stake_intersections
+		intersectionDistances[img_names[count]] = stake_distances
 
 	# if in debugging mode
 	if(debug):
@@ -294,4 +332,4 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 		json.dump(intersection_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return dictionary
-	return intersectionCoordinates
+	return intersectionCoordinates, intersectionDistances
