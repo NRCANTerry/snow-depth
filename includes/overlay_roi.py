@@ -26,11 +26,12 @@ def overlay(imgs, templateIntersections, roiCoordinates, upperBorder, img_names,
             for i, rectangle in enumerate(stake):
                 # stake itself
                 if(i == 0):
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-upperBorder),
-                        (rectangle[1][0], rectangle[1][1]-upperBorder), (0, 0, 255), 3)
+                    cv2.rectangle(img_write, (int(rectangle[0][0]), int(rectangle[0][1])-upperBorder),
+                        (int(rectangle[1][0]), int(rectangle[1][1])-upperBorder), (0, 0, 255), 3)
                 # blobs
                 else:
-                    cv2.rectangle(img_write, (rectangle[0][0], rectangle[0][1]-upperBorder),
-                        (rectangle[1][0], rectangle[1][1]-upperBorder), (0, 255, 0), 3)
+                    cv2.rectangle(img_write, (int(rectangle[0][0]), int(rectangle[0][1])-upperBorder),
+                        (int(rectangle[1][0]), int(rectangle[1][1])-upperBorder), (0, 255, 0), 3)
 
+        # write image to debug directory
         cv2.imwrite(debug_directory + img_names[count], img_write)
