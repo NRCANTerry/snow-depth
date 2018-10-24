@@ -23,6 +23,7 @@ from progress_bar import progress
 from scipy.signal import find_peaks
 from scipy import signal
 from scipy import ndimage
+import math
 
 class GUI:
     def __init__(self, master):
@@ -1191,8 +1192,10 @@ class GUI:
                             raw_stakes_coords[w].append([[points[0][0], points[0][1]], \
                                 [points[2][0], points[2][1]]])
 
-                            # add lower coordinate (bottom y coordinate) to intersection list
-                            intersection_distances[w].append(points[2][1])
+                            # add centroid coordinates to intersection list
+                            centroid = (float(points[0][0] + points[2][0]) / 2.0, float(points[0][1] + \
+                                points[2][1]) / 2.0)
+                            intersection_distances[w].append(centroid)
 
                             # add blobs to stake list
                             # dilate blobs by 33% of size
@@ -1400,9 +1403,23 @@ class GUI:
                         median_x = statistics.median(x_vals)
                         stakes_intersect.append([median_x, median_y])
 
+                        # calculate offset for overlay
+                        num_blobs = len(raw_stake)
+                        offset = abs(float(bottom_blob[0][0] - bottom_blob[1][0])) / num_blobs
+
                         # update intersection distance measurements for that stake
-                        for g, y_coordinate in enumerate(intersection_distances[w]):
-                            intersection_distances[w][g] = y_coordinate - median_y
+                        for g, coordinate_set in enumerate(intersection_distances[w]):
+                            distance_blob = math.hypot(median_x - coordinate_set[0], \
+                                median_y - coordinate_set[1])
+
+                            # overlay on output image
+                            cv2.circle(img_unmarked, (int(coordinate_set[0]), int(coordinate_set[1])), 5,
+                                (0,255,255), 3)
+                            cv2.line(img_unmarked, (int(coordinate_set[0] + (g-(num_blobs/2.0)) * offset), int(coordinate_set[1])), \
+    							(int(median_x + (g-(num_blobs/2.0)) * offset), int(median_y)), (0,255,255), 2)
+
+                            # update list with distance
+                            intersection_distances[w][g] = distance_blob
 
                     # if no data stop template generation
                     else:
