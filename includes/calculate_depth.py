@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 # function to calculate the change in snow depth for each stake
 # using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
-    upperBorder, tensors, intersectionDist, blobIndexes, blobDistTemplate, debug, debug_directory):
+    upperBorder, tensors, intersectionDist, blobDistTemplate, debug, debug_directory):
 
     # list containing median depths for each image
     median_depths = list()
@@ -67,9 +67,8 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
         # get intersection coordiantes
         coords_stake = intersectionCoords[img_name]
 
-        # get blob intersection distances and indexes
+        # get blob intersection distances
         intersection_dist_stake = intersectionDist[img_name]
-        blob_indexes_stake = blobIndexes[img_name]
 
         # iterate through stakes in image
         for i, stake in enumerate(coords_stake):
@@ -85,9 +84,11 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
                 depth_change = ((templateIntersections[i][1] - upperBorder) - stake["average"][1]) * tensors[i]
 
                 # calculate change in snow depth using blob distances
-                upper_distance = (abs(blobDistTemplate[i][blob_indexes_stake[i][0]-1]) - abs(intersection_dist_stake[i][0])) * tensors[i]
-                lower_distance = (abs(blobDistTemplate[i][blob_indexes_stake[i][1]-1]) - abs(intersection_dist_stake[i][1])) * tensors[i]
-                distance_estimate = float(upper_distance + lower_distance) / 2.0
+                distances_stake = list()
+                for w, x in enumerate(intersection_dist_stake[i]):
+                    if x != False:
+                        distances_stake.append((abs(blobDistTemplate[i][w]) - abs(x)) * tensors[i])
+                distance_estimate = statistics.median(distances_stake) if len(distances_stake) > 0 else 0
 
                 # write to excel file
                 worksheet.write(row, col + i, "%.2f (%.2f)" % (depth_change, distance_estimate), cell_format)
