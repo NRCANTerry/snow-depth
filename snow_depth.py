@@ -246,7 +246,7 @@ if(debug):
 print("\n\nValidating Stakes")
 
 # check stakes in image
-stake_validity, blob_coords, tensor_data_set, blob_indexes = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
+stake_validity, blob_coords, tensor_data_set = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
     upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
     tensor_data_set, dataset_tensor_enabled)
 
@@ -271,7 +271,7 @@ print("\n\nCalculating Change in Snow Depth")
 
 # get snow depths
 depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
-    template_intersections, img_border_upper, template_tensor, intersection_dist, blob_indexes,
+    template_intersections, img_border_upper, template_tensor, intersection_dist,
     blob_distances_template, debug, paths_dict["snow-depth"])
 
 # display run time
