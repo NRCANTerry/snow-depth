@@ -58,6 +58,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		# create list for blob indexes on stakes
 		blobIndexesStake = list()
 
+		# create list for actual blob coordinates
+		actualCoordsStake = list()
+
 		# reduce noise in image by local smoothing
 		img_blur = cv2.medianBlur(img, median_kernel_size)
 
@@ -78,16 +81,6 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		for j, stake in enumerate(coordinates):
 			# create bool list for blobs for each stake
 			validBlobs = list()
-
-			# lowest blob variable
-			lowestBlob = np.array([[0,0],[0,0],[0,0],[0,0]])
-
-			# highest blob variable
-			highestBlob = np.array([[1e5,1e5],[1e5,1e5],[1e5,1e5],[1e5,1e5]])
-
-			# low and high index variables
-			lowIndex = 0
-			highIndex = 0
 
 			# get blob size range for stake
 			blob_size_range = blobSizes[j]
@@ -138,15 +131,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					box = np.array(coords, dtype = "int")
 
 					# add to list of points for stake
-					actualCoords.append(orderPoints(box))
-
-					if box[0][1] > lowestBlob[0][1]:
-						lowestBlob = box
-						lowIndex = i
-
-					if box[0][1] < highestBlob[0][1]:
-						highestBlob = box
-						highIndex = i
+					actualCoords.append(orderPoints(box, False))
 
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
@@ -157,8 +142,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				else:
 					validBlobs.append(False)
 
-					# add empty list to list of points
-					actualCoords.append(list())
+					# add False to list
+					actualCoords.append(False)
 
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
@@ -260,10 +245,11 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			# add lowest blob to list
 			if validStake:
 				# order coordinates and append to list
-				ordered_coordinates_low = orderPoints(lowestBlob, False)
-				ordered_coordinates_high = orderPoints(highestBlob, False)
-				blobCoordsStake.append(list(ordered_coordinates_high + ordered_coordinates_low))
-				blobIndexesStake.append([highIndex, lowIndex])
+				validCoordinates = [t for t in actualCoords if t != False]
+				ordered_coordinates_low = validCoordinates[0]
+				ordered_coordinates_high = validCoordinates[len(validCoordinates)-1]
+				blobCoordsStake.append(list(ordered_coordinates_low + ordered_coordinates_high))
+				actualCoordsStake.append(actualCoords)
 
 				# write labelled image if in debugging mode
 				if(debug):
@@ -275,7 +261,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			else:
 				# if stake is invalid add zero box
 				blobCoordsStake.append([0,0,0,0,0,0,0,0])
-				blobIndexesStake.append([0,0])
+				actualCoordsStake.append(False)
 
 		# if in debugging mode
 		if(debug):
@@ -288,26 +274,22 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			stake_dict = dict()
 			stake_dict_coords_low = dict()
 			stake_dict_coords_high = dict()
-			stake_dict_indexes = dict()
 
 			# add data to output
 			for x in range(0, len(coordinates)):
 				stake_dict['stake' + str(x)] = validStakes[x]
 				stake_dict_coords_low['stake' + str(x)] = blobCoordsStake[x][0:4]
 				stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
-				stake_dict_indexes['stake' + str(x)] = blobIndexesStake[x]
 
 			stake_output[img_names[count]] = {
 				"validity": stake_dict,
 				"lower blob": stake_dict_coords_low,
-				"upper blob": stake_dict_coords_high,
-				"blob indexes": stake_dict_indexes
+				"upper blob": stake_dict_coords_high
 			}
 
 		# add data to return dictionaries
 		validImages[img_names[count]] = validStakes
-		blobCoords[img_names[count]] = blobCoordsStake
-		blobIndexes[img_names[count]] = blobIndexesStake
+		blobCoords[img_names[count]] = actualCoordsStake
 
 	# if in debugging mode
 	if(debug):
@@ -316,4 +298,4 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return list of valid stakes
-	return validImages, blobCoords, dataset, blobIndexes
+	return validImages, blobCoords, dataset
