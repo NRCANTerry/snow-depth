@@ -107,15 +107,21 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 				# centroid and right edge of lowest blob
 				coordinateCombinations = list()
 
-				# points are already ordered
-				# determine middle of box
-				middleTop = ((box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2)
-				middleBottom = ((box[6][0] + box[7][0]) / 2, (box[6][1] + box[7][1]) / 2)
+				# get valid coordinates from stake
+				validCoordinates = [t for t in box if t != False]
+				bottomBlob = validCoordinates[0]
+				topBlob = validCoordinates[len(validCoordinates)-1]
+
+				# determine centre of upper and lower reference blobs
+				middleTop = (float(topBlob[0][0] + topBlob[2][0]) / 2.0, \
+					float(topBlob[0][1] + topBlob[2][1]) / 2.0)
+				middleBottom = (float(bottomBlob[0][0] + bottomBlob[2][0]) / 2.0, \
+					float(bottomBlob[0][1] + bottomBlob[2][1]) / 2.0)
 
 				# add combinations to list
 				coordinateCombinations.append((middleTop, middleBottom)) # middle
-				coordinateCombinations.append((box[0], box[7])) # left
-				coordinateCombinations.append((box[1], box[6])) # right
+				coordinateCombinations.append((topBlob[0], bottomBlob[3])) # left
+				coordinateCombinations.append((topBlob[1], bottomBlob[2])) # right
 
 				# combination names list
 				combination_names = ["middle", "left", "right"]
@@ -153,6 +159,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 					# determine peaks and properties
 					peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=5)
+					peakWidths = signal.peak_widths(lineVals_smooth, peaks, rel_height = 0.5)
 					minLineVal = min(lineVals)
 
 					# get sorted indexes (decreasing distance down the line)
@@ -172,11 +179,20 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
 							minimum = lineVals[properties["left_bases"][index]]
 
-							if((properties["left_ips"][index] - properties["right_ips"][index-1] > 100
-								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5
-								or (current_width > (next_width*3) and index-1 == 0)) and float(minimum) / float(minLineVal) < 6.0):
+							# determine snow cover ahead of peak
+							peak_index = peaks[index]
+							peak_range = lineVals[:peak_index]
+							peak_intensity = lineVals[peak_index]
+							snow_threshold = peak_intensity * 0.5 if peak_intensity * 0.5 < 130 else 130
+							snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
+
+							if((properties["left_ips"][index] - properties["right_ips"][index-1] > 50 \
+								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5 \
+								or (float(properties["right_ips"][index-1] - properties["left_ips"][index-1]) / properties["right_ips"][index-1] < \
+								0.25 and next_width < 100 and index == 1) or (current_width > (next_width*3) and index-1 == 0)) and float(minimum) / \
+								float(minLineVal) < 6.0 and snow_cover < 0.333):#.7
 								selected_peak = index
-								break
+								break #100
 
 						# else select the only peak remaining
 						else:
@@ -211,7 +227,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 						# restrict stake threshold
 						stake_threshold = 65 if stake_threshold < 65 else stake_threshold
-						stake_threshold = 115 if stake_threshold > 115 else stake_threshold
+						stake_threshold = 125 if stake_threshold > 125 else stake_threshold
+						if(stake_threshold > 105 and max(lineVals) < 235): stake_threshold = 105
 
 						# determine index of intersection point
 						intersection_index = 0
@@ -222,18 +239,25 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 						# determine threshold for drop in intensity
 						# varies based on lighting conditions
-						maximum_drop = np.amax(line_gradients_full)
+						maximum_drop = max(x for x in line_gradients_full if x < 10)
 						drop_threshold = maximum_drop * 0.333
+
+						# determine next point which is certain to be stake
+						next_threshold = minLineVal * 2.0 if minLineVal < 30 else 60
+						next_index = max(np.argwhere(lineVals[:peak_index_line] < next_threshold))
 
 						# iterate through points prior to peak
 						for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
 							# calculate maximum drop near point
-							max_drop = max(line_gradients.tolist()[t-20:t+20]) if (t>20 and t<(len(line_gradients)-20)) \
+							max_drop = max(line_gradients.tolist()[t-25:t+25]) if (t>25 and t<(len(line_gradients)-25)) \
 								else 0
 
+							# ensure that all values that follow are below threshold
+							all_low = all(v < stake_threshold for v in lineVals[int(next_index):int(peak_index_line-t)].tolist())
+
 							# if below threshold or large drop
-							if((intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0)) \
-							 	or (line_gradients[t] > 20 and lineVals[peak_index_line-t-25] < stake_threshold+25)):
+							if((intensity < stake_threshold and all_low and (max_drop > drop_threshold or max_drop == 0)) \
+							 	or (line_gradients[t] > 20 and all_low)):
 								intersection_index = peak_index_line-t
 								break
 
@@ -268,6 +292,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							axes[1].axvline(x=properties["left_bases"][selected_peak], color = 'b')
 							axes[1].axvline(x=properties["left_ips"][selected_peak], color = 'y')
 							axes[1].axvline(x=intersection_index,color='r')
+							axes[1].axvline(x=next_index,color='g')
 
 						filename, file_extension = os.path.splitext(img_names[count])
 						plt.savefig((signal_dir + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
@@ -292,9 +317,26 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 				stake_intersections.append(coordinates)
 
 				# add distances to list
-				distance_high = box[2][1] - coordinates["average"][1]
-				distance_low = box[6][1] - coordinates["average"][1]
-				stake_distances.append([distance_high, distance_low])
+				distances_list = list()
+				num_blobs = len(box)
+				validDistances = [t for t in box if t != False]
+				offset = abs(float(validDistances[0][2][0] - validDistances[0][0][0])) / num_blobs
+				for q, v in enumerate(box):
+					if(v != False):
+						# calculate centre of blob
+						middle = (float(v[0][0] + v[2][0]) / 2.0, float(v[0][1] + v[2][1]) / 2.0)
+						distances_list.append(math.hypot(coordinates["average"][0] - middle[0], \
+							coordinates["average"][1] - middle[1]))
+
+						# overlay debugging points
+						cv2.circle(img_write, (int(middle[0]), int(middle[1])), 5, (0,255,255), 3)
+						cv2.line(img_write, (int(middle[0] + (q-(num_blobs/2.0)) * offset), int(middle[1])), \
+							(int(median_x + (q-(num_blobs/2.0)) * offset), int(median_y)), (0,255,255), 2)
+					else:
+						distances_list.append(False)
+
+				# add to stake distance list
+				stake_distances.append(distances_list)
 
 			# if stake isn't valid append empty dictionary and list
 			else:
