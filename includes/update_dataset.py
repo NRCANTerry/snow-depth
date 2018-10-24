@@ -33,7 +33,7 @@ def createDataset(template_name, dataset, dataset_enabled):
         print "Number of Values: %d" % num_filtered_values
 
     # convert from numpy to list
-    elif dataset_enabled: dataset = dataset.tolist()
+    elif dataset_enabled: dataset = np.array(dataset).tolist()
 
     # write changes to config file
     config = ConfigParser.ConfigParser()
@@ -76,7 +76,7 @@ def createDatasetTensor(template_name, dataset, dataset_enabled):
             print "Number of Values: %d" % num_filtered_values
 
         # convert from numpy to list
-        elif dataset_enabled[j]: dataset[j] = dataset[j].tolist()
+        elif dataset_enabled[j]: dataset[j] = np.array(dataset[j]).tolist()
 
     # write changes to config file
     config = ConfigParser.ConfigParser()
