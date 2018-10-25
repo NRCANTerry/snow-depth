@@ -158,17 +158,60 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 					lineVals_smooth = np.append(lineVals_smooth, 0)
 
 					# determine peaks and properties
-					peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=5)
-					peakWidths = signal.peak_widths(lineVals_smooth, peaks, rel_height = 0.5)
+					peaks, properties = find_peaks(lineVals_smooth, height=90, width=10)
+					peakWidthsOutput = signal.peak_widths(lineVals_smooth, peaks, rel_height = 0.5)
+					peakWidths = peakWidthsOutput[0]
 					minLineVal = min(lineVals)
+					maxLineVal = float(max(lineVals)) * 0.75
 
 					# get sorted indexes (decreasing distance down the line)
 					sorted_index = np.argsort(peaks)
-					sorted_index = sorted_index[::-1]
+					last_index = sorted_index[len(sorted_index)-1]
+					#sorted_index = sorted_index[::-1]
 
 					# index of selected peak in sorted list of peaks
 					selected_peak = -1
 
+					# iterate through peaks from top to bottom
+					for index in sorted_index:
+						# determine snow cover before peak
+						peak_index = peaks[index]
+						left_edge = properties["left_ips"][index]
+						peak_range = lineVals[:int(left_edge)]
+						peak_intensity = lineVals[peak_index]
+						snow_threshold = peak_intensity * 0.65 if peak_intensity < 200 else 125
+						stake_cover = float(len(np.where(peak_range < snow_threshold)[0])) / float(len(peak_range))
+
+						# determine snow cover after peak
+						peak_range = lineVals[int(left_edge):]
+						snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
+
+						# get peak width and next peak width
+						peak_width = peakWidths[index]
+						if index != last_index:
+							peak_width_next = peakWidths[index+1]
+
+						# get proximity to next peak
+						if index != last_index:
+							proximity_peak = properties["left_ips"][index+1] - properties["right_ips"][index]
+
+						# get maximum derivative in between peak edges
+						max_derivative = max(np.gradient(lineVals[properties["left_bases"][index]:properties["right_bases"][index]]))
+
+						# get size of next peak
+						if(index != last_index): next_peak_height = peaks[index+1]
+
+						# if peak meets conditions select it
+						if(index != last_index and stake_cover > 0.5 and snow_cover > 0.5 and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal \
+							and proximity_peak < 100 and float(peak_intensity) / float(next_peak_height) > 0.65)) and (peak_width > 100 or \
+							(peak_width + peak_width_next > 100 and proximity_peak < 125))):
+							selected_peak = index
+							break
+						elif(index == last_index and stake_cover > 0.4 and peak_intensity > maxLineVal * 0.75 and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75)):
+							selected_peak = index
+							break
+
+					'''
 					# iterate through peaks from bottom to top
 					for index in sorted_index:
 						# only check if there is more than 1 peak remaining
@@ -210,6 +253,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							else:
 								selected_peak = -1
 							break
+					'''
+					# calculate gradient of line
+					line_gradients_full = np.gradient(lineVals)
 
 					# if a snow case was found
 					if(selected_peak != -1):
@@ -235,16 +281,11 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 						# calculate gradients
 						line_gradients = np.gradient(lineVals)[0:peak_index_line][::-1]
-						line_gradients_full = np.gradient(lineVals)
 
 						# determine threshold for drop in intensity
 						# varies based on lighting conditions
 						maximum_drop = max(x for x in line_gradients_full if x < 10)
 						drop_threshold = maximum_drop * 0.333
-
-						# determine next point which is certain to be stake
-						next_threshold = minLineVal * 2.0 if minLineVal < 30 else 60
-						next_index = max(np.argwhere(lineVals[:peak_index_line] < next_threshold))
 
 						# iterate through points prior to peak
 						for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
@@ -252,12 +293,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							max_drop = max(line_gradients.tolist()[t-25:t+25]) if (t>25 and t<(len(line_gradients)-25)) \
 								else 0
 
-							# ensure that all values that follow are below threshold
-							all_low = all(v < stake_threshold for v in lineVals[int(next_index):int(peak_index_line-t)].tolist())
-
 							# if below threshold or large drop
-							if((intensity < stake_threshold and all_low and (max_drop > drop_threshold or max_drop == 0)) \
-							 	or (line_gradients[t] > 20 and all_low)):
+							if((intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0)) \
+							 	or (line_gradients[t] > 20)):
 								intersection_index = peak_index_line-t
 								break
 
@@ -265,6 +303,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 						if(debug):
 							cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
 							cv2.circle(img_write, (int(x[intersection_index]), int(y[intersection_index])), 5, (0,255,0), 3)
+
+					else: peak_index_line = 0
 
 					# add coordinates to dictionary
 					if(selected_peak != -1 and intersection_index != 0):
@@ -280,6 +320,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 						axes[0].plot([x0, x1], [y0, y1], 'ro-')
 						axes[0].axis('image')
 						axes[1].plot(lineVals)
+						axes[1].plot(peaks, lineVals[peaks], "x")
 						axes[1].plot(peak_index_line, lineVals[peak_index_line], "x")
 						axes[2].plot(line_gradients_full)
 
@@ -289,10 +330,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 								ymax=lineVals[peak_index_line], color="C1")
 							axes[1].hlines(y=properties["width_heights"][selected_peak], xmin=properties["left_ips"][selected_peak],
 								xmax=properties["right_ips"][selected_peak], color = "C1")
+							axes[1].hlines(*peakWidthsOutput[1:], color = "C2")
 							axes[1].axvline(x=properties["left_bases"][selected_peak], color = 'b')
 							axes[1].axvline(x=properties["left_ips"][selected_peak], color = 'y')
 							axes[1].axvline(x=intersection_index,color='r')
-							axes[1].axvline(x=next_index,color='g')
 
 						filename, file_extension = os.path.splitext(img_names[count])
 						plt.savefig((signal_dir + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
@@ -322,7 +363,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 				validDistances = [t for t in box if t != False]
 				offset = abs(float(validDistances[0][2][0] - validDistances[0][0][0])) / num_blobs
 				for q, v in enumerate(box):
-					if(v != False):
+					if(v != False and selected_peak != -1):
 						# calculate centre of blob
 						middle = (float(v[0][0] + v[2][0]) / 2.0, float(v[0][1] + v[2][1]) / 2.0)
 						distances_list.append(math.hypot(coordinates["average"][0] - middle[0], \
