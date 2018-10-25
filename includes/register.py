@@ -12,11 +12,31 @@ MAX_FEATURES = 500000 #15000 #5000
 # of the affine transformation matrix and average can be
 NUM_STD_DEV = 5
 
+# image translation parameters
+MAX_ROTATION = 45
+MAX_TRANSLATION = 300
+MAX_SCALING = 1.10
+
 # function to align image to template
 # the first image and template are already grayscale from clahe application
 # the third image is unaltered and will be subjected to the warp
 def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registered,
 	debug_directory_matches, debug, dataset, dataset_enabled):
+
+	# determine maximum mean squared error for non-initialized dataset
+	max_mean_squared_error = 1e10
+	zero_matrix = np.zeros((2,3), dtype=np.float32)
+
+	# create affine matrix according to specified rotation, translation and scale
+	alpha = MAX_SCALING * np.cos(np.deg2rad(MAX_ROTATION))
+	beta = MAX_SCALING * np.sin(np.deg2rad(MAX_ROTATION))
+	affine_transform_matrix = np.array([
+		[alpha, beta, MAX_TRANSLATION],
+		[-beta, alpha, MAX_TRANSLATION]])
+
+	# determine mean squared error
+	max_mean_squared_error = np.sum(np.square(abs(affine_transform_matrix) - zero_matrix))
+
 	# number of images
 	num_images = len(imgs)
 
@@ -88,12 +108,11 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 		imgRegGray = img1Gray
 
 		# get mean squared error between affine matrix and zero matrix
-		zero_matrix = np.zeros((2,3), dtype=np.float32)
 		mean_squared_error = np.sum(np.square(abs(affine_matrix) - zero_matrix))
 
 		# update dataset
 		# if dataset isn't enabled, append mean squared error to dataset
-		if(not dataset_enabled and mean_squared_error <= 10000):
+		if(not dataset_enabled and mean_squared_error <= max_mean_squared_error):
 			dataset[1].append(mean_squared_error)
 
 			# apply registration
@@ -104,7 +123,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			ORB_aligned_flag = True
 
 		# if dataset is enabled, compare matrix to mean
-		elif mean_squared_error <= 1e4:
+		elif mean_squared_error <= max_mean_squared_error:
 			# get mean and standard deviation from dataset
 			mean = dataset[0][0]
 			std_dev = dataset[0][1]
@@ -140,7 +159,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# specify the number of iterations and threshold
 		number_iterations = 250
-		termination_thresh = 1e-6 if mean_squared_error <= 1e4 else 1e-8
+		termination_thresh = 1e-1 if mean_squared_error <= 1e4 else 1e-2#6,8
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
