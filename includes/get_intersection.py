@@ -12,6 +12,7 @@ import statistics
 from scipy.signal import find_peaks
 from scipy import signal
 from scipy import ndimage
+from scipy import integrate
 
 # function that returns the intersection of lines defined by two points
 def lineIntersections(pt1, pt2, ptA, ptB):
@@ -171,6 +172,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 					# index of selected peak in sorted list of peaks
 					selected_peak = -1
+					major_peak = -1 # select larger peak for threshold calculation
 
 					# iterate through peaks from top to bottom
 					for index in sorted_index:
@@ -199,63 +201,31 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 						max_derivative = max(np.gradient(lineVals[properties["left_bases"][index]:properties["right_bases"][index]]))
 
 						# get size of next peak
-						if(index != last_index): next_peak_height = peaks[index+1]
+						if(index != last_index): next_peak_height = lineVals[peaks[index+1]]
 
 						# if peak meets conditions select it
 						if(index != last_index and stake_cover > 0.5 and snow_cover > 0.5 and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal \
-							and proximity_peak < 100 and float(peak_intensity) / float(next_peak_height) > 0.65)) and (peak_width > 100 or \
-							(peak_width + peak_width_next > 100 and proximity_peak < 125))):
+							and proximity_peak < 100 and float(peak_intensity) / float(next_peak_height) > 0.5)) and (peak_width > 100 or \
+							((peak_width + peak_width_next > 100) and proximity_peak < 125 and (float(peak_width) / float(peak_width_next) > 0.20)))):
+							# select peak
 							selected_peak = index
+
+							# determine major peak
+							if(peak_intensity < maxLineVal and next_peak_height > maxLineVal and proximity_peak < 100):
+								major_peak = index + 1
+							else:
+								major_peak = index
+
+							# break loop
 							break
 						elif(index == last_index and stake_cover > 0.4 and peak_intensity > maxLineVal * 0.75 and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75)):
 							selected_peak = index
+							major_peak = index
 							break
 
-					'''
-					# iterate through peaks from bottom to top
-					for index in sorted_index:
-						# only check if there is more than 1 peak remaining
-						if(index > 0):
-							# check that peak is isolated (doesn't have peak immediately next to it
-							# of similar size)
-							current_width = properties["right_ips"][index] - properties["left_ips"][index]
-							next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
-							minimum = lineVals[properties["left_bases"][index]]
-
-							# determine snow cover ahead of peak
-							peak_index = peaks[index]
-							peak_range = lineVals[:peak_index]
-							peak_intensity = lineVals[peak_index]
-							snow_threshold = peak_intensity * 0.5 if peak_intensity * 0.5 < 130 else 130
-							snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
-
-							if((properties["left_ips"][index] - properties["right_ips"][index-1] > 50 \
-								or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5 \
-								or (float(properties["right_ips"][index-1] - properties["left_ips"][index-1]) / properties["right_ips"][index-1] < \
-								0.25 and next_width < 100 and index == 1) or (current_width > (next_width*3) and index-1 == 0)) and float(minimum) / \
-								float(minLineVal) < 6.0 and snow_cover < 0.333):#.7
-								selected_peak = index
-								break #100
-
-						# else select the only peak remaining
-						else:
-							# determine if this is a no snow case
-							# must see mostly snow after peak (50% coverage)
-							# snow threshold is 60% of peak
-							peak_index = peaks[index]
-							peak_intensity = lineVals[peak_index]
-							peak_range = lineVals[peak_index:]
-							snow_threshold = peak_intensity * 0.60 if peak_intensity * 0.60 < 140 else 140
-							snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
-
-							if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
-								selected_peak = 0
-							else:
-								selected_peak = -1
-							break
-					'''
 					# calculate gradient of line
 					line_gradients_full = np.gradient(lineVals)
+					integral_full = integrate.cumtrapz(lineVals)
 
 					# if a snow case was found
 					if(selected_peak != -1):
@@ -264,10 +234,11 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 						# determine threshold for finding stake
 						# average of intensity at left edge of peak and intensity at base of peak
-						left_edge_index = properties["left_ips"][selected_peak]
+						left_edge_index = properties["left_ips"][major_peak]
 						left_edge_intensity = lineVals[int(left_edge_index)]
 						left_base_index = properties["left_bases"][selected_peak]
-						left_base_intensity = lineVals[int(left_base_index)]
+						left_base_intensity = lineVals[int(left_base_index)] if lineVals[peak_index_line] < left_edge_index * 1.5 \
+						 	else lineVals[peak_index_line]
 						stake_threshold = (float(left_edge_intensity) - float(left_base_intensity)) / 2.0 + \
 											float(left_base_intensity)
 
@@ -293,10 +264,13 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 							max_drop = max(line_gradients.tolist()[t-25:t+25]) if (t>25 and t<(len(line_gradients)-25)) \
 								else 0
 
+							# converted index
+							conv_index = peak_index_line-t
+
 							# if below threshold or large drop
 							if((intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0)) \
-							 	or (line_gradients[t] > 20)):
-								intersection_index = peak_index_line-t
+							 	or (line_gradients[t] > 15 and min(lineVals[conv_index-25:conv_index].tolist()) < stake_threshold*1.25)):
+								intersection_index = conv_index
 								break
 
 						# overlay debugging points
@@ -315,7 +289,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 					# if in debugging mode
 					if debug:
 						# plot and save
-						fig, axes = plt.subplots(nrows = 3)
+						fig, axes = plt.subplots(nrows = 4)
 						axes[0].imshow(img)
 						axes[0].plot([x0, x1], [y0, y1], 'ro-')
 						axes[0].axis('image')
@@ -323,6 +297,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 						axes[1].plot(peaks, lineVals[peaks], "x")
 						axes[1].plot(peak_index_line, lineVals[peak_index_line], "x")
 						axes[2].plot(line_gradients_full)
+						axes[3].plot(integral_full)
 
 						# only show if valid intersction point found
 						if selected_peak != -1:
