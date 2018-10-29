@@ -6,22 +6,17 @@ from sklearn.metrics import mean_squared_error
 import json
 
 # global variables
-MAX_FEATURES = 500000 #15000 #5000
-
-# number of standard deviations away from the mean the mean squared error
-# of the affine transformation matrix and average can be
-NUM_STD_DEV = 5
-
-# image translation parameters
-MAX_ROTATION = 45
-MAX_TRANSLATION = 300
-MAX_SCALING = 1.10
+MAX_FEATURES = 500000
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
 # the third image is unaltered and will be subjected to the warp
 def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registered,
-	debug_directory_matches, debug, dataset, dataset_enabled):
+	debug_directory_matches, debug, dataset, dataset_enabled, MAX_ROTATION,
+	MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+
+	# adjust scaling from % to absolute
+	MAX_SCALING /= 100
 
 	# determine maximum mean squared error for non-initialized dataset
 	max_mean_squared_error = 1e10
@@ -159,7 +154,8 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# specify the number of iterations and threshold
 		number_iterations = 250
-		termination_thresh = 1e-1 if mean_squared_error <= 1e4 else 1e-2#6,8
+		termination_thresh = 1e-6 if mean_squared_error <= max_mean_squared_error else 1e-8
+		#termination_thresh = 1e-1 if mean_squared_error <= max_mean_squared_error else 1e-2
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
