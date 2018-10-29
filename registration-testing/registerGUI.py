@@ -277,9 +277,9 @@ else :
     im2_aligned = cv2.warpAffine(imReg, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP);
 '''
 # write aligned image to disk
-#outputFile = "aligned.jpg"
+outputFile = "aligned.jpg"
 outputMatch = "matches.jpg"
-outputFile = "MFD.jpg"
+#outputFile = "MFD.jpg"
 print("Saving aligned image :", outputFile)
 cv2.imwrite(outputFile, imReg)
 cv2.imwrite(outputMatch, Matches)
