@@ -2,6 +2,7 @@
 import sys
 
 sys.path.append('./includes')
+sys.path.append('./includes/GUI')
 
 # import necessary modules
 import cv2
@@ -14,7 +15,7 @@ from equalize import equalize_hist
 from register import alignImages
 from filter_night import isDay
 from check_stakes import getValidStakes
-from GUI import GUI
+from main import GUI
 from get_intersection import getIntersections
 from calculate_depth import getDepths
 from equalize import equalize_hist_colour
@@ -53,19 +54,18 @@ lower_hsv2 = params[3]
 upper_hsv2 = params[4]
 img_border_upper = params[5]
 img_border_lower = params[6]
-blob_size_lower = params[7]
-blob_size_upper = params[8]
-roi_coordinates = params[9]
-template_path = params[10]
-clip_limit = params[11]
-tile_size = tuple(params[12])
-template_intersections = params[14]
-template_tensor = params[15]
-template_blob_sizes = params[16]
-template_data_set = params[17]
-template_name = params[18]
-tensor_data_set = params[19]
-blob_distances_template = params[20]
+roi_coordinates = params[7]
+template_path = params[8]
+clip_limit = params[9]
+tile_size = tuple(params[10])
+template_intersections = params[12]
+template_tensor = params[13]
+template_blob_sizes = params[14]
+template_data_set = params[15]
+template_name = params[16]
+tensor_data_set = params[17]
+blob_distances_template = params[18]
+STD_DEV_REG, STD_DEV_TENSOR, ROTATION, TRANSLATION, SCALE = params[19]
 
 # determine if the dataset for the template is established
 # must have registered at least 50 images to the template
@@ -92,7 +92,7 @@ for k, stake in enumerate(tensor_data_set):
         print "Number of images required: %d" % (50-len(stake[1]))
 
 # flag to run program in debug mode
-debug = params[13]
+debug = params[11]
 
 # other parameters
 median_kernal_size = 5
@@ -223,7 +223,8 @@ print("\n\nRegistering Images")
 
 # get registered images
 images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
-    images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled)
+    images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
+    ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
 # update registration dataset
 createDataset(template_name, template_data_set, dataset_enabled)
@@ -248,7 +249,7 @@ print("\n\nValidating Stakes")
 # check stakes in image
 stake_validity, blob_coords, tensor_data_set = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
     upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
-    tensor_data_set, dataset_tensor_enabled)
+    tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR)
 
 # update tensor dataset
 createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
