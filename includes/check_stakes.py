@@ -12,15 +12,12 @@ import statistics
 median_kernel_size = 5
 dilate_kernel = (5,5)
 
-# number of standard deviations away from the mean the tensor can be
-NUM_STD_DEV = 5
-
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
-	img_names, debug_directory, dataset, dataset_enabled):
+	img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV):
 
 	# contains output data
 	stake_output = {}
@@ -105,8 +102,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				bottom_right = (rectangle[1][0], rectangle[1][1]-upper_border)
 
 				# copy ROI to zero image
-				mask[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]] = \
-					mask_open[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
+				mask[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])] = \
+					mask_open[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])]
 
 				# find final coloured polygon regions
 				#contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
