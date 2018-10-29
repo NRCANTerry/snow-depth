@@ -307,6 +307,7 @@ class createTemplate:
 
         # import template image
         self.cv2_img = cv2.imread(self.templatePath)
+        self.outputImage = self.cv2_img.copy()
         self.equalized_img = equalize_hist_colour(self.cv2_img.copy(), 5.0, (8,8))
         self.equalized_img = cv2.cvtColor(self.equalized_img, cv2.COLOR_BGR2RGB)
         self.img_orig = Image.fromarray(self.equalized_img)
@@ -972,7 +973,7 @@ class createTemplate:
             # and system parameters to user
             return [self.templateCoordinates, self.templateIntersections,
                 self.templateDistances, self.templateTensors, self.blobSizeRanges,
-                self.systemParameters]
+                self.systemParameters, self.outputImage, self.cv2_img]
         else:
             return False
 
@@ -990,20 +991,3 @@ class createTemplate:
     def closePreviewWindow(self):
         self.root.deiconify()
         self.previewWindow.destroy()
-
-root = tk.Tk()
-templateWindow = createTemplate(root)
-root.mainloop()
-data = templateWindow.getTemplate()
-print "Template Coordinates"
-print data[0]
-print "\n\nTemplate Intersections"
-print data[1]
-print "\n\nTemplate Distances"
-print data[2]
-print "\n\nTemplate Tensors"
-print data[3]
-print "\n\nBlob Ranges"
-print data[4]
-print "\n\n"
-print data[5]
