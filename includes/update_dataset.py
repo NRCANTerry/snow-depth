@@ -1,6 +1,8 @@
 # import necessary packages
 import numpy as np
 import ConfigParser
+from scipy.stats import trimboth
+import warnings
 
 # function to update the dataset of registration matrices
 # if the number of registrations is less than 50, the mean
@@ -8,15 +10,22 @@ import ConfigParser
 # if the number is greater than 50 the mean and std dev will
 # be calculated and kept updated
 def createDataset(template_name, dataset, dataset_enabled):
+    # disable FutureWarning from trimboth
+    # caused by conflict of scipy 1.10 and numpy 1.15
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+
     # determine if there are sufficient images to initialize the dataset
     if(not dataset_enabled and len(dataset[1]) >= 50):
         # if so get values
         dataset_values = np.array(dataset[1])
 
+        # use 25% trimmed mean
+        filtered_dataset_values = trimboth(dataset_values, 0.25)
+
         # filter out outliers using standard deviation
-        mean = np.mean(dataset_values)
-        std_dev = np.std(dataset_values)
-        filtered_dataset_values = dataset_values[abs(dataset_values - mean) < 2 * std_dev]
+        #mean = np.mean(dataset_values)
+        #std_dev = np.std(dataset_values)
+        #filtered_dataset_values = dataset_values[abs(dataset_values - mean) < 2 * std_dev]
 
         # determine standard deviation and mean for filtered dataset
         filtered_mean = np.mean(filtered_dataset_values)
@@ -49,6 +58,10 @@ def createDataset(template_name, dataset, dataset_enabled):
 # if the number is greater than 50 the mean and std dev will
 # be calculated and kept updated
 def createDatasetTensor(template_name, dataset, dataset_enabled):
+    # disable FutureWarning from trimboth
+    # caused by conflict of scipy 1.10 and numpy 1.15
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+
     # iterate through stakes
     for j, stake in enumerate(dataset):
         # determine if there are sufficient images to initialize the dataset
@@ -56,10 +69,13 @@ def createDatasetTensor(template_name, dataset, dataset_enabled):
             # if so get values
             dataset_values = np.array(stake[1])
 
+            # use 25% trimmed mean
+            filtered_dataset_values = trimboth(dataset_values, 0.25)
+
             # filter out outliers using standard deviation
-            mean = np.mean(dataset_values)
-            std_dev = np.std(dataset_values)
-            filtered_dataset_values = dataset_values[abs(dataset_values - mean) < 2 * std_dev]
+            #mean = np.mean(dataset_values)
+            #std_dev = np.std(dataset_values)
+            #filtered_dataset_values = dataset_values[abs(dataset_values - mean) < 2 * std_dev]
 
             # determine standard deviation and mean for filtered dataset
             filtered_mean = np.mean(filtered_dataset_values)
