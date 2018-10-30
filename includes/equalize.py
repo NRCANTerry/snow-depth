@@ -56,7 +56,7 @@ def equalize_hist(img, clip_limit, tile_size):
 	l = clahe.apply(img)
 
 	# increase brigh#tness
-	bgr = np.where((255-l) < 50, 255, l + 50)
+	bgr = np.where((255-l) < 75, 255, l + 75)
 
 	# return image
 	return bgr
