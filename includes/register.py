@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error
 import json
 
 # global variables
-MAX_FEATURES = 500000
+MAX_FEATURES = int(1e7)
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
@@ -155,7 +155,6 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 		# specify the number of iterations and threshold
 		number_iterations = 250
 		termination_thresh = 1e-6 if mean_squared_error <= max_mean_squared_error else 1e-8
-		#termination_thresh = 1e-1 if mean_squared_error <= max_mean_squared_error else 1e-2
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
