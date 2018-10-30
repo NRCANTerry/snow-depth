@@ -6,7 +6,7 @@ import math
 from scipy import ndimage
 
 # global variables
-MAX_FEATURES = int(5e4)
+MAX_FEATURES = int(5e6)
 
 # the third image is unaltered and will be subjected to the warp
 def alignImages3(img, template):
@@ -22,8 +22,8 @@ def alignImages3(img, template):
 
 	# detect ORB features and compute descriptors
 	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
-	kp1, desc1 = orb.detectAndCompute(img, None)
-	kp2, desc2 = orb.detectAndCompute(template, None)
+	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
+	kp2, desc2 = orb.detectAndCompute(img2Gray, None)
 
 	# create brute-force matcher object and match descriptors
 	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
@@ -66,7 +66,7 @@ def alignImages3(img, template):
 
 	# specify the number of iterations and threshold
 	number_iterations = 250
-	termination_thresh = 1e-6
+	termination_thresh = 1e-5
 
 	# define termination criteria
 	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
