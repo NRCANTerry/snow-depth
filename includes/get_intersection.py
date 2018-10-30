@@ -269,7 +269,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 							# if below threshold or large drop
 							if((intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0)) \
-							 	or (line_gradients[t] > 15 and min(lineVals[conv_index-25:conv_index].tolist()) < stake_threshold*1.25)):
+							 	or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) < stake_threshold*1.25)):
 								intersection_index = conv_index
 								break
 
