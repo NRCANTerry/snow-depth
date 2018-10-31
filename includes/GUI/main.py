@@ -418,18 +418,19 @@ class GUI:
         # open directory selector
         dirname = tkFileDialog.askdirectory(parent=self.root, initialdir="/", title='Select Directory')
 
-        # check that all files in directory are images
-        files = [file for file in os.listdir(dirname)]
-        valid = all(self.checkImage((dirname + "/" + str(y))) for y in files)
+        # if new directory selected
+        if(len(dirname) > 0):
+            # check that all files in directory are images
+            files = [file for file in os.listdir(dirname)]
+            valid = all(self.checkImage((dirname + "/" + str(y))) for y in files)
 
-        # if new directory selected, update label
-        if (len(dirname) > 0 and valid):
-            self.pathLabel.config(text=dirname)
-            self.systemParameters["Directory"] = str(dirname)
-        # if not all files are images
-        elif (len(dirname) > 0):
-            # warn user
-            tkMessageBox.showinfo("Error", "Not all files in the selected directory are images")
+            # if valid update label
+            if(valid):
+                self.pathLabel.config(text=dirname)
+                self.systemParameters["Directory"] = str(dirname)
+            # else warn user
+            else:
+                tkMessageBox.showinfo("Error", "Not all files in the selected directory are images")
 
     # ---------------------------------------------------------------------------------
     # Function to save inputted values and close window
