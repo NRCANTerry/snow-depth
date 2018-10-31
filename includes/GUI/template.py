@@ -89,12 +89,14 @@ class createTemplate:
         self.blobIndex = -1
         self.windowClosed = False
         self.templateSaved = False
+        self.numPoint = 0
 
         #-----------------------------------------------------------------------
         # Frames
         #-----------------------------------------------------------------------
 
         self.leftFrame = tk.Frame(self.root, bg = self.gray)
+        self.templateNameFrame = tk.Frame(self.leftFrame, bg = self.gray)
         self.tensorFrame = tk.Frame(self.leftFrame, bg = self.gray)
         self.registerFrame = tk.Frame(self.leftFrame, bg = self.gray)
 
@@ -109,7 +111,7 @@ class createTemplate:
 
         # left frame
         self.titleLabel = tk.Label(self.root, text = "Generate Template", bg = self.gray, fg = self.white, font = self.titleFont)
-        self.directoryLabel = tk.Label(self.leftFrame, text = "Select Marked Template", bg = self.gray, fg = self.white, font = self.boldFont)
+        self.directoryLabel = tk.Label(self.templateNameFrame, text = "Select Template", bg = self.gray, fg = self.white, font = self.boldFont)
         self.pathLabel = tk.Label(self.leftFrame, text = "No Template Selected", bg = self.gray, fg = self.white, font = self.smallFont)
         self.parametersLabel = tk.Label(self.leftFrame, text = "Parameters", bg = self.gray, fg = self.white, font = self.boldFont)
         self.tensorLabel = tk.Label(self.tensorFrame, text = "Tensor Std Dev", bg = self.gray, fg = self.white, font = self.smallFont)
@@ -159,12 +161,24 @@ class createTemplate:
             command = lambda: self.getImage(), width = 25)
 
         #-----------------------------------------------------------------------
+        # Checkbox
+        #-----------------------------------------------------------------------
+
+        self.snowFlag = tk.IntVar()
+        self.snowFlag.set(1)
+        self.snowCheckbox = tk.Checkbutton(self.templateNameFrame, text = "Snow", bg = self.gray, fg = self.white,
+            selectcolor = self.gray, activebackground = self.gray, activeforeground = self.white,
+            variable = self.snowFlag, font = self.mediumFont)
+
+        #-----------------------------------------------------------------------
         # Packing
         #-----------------------------------------------------------------------
 
         self.titleLabel.pack(pady = (30,20))
         self.leftFrame.pack(side = tk.LEFT, padx = 50, pady = (0,10))
-        self.directoryLabel.pack(pady = 10)
+        self.templateNameFrame.pack()
+        self.directoryLabel.pack(pady = 10, padx = 5, side = tk.LEFT)
+        self.snowCheckbox.pack(pady = 10, padx = 5, side = tk.RIGHT)
         self.pathLabel.pack(pady = 10)
         self.directoryButton.pack(pady = 10)
 
@@ -258,6 +272,8 @@ class createTemplate:
         self.templateWindow = tk.Toplevel(self.root)
         self.templateWindow.configure(bg = self.gray)
         self.templateWindow.protocol("WM_DELETE_WINDOW", self.closeTemplateWindow)
+        self.templateWindowClosed = tk.IntVar()
+        self.templateWindowClosed.set(0)
 
         #-----------------------------------------------------------------------
         # Reset variables
@@ -297,7 +313,7 @@ class createTemplate:
 
         self.buttonVar = tk.IntVar()
 
-        undoButton = tk.Button(leftFrame, text = "Undo", bg = self.gray, fg = self.white, font = self.smallFont,
+        self.undoButton = tk.Button(leftFrame, text = "Undo", bg = self.gray, fg = self.white, font = self.smallFont,
             width = 25, command = lambda: self.undo())
         self.nextButton = tk.Button(leftFrame, text = "Next", bg = self.gray, fg = self.white, font = self.smallFont,
             width = 25, command = lambda: self.next())
@@ -362,7 +378,7 @@ class createTemplate:
         self.stakesLabel.pack(pady = 20)
         coordinateTitleLabel.pack(pady = (10,0))
         self.coordinateLabel.pack(pady = (5,20))
-        undoButton.pack(pady = 30)
+        self.undoButton.pack(pady = 30)
         self.nextButton.pack(pady = 30)
 
         # run window
@@ -387,7 +403,8 @@ class createTemplate:
         self.numRect = 0
 
         # run window
-        self.root.wait_window(self.templateWindow)
+        self.root.wait_variable(self.templateWindowClosed)
+        #self.root.wait_window(self.templateWindow)
 
         # if window was closed early
         if(self.windowClosed):
@@ -397,8 +414,8 @@ class createTemplate:
         # calculate tensors
         self.calculateTensors()
 
-        # get intersection points
-        self.calculateIntersections()
+        # get intersection points if in snow mode
+        if(self.snowFlag.get()): self.calculateIntersections()
 
         # create overaly
         self.createOverlay()
@@ -565,11 +582,52 @@ class createTemplate:
             avgSize = float(blobArea) / float(blobNum)
             self.blobSizeRanges.append([avgSize * 0.7, avgSize * 1.50])
 
+            # if no snow in template allow user to manually select intersection point
+            if(not self.snowFlag.get()):
+                # update widgets
+                self.instructionsLabelTemplate.config(text = "Select Intersection Point on Stake %d" \
+                    % self.blobIndex)
+                self.stakesLabel.config(text = "No Point Selected")
+                self.coordinateLabel.config(text = "None")
+                self.numPoint = 0
+
+                # update click binding
+                self.canvas.tag_bind('image', '<Button-1>', self.windowClickIntersection)
+
+                # update buttons
+                waitVariable = tk.IntVar()
+                self.nextButton.config(command = lambda: waitVariable.set(1))
+                self.undoButton.config(command = lambda: self.undoIntersection())
+
+                # wait until intersection point selected
+                self.templateWindow.wait_variable(waitVariable)
+
+                # determine coordinates
+                coords_c = self.canvas.coords(self.lastCircle)
+                [x0_c, y0_c] = [(float(x) + 15) / self.cropRatio for x in coords_c][:2]
+                [x0_c, y0_c] = [x0_c + sx0, y0_c + sy0]
+                self.templateIntersections.append([x0_c, y0_c])
+
+                # update intersection distance measurements for stake
+                for j, coordinate_set in enumerate(self.templateDistances[self.blobIndex]):
+                    distance_blob = math.hypot(x0_c - coordinate_set[0], \
+                        y0_c - coordinate_set[1])
+
+                    # update list with distance
+                    self.templateDistances[self.blobIndex][j] = distance_blob
+
+                # reassign button actions and click binding
+                self.canvas.tag_bind('image', '<Button-1>', self.windowClick)
+                self.nextButton.config(command = lambda: self.next(self.blobIndex))
+                self.undoButton.config(command = lambda: self.undo())
+
             # update blob index
             self.blobIndex += 1
             if(self.blobIndex >= self.stakeNum):
                 self.windowClosed = False
-                self.templateWindow.destroy()
+                if(self.snowFlag.get()):
+                    self.templateWindow.destroy()
+                self.templateWindowClosed.set(1)
                 return
             elif(self.blobIndex == (self.stakeNum - 1)):
                 self.continueButton.config(text = "Generate")
@@ -839,6 +897,41 @@ class createTemplate:
                 return
 
     #-----------------------------------------------------------------------
+    # Function to handle manual intersection point selection
+    #-----------------------------------------------------------------------
+
+    def undoIntersection(self):
+        # if an intersection point has been selected
+        if(self.numPoint > 0):
+            # delete circle
+            self.canvas.delete(self.lastCircle)
+
+            # reset label
+            self.numPoint = 0
+            self.stakesLabel.config(text = "No Point Selected")
+            self.coordinateLabel.config(text = "(0, 0)")
+
+    def windowClickIntersection(self, event):
+        # if an intersection point hasn't been selected
+        if(self.numPoint == 0):
+            # determine coordinates of click
+            x = self.canvas.canvasx(event.x)
+            y = self.canvas.canvasy(event.y)
+
+            # update coordinate label
+            coordinateString = "(%0.2f, %0.2f)" % (x,y)
+            self.coordinateLabel.config(text = coordinateString)
+
+            # draw circle on canvas
+            radius = 15
+            self.lastCircle = self.canvas.create_oval(x-radius, y-radius, x+radius, y+radius,
+                outline = "green", width = 5)
+            self.numPoint = 1
+
+            # update label
+            self.stakesLabel.config(text = "Snow Point Selected")
+
+    #-----------------------------------------------------------------------
     # Function to create image showing results of template generation
     #-----------------------------------------------------------------------
 
@@ -959,7 +1052,9 @@ class createTemplate:
         self.previewWindow.destroy()
 
         # close template window
-        self.templateWindow.destroy()
+        if(self.snowFlag.get()):
+            self.templateWindow.destroy()
+        self.templateWindowClosed.set(1)
 
         # update flag
         self.templateSaved = True
@@ -991,6 +1086,7 @@ class createTemplate:
         self.buttonVar.set(1)
         self.windowClosed = True
         self.templateWindow.destroy()
+        self.templateWindowClosed.set(1)
         self.root.deiconify()
 
     def closePreviewWindow(self):
