@@ -88,7 +88,6 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 		# convert image to gray
 		img_write = img_.copy()
 		img = cv2.cvtColor(img_.copy(), cv2.COLOR_BGR2GRAY)
-		img_hsv = cv2.split(cv2.cvtColor(img_.copy(), cv2.COLOR_BGR2HSV))[1]
 
 		# get top and bottom blob coordinates
 		blob_coords = boxCoords[img_names[count]]
@@ -203,10 +202,22 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 						# get size of next peak
 						if(index != last_index): next_peak_height = lineVals[peaks[index+1]]
 
+						# get rgb value of peaks
+						rgb_peak = img_[int(y[peak_index]), int(x[peak_index])]
+						rgb_proximity = np.amax(rgb_peak.astype(np.int32)) - np.amin(rgb_peak.astype(np.int32))
+						rgb_min = np.amin(rgb_peak.astype(np.int32))
+
+						# calculate rgb value of next peak if possible
+						if(index != last_index):
+							rgb_peak_next = img_[int(y[peaks[index+1]]), int(x[peaks[index+1]])]
+							rgb_proximity_next = np.amax(rgb_peak_next.astype(np.int32)) - np.amin(rgb_peak_next.astype(np.int32))
+							rgb_min_next = np.amin(rgb_peak_next.astype(np.int32))
+
 						# if peak meets conditions select it
 						if(index != last_index and stake_cover > 0.5 and snow_cover > 0.5 and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal \
 							and proximity_peak < 100 and float(peak_intensity) / float(next_peak_height) > 0.5)) and (peak_width > 100 or \
-							((peak_width + peak_width_next > 100) and proximity_peak < 125 and (float(peak_width) / float(peak_width_next) > 0.20)))):
+							((peak_width + peak_width_next > 100) and proximity_peak < 125 and (float(peak_width) / float(peak_width_next) > 0.20))) \
+							and rgb_proximity < 25 and rgb_proximity_next < 40 and rgb_min > 180 and rgb_min_next > 200):
 							# select peak
 							selected_peak = index
 
@@ -218,7 +229,9 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names, 
 
 							# break loop
 							break
-						elif(index == last_index and stake_cover > 0.4 and peak_intensity > maxLineVal * 0.75 and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75)):
+
+						elif(index == last_index and stake_cover > 0.4 and peak_intensity > maxLineVal * 0.75 and (snow_cover > 0.33 or peak_index > \
+							float(len(lineVals)) * 0.75) and rgb_proximity < 25 and rgb_min > 200):
 							selected_peak = index
 							major_peak = index
 							break
