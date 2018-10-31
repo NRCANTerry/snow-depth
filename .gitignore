@@ -7,3 +7,7 @@ includes/templates
 # ignore images in registration-testing
 registration-testing/**/*.jpg
 registration-testing/**/*.JPG
+
+# ignore images in main directory
+*.JPG
+*.jpg
