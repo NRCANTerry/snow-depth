@@ -4,9 +4,10 @@ import numpy as np
 from progress_bar import progress
 from sklearn.metrics import mean_squared_error
 import json
+import tqdm
 
 # global variables
-MAX_FEATURES = int(1e7)
+MAX_FEATURES = int(3e5)
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
@@ -46,11 +47,11 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 	# filtered image names
 	images_names_registered = list()
 
-	# iterate through imagse
-	for count, img in enumerate(imgs):
-		# update progress bar
-		progress(count + 1, num_images, status=img_names[count])
+	# iterator
+	count = 0
 
+	# iterate through imagse
+	for img in tqdm.tqdm(imgs):
 		# flags for whether image was aligned
 		ORB_aligned_flag = False
 		ECC_aligned_flag = False
@@ -93,7 +94,8 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# determine affine 2D transformation
 		# apply RANSAC robust method
-		affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC)[0]
+		affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
+			refineIters = 20, confidence = 0.995)[0]
 		height, width = template.shape
 
 		# set registered images to original images
@@ -211,6 +213,9 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 				"ECC Matrix": warp_matrix.tolist()
 			}
 
+		# increment iterator
+		count += 1
+
 	# if in debugging mode
 	if(debug):
 		# output JSON file
@@ -219,3 +224,247 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 	# return list of registered images
 	return registeredImages, dataset, images_names_registered
+
+# function to perform all registrations in pool
+def registerParallel(img, template, name, img_apply, debug, debug_directory_registered,
+	debug_directory_matches, dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
+	outputDict, errorQueue):
+
+	# flags for whether image was aligned
+	ORB_aligned_flag = False
+	ECC_aligned_flag = False
+
+	# apply median blur to highlight foreground features
+	img1Gray = cv2.medianBlur(img, 5)
+
+	# denoise grayscale image
+	#img1Gray = cv2.fastNlMeansDenoising(img1Gray, None, 3, 10, 7)
+
+	# detect ORB features and compute descriptors for input image
+	orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scaleFactor = 1.15,
+		nlevels = 10)
+	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
+	kp2, desc2 = orb.detectAndCompute(template, None)
+
+	# create brute-force matcher object and match descriptors
+	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
+	matches = bf.match(desc1, desc2)
+
+	# sort matches by score and remove poor matches
+	# matches with a score greater than 27 are removed
+	matches = sorted(matches, key = lambda x: x.distance)
+	matches = [x for x in matches if x.distance <= 27]
+	if len(matches) > 100:
+		matches = matches[:100]
+
+	# draw top matches
+	imgMatches = cv2.drawMatches(img, kp1, template, kp2, matches, None)
+
+	# extract location of good matches
+	points1 = np.zeros((len(matches), 2), dtype = np.float32)
+	points2 = np.zeros((len(matches), 2), dtype = np.float32)
+
+	for i, match in enumerate(matches):
+		points1[i, :] = kp1[match.queryIdx].pt
+		points2[i, :] = kp2[match.trainIdx].pt
+
+	# determine affine 2D transformation
+	# apply RANSAC robust method
+	affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
+		refineIters = 15, confidence = 0.995)[0]
+	height, width = template.shape
+
+	# set registered images to original images
+	# will be warped if the affine matrix is within spec
+	imgReg = img_apply
+	imgRegGray = img1Gray
+
+	# get mean squared error between affine matrix and zero matrix
+	zero_matrix = np.zeros((2,3), dtype=np.float32)
+	mean_squared_error = np.sum(np.square(abs(affine_matrix) - zero_matrix))
+
+	# update dataset
+	# if dataset isn't enabled, append mean squared error to dataset
+	if(not dataset_enabled and mean_squared_error <= max_mean_squared_error):
+		# add to queue
+		errorQueue.put(mean_squared_error)
+
+		# apply registration
+		imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
+		imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
+
+		# update flag
+		ORB_aligned_flag = True
+
+	# if dataset is enabled, compare matrix to mean
+	elif mean_squared_error <= max_mean_squared_error:
+		# get mean and standard deviation from dataset
+		mean = dataset[0][0]
+		std_dev = dataset[0][1]
+
+		# if mean squared error is within defined range (number of standard deviations)
+		if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
+			# apply registration
+			imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
+			imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
+
+			# add to queue
+			errorQueue.put(mean_squared_error)
+
+			# update flag
+			ORB_aligned_flag = True
+
+	# overly large mean squared error
+	else:
+		# use unaligned images
+		imgReg = img_apply
+		imgRegGray = img1Gray
+
+	# define ECC motion model
+	warp_mode = cv2.MOTION_AFFINE
+
+	# define 2x3 matrix
+	warp_matrix = np.eye(2, 3, dtype=np.float32)
+
+	# specify the number of iterations and threshold
+	number_iterations = 250
+	termination_thresh = 1e-5 if ORB_aligned_flag else 1e-7
+
+	# define termination criteria
+	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
+
+	# run ECC algorithm (results are stored in warp matrix)
+	warp_matrix = cv2.findTransformECC(template, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+
+	# only check if dataset enabled
+	if(dataset_enabled):
+		# compare warp matrix to data set
+		mean_squared_error = np.sum(np.square(abs(warp_matrix) - zero_matrix))
+
+		# get mean and standard deviation from dataset
+		mean = dataset[0][0]
+		std_dev = dataset[0][1]
+
+		# align image if warp is within spec
+		if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
+			# align image
+			imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+
+			# update flag
+			ECC_aligned_flag = True
+		# else use ORB registered image
+		else:
+			imgECCAligned = imgReg
+
+	# else align image
+	else:
+		# align image
+		imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+
+		# update flag
+		ECC_aligned_flag = True
+
+	# if in debugging mode
+	if(debug):
+		# add data to output
+		outputDict[name] = {
+			"ORB Aligned": ORB_aligned_flag,
+			"ORB Matrix": affine_matrix.tolist(),
+			"ECC Aligned": ECC_aligned_flag,
+			"ECC Matrix": warp_matrix.tolist()
+		}
+
+	# only if image was aligned (is not the same as input image)
+	if(ORB_aligned_flag or ECC_aligned_flag):
+		# write images to debug directories
+		if(debug):
+			cv2.imwrite(debug_directory_registered + name, imgECCAligned)
+			cv2.imwrite(debug_directory_matches + name, imgMatches)
+
+		# return image
+		return (imgECCAligned, name)
+
+	# return nothing if not aligned
+	else: return None
+
+# function to unpack arguments explicitly
+def unpackArgs(args):
+	# and call registration function
+	return registerParallel(*args)
+
+# function to align image to template using parallel pool
+# used for iterations with more than 5 images
+def alignImagesParallel(pool, manager, imgs, template, img_names, imgs_apply,
+	debug_directory_registered, debug_directory_matches, debug, dataset,
+	dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+
+	# adjust scaling from % to absolute
+	MAX_SCALING /= 100
+
+	# determine maximum mean squared error for non-initialized dataset
+	zero_matrix = np.zeros((2,3), dtype=np.float32)
+
+	# create affine matrix according to specified rotation, translation and scale
+	alpha = MAX_SCALING * np.cos(np.deg2rad(MAX_ROTATION))
+	beta = MAX_SCALING * np.sin(np.deg2rad(MAX_ROTATION))
+	affine_transform_matrix = np.array([
+		[alpha, beta, MAX_TRANSLATION],
+		[-beta, alpha, MAX_TRANSLATION]])
+
+	# determine mean squared error
+	max_mean_squared_error = np.sum(np.square(abs(affine_transform_matrix) - zero_matrix))
+
+	# blur template
+	img2Gray = cv2.medianBlur(template, 5)
+
+	# setup queue
+	mean_error_queue = manager.Queue()
+
+	# setup output dictionary
+	registration_output = manager.dict()
+
+	# create task list for pool
+	tasks = list()
+	for i, img in enumerate(imgs):
+		tasks.append((img, template, img_names[i], imgs_apply[i], debug, debug_directory_registered,
+			debug_directory_matches, dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
+			registration_output, mean_error_queue))
+
+	# lists for processed images
+	registeredImages = list()
+	registeredNames = list()
+
+	# run tasks using pool
+	for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total = len(tasks)):
+		if i != None: # if registered
+			image, name = i
+			registeredImages.append(image)
+			registeredNames.append(name)
+		pass
+
+	# update data set
+	if(dataset_enabled):
+		print "Updating Dataset..."
+
+		# get mean and standard deviation from dataset
+		mean = dataset[0][0]
+		std_dev = dataset[0][1]
+
+		# unpack queue
+		while not mean_error_queue.empty():
+			mean_squared_error = mean_error_queue.get()
+			num_vals_dataset = dataset[0][2]
+			new_vals_dataset = num_vals_dataset + 1
+			new_mean = ((mean * num_vals_dataset) + mean_squared_error) / new_vals_dataset
+			new_std_dev = np.sqrt(pow(std_dev, 2) + ((((mean_squared_error - mean) * (mean_squared_error - new_mean)) - \
+						pow(std_dev, 2)) / new_vals_dataset))
+			dataset = np.array([[new_mean, new_std_dev, new_vals_dataset], []])
+
+	# if in debugging mode
+	if(debug):
+		# output JSON file
+		file = open(debug_directory_registered + 'registered.json', 'w')
+		json.dump(dict(registration_output), file, sort_keys=True, indent=4, separators=(',', ': '))
+
+	# return list of registered images
+	return registeredImages, dataset, registeredNames
