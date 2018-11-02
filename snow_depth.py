@@ -11,13 +11,10 @@ import numpy as np
 import json
 import imutils
 from progress_bar import progress
-from equalize import equalize_hist
-from register import alignImages
 from check_stakes import getValidStakes
 from main import GUI
 from get_intersection import getIntersections
 from calculate_depth import getDepths
-from equalize import equalize_hist_colour
 from overlay_roi import overlay
 import Tkinter as tk
 import datetime
@@ -154,7 +151,7 @@ if __name__ == '__main__':
         from multiprocessing import cpu_count
         from multiprocessing import Queue
 
-        print("\nCreating Paralell Pool...")
+        print("\nCreating Parallel Pool...")
 
         # create pool with 75% as many processes as there are cores
         num_cores = float(cpu_count()) * 0.75
@@ -193,18 +190,25 @@ if __name__ == '__main__':
             template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
             paths_dict["equalized"], paths_dict["equalized-template"])
 
-    sys.exit()
-
     # ---------------------------------------------------------------------------------
     # Register Images to Template
     # ---------------------------------------------------------------------------------
 
+    # update number of images
+    num_imgs = len(images_equalized)
+
     print("\n\nRegistering Images")
 
-    # get registered images
-    images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
-        images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
-        ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+    if(num_imgs > 5):
+        from register import alignImagesParallel
+        images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, manager, images_equalized,
+            template_eq, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
+            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+    else:
+        from register import alignImages
+        images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
+            images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
+            ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
     # update registration dataset
     createDataset(template_name, template_data_set, dataset_enabled)
