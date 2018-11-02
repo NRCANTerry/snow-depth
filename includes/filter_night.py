@@ -1,51 +1,134 @@
 # import necessary modules
 import cv2
 import numpy as np
+from progress_bar import progress
+import os
+import statistics
+from colour_balance import balanceColour
+import tqdm
+import time
+import multiprocessing as m
 
-# parameters
-median_kernel_size = 5
-dilate_kernel = (5,5)
-min_pixel_count = 100
+# threshold for day image
+PERCENTAGE_THRESHOLD = 0.5
+HIST_LOW = 50
+HIST_HIGH = 200
 
-# function to determine if an image was taken at night
-def isDay(img, hsvRanges, blobSizes):
-	# determine whether single or double HSV range
-	numRanges = len(hsvRanges)
+# function that returns whether an image is day or not
+def isDay(img_name, directory, upperBorder, lowerBorder, imgQueue, nameQueue):
 
-	# get image shape
-	h, w = img.shape[:2]
+    # import image
+    img = cv2.imread(directory + img_name)
 
-	# reduce noise in image by local smoothing
-	img = cv2.medianBlur(img, median_kernel_size)
+    # get height and width
+    h, w = img.shape[:2]
 
-	# identify coloured regions in image
-	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-	mask = cv2.inRange(hsv, hsvRanges[0], hsvRanges[1])
+    # crop image
+    img = img[int(upperBorder):int(h-lowerBorder), :, :]
 
-	# apply second mask if required
-	if(numRanges == 4):
-		mask2 = cv2.inRange(hsv, hsvRanges[2], hsvRanges[3])
-		mask = cv2.bitwise_or(mask, mask2)
+    # get total number of pixels in image
+    sum_total = img.shape[:2][0] * img.shape[:2][1]
 
-	# erosion followed by dilation to reduce noise
-	kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
-	mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    # variable for number of pixels in range
+    num_px = 0
 
-	# find final coloured polygon regions
-	mask_filtered = np.zeros((h,w), dtype=np.uint8)
-	contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+    # get historgram for colour image
+    for i in range(0, 3):
+        histr = cv2.calcHist([img], [i], None, [256], [0, 256])
 
-	# set range as smallest to largest blob sizes
-	min_area = min(blobSizes, key = lambda y: y[0])[0]
-	max_area = max(blobSizes, key = lambda y: y[1])[1]
+        # determine number of pixels below in middle of histogram
+        num_px += float(np.sum(histr[HIST_LOW:HIST_HIGH]))
 
-	# filter by area
-	for cnt in contours:
-		contour_area = cv2.contourArea(cnt)
-		if(min_area <= contour_area <= max_area):
-			cv2.drawContours(mask_filtered, [cnt], 0, 255, -1)
+    # get mean percentage
+    mean_pct = (num_px / 3.0) / float(sum_total)
 
-	# count number of pixels within polygons
-	pixel_count = np.count_nonzero(mask_filtered)
+    # determine if image is night or day based on the mean percetange
+    # of pixels in the "dark" range
+    if(mean_pct > PERCENTAGE_THRESHOLD):
+        # add image to lists
+        imgQueue.put(balanceColour(img, 1))
+        nameQueue.put(img_name)
 
-	return pixel_count > min_pixel_count
+# function to unpack arguments explicitly
+def unpackArgs(args):
+    # and call isDay function
+    return isDay(*args)
+
+# parallel function to filter out night images
+def filterNightParallel(pool, manager, directory, upperBorder, lowerBorder):
+    # setup queues
+    images_filtered_queue = manager.Queue()
+    filtered_names_queue = manager.Queue()
+
+    # get file names
+    images = tuple([file_name for file_name in os.listdir(directory)])
+
+    # create list for pool
+    tasks = list()
+    for name in images:
+        tasks.append((name, directory, upperBorder, lowerBorder,
+            images_filtered_queue, filtered_names_queue))
+
+    # run tasks using pool
+    for _ in tqdm.tqdm(pool.imap_unordered(unpackArgs, tasks), total = len(tasks)):
+        pass
+
+    # unpack queues
+    print "Unpacking Queues..."
+    images_filtered = list()
+    filtered_names = list()
+    while not images_filtered_queue.empty():
+        images_filtered.append(images_filtered_queue.get())
+        filtered_names.append(filtered_names_queue.get())
+
+    # return lists
+    return images_filtered, filtered_names
+
+# non parallel function to process small batches of night images
+def filterNight(directory, upperBorder, lowerBorder):
+    # get file names
+    images = [file_name for file_name in os.listdir(directory)]
+
+    # determine number of images
+    num_images = len(images)
+
+    # lists for filtered images
+    images_filtered = list()
+    filtered_names = list()
+
+    # iterate through images
+    for img_name in tqdm.tqdm(images):
+        # import image
+        img = cv2.imread(directory + img_name)
+
+        # get height and width
+        h, w = img.shape[:2]
+
+        # crop image
+        img = img[upperBorder:(h-lowerBorder), :, :]
+
+        # get total number of pixels in image
+        sum_total = img.shape[:2][0] * img.shape[:2][1]
+
+        # variable for number of pixels in range
+        num_px = 0
+
+        # get historgram for colour image
+        for i in range(0, 3):
+            histr = cv2.calcHist([img], [i], None, [256], [0, 256])
+
+            # determine number of pixels below in middle of histogram
+            num_px += float(np.sum(histr[HIST_LOW:HIST_HIGH]))
+
+        # get mean percentage
+        mean_pct = (num_px / 3.0) / float(sum_total)
+
+        # determine if image is night or day based on the mean percetange
+        # of pixels in the "dark" range
+        if(mean_pct > PERCENTAGE_THRESHOLD):
+            # add image to lists
+            images_filtered.append(balanceColour(img, 1))
+            filtered_names.append(img_name)
+
+    # return lists
+    return images_filtered, filtered_names
