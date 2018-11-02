@@ -19,7 +19,6 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 	MAX_SCALING /= 100
 
 	# determine maximum mean squared error for non-initialized dataset
-	max_mean_squared_error = 1e10
 	zero_matrix = np.zeros((2,3), dtype=np.float32)
 
 	# create affine matrix according to specified rotation, translation and scale
@@ -75,9 +74,9 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 		matches = bf.match(desc1, desc2)
 
 		# sort matches by score and remove poor matches
-		# matches with a score greater than 30 are removed
+		# matches with a score greater than 27 are removed
 		matches = sorted(matches, key = lambda x: x.distance)
-		matches = [x for x in matches if x.distance <= 30]
+		matches = [x for x in matches if x.distance <= 27]
 		if len(matches) > 100:
 			matches = matches[:100]
 
@@ -112,7 +111,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 			# apply registration
 			imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
-			imgRegGray = cv2.warpAffine(img1Gray, affine_matrix, (width, height))
+			imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
 
 			# update flag
 			ORB_aligned_flag = True
@@ -127,7 +126,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
 				# apply registration
 				imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
-				imgRegGray = cv2.warpAffine(img1Gray, affine_matrix, (width, height))
+				imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
 
 				# update data set
 				num_vals_dataset = dataset[0][2]
@@ -154,7 +153,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# specify the number of iterations and threshold
 		number_iterations = 250
-		termination_thresh = 1e-6 if mean_squared_error <= max_mean_squared_error else 1e-8
+		termination_thresh = 1e-5 if ORB_aligned_flag else 1e-7
 
 		# define termination criteria
 		criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
