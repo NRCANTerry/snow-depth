@@ -79,7 +79,7 @@ def equalizeParallel(img, clipLimit, tileSize, name, debug, debug_directory,
 
 # function to unpack arguments explicitly
 def unpackArgs(args):
-    # and call isDay function
+    # and call equalization function
     return equalizeParallel(*args)
 
 # parallel function to equalize images
