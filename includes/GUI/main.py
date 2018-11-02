@@ -658,22 +658,6 @@ class GUI:
         os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
 
     # ---------------------------------------------------------------------------------
-    # Function to centre window
-    # ---------------------------------------------------------------------------------
-
-    def centre_window(self, window, width, height):
-        # get screen width and height
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-
-        # calculate position x and y coords
-        x = (screen_width/2) - (width/2)
-        y = (screen_height/2) - (height/2)
-
-        # centre window
-        window.geometry('%dx%d+%d+%d' % (width, height, x, y))
-
-    # ---------------------------------------------------------------------------------
     # Function to allow user to save HSV ranges to preferences file
     # ---------------------------------------------------------------------------------
 
@@ -1207,29 +1191,67 @@ class GUI:
         if(self.profileMenuVar.get() != 'Select Profile'):
             # create window
             newWindow = tk.Toplevel(self.root)
-            newWindow.configure(bg='#ffffff')
-            self.centre_window(newWindow, 450, 500)
+            newWindow.configure(bg=self.gray)
+
+            # frames
+            leftFrame = tk.Frame(newWindow, bg = self.gray)
+            rightFrame = tk.Frame(newWindow, bg = self.gray)
 
             # labels
-            titleLabel = tk.Label(newWindow, text = str(self.profileMenuVar.get()), bg = '#ffffff', fg = '#000000', font=("Calibri Light", 24))
-            upperBorderLabel = tk.Label(newWindow, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
-            lowerBorderLabel = tk.Label(newWindow, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
-            templateLabel = tk.Label(newWindow, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
-            clipLimitLabel = tk.Label(newWindow, text = "Clip Limit: " + str(self.systemParameters["Clip_Limit"]))
-            tileSizeLabel = tk.Label(newWindow, text = "Tile Size: " + str(self.systemParameters["Tile_Size"]))
+            titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg = self.gray, fg = self.white, font=("Calibri Light", 24))
+            upperBorderLabel = tk.Label(leftFrame, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
+            lowerBorderLabel = tk.Label(leftFrame, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
+            templateLabel = tk.Label(leftFrame, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
+            clipLimitLabel = tk.Label(leftFrame, text = "Clip Limit: " + str(self.systemParameters["Clip_Limit"]))
+            tileSizeLabel = tk.Label(leftFrame, text = "Tile Size: " + str(self.systemParameters["Tile_Size"]))
 
             labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel]
 
             for label in labels:
-                label.config(bg = "#ffffff", fg = "#000000", font=("Calibri Light", 16))
+                label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 16))
+
+            # canvas
+            screen_width = float(self.root.winfo_screenwidth())
+            screen_height = float(self.root.winfo_screenheight())
+
+            # import image
+            filename, extension = os.path.splitext(self.systemParameters["Current_Template_Path"])
+            markedPath = filename + "-marked" + extension
+            im = Image.open(markedPath)
+            width, height = im.size
+
+            # determine height and width for canvas
+            ratio = min(screen_width/float(width), screen_height/float(height)) * 0.8
+            imgWidth = int(float(width) * ratio)
+            imgHeight = int(float(height) * ratio)
+
+            # resize image and place in canvas
+            im = im.resize((imgWidth, imgHeight))
+            im = ImageTk.PhotoImage(im)
+            previewCanvas = tk.Canvas(rightFrame, width = imgWidth * 0.8, height = imgHeight,
+                bg = self.gray, scrollregion = (0, 0, imgWidth, imgHeight))
 
             # packing
+            leftFrame.pack(side = tk.LEFT, padx = 40)
             titleLabel.pack(pady = 20)
             upperBorderLabel.pack(pady = 10)
             lowerBorderLabel.pack(pady = 10)
             templateLabel.pack(pady = 10)
             clipLimitLabel.pack(pady = 10)
             tileSizeLabel.pack(pady = 10)
+
+            # canvas packing
+            rightFrame.pack(side = tk.RIGHT)
+
+            # setup scrollbars
+            h_bar = tk.Scrollbar(rightFrame, orient = tk.HORIZONTAL, command = previewCanvas.xview)
+            h_bar.pack(side = tk.BOTTOM, fill = tk.X)
+            v_bar = tk.Scrollbar(rightFrame, orient = tk.VERTICAL, command = previewCanvas.yview)
+            v_bar.pack(side = tk.RIGHT, fill = tk.Y)
+            previewCanvas.config(xscrollcommand = h_bar.set, yscrollcommand = v_bar.set)
+
+            previewCanvas.pack(side = tk.LEFT, expand = tk.YES, fill = tk.BOTH)
+            previewCanvas.create_image(0, 0, image = im, anchor = tk.NW)
 
             # wait until user closes window
             self.root.wait_window(newWindow)
