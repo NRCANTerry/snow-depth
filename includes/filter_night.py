@@ -15,8 +15,7 @@ HIST_LOW = 50
 HIST_HIGH = 200
 
 # function that returns whether an image is day or not
-def isDay(img_name, directory, upperBorder, lowerBorder, imgQueue, nameQueue):
-
+def isDay(img_name, directory, upperBorder, lowerBorder):
     # import image
     img = cv2.imread(directory + img_name)
 
@@ -45,9 +44,9 @@ def isDay(img_name, directory, upperBorder, lowerBorder, imgQueue, nameQueue):
     # determine if image is night or day based on the mean percetange
     # of pixels in the "dark" range
     if(mean_pct > PERCENTAGE_THRESHOLD):
-        # add image to lists
-        imgQueue.put(balanceColour(img, 1))
-        nameQueue.put(img_name)
+        return balanceColour(img, 1), img_name
+    else:
+        return None
 
 # function to unpack arguments explicitly
 def unpackArgs(args):
@@ -56,9 +55,9 @@ def unpackArgs(args):
 
 # parallel function to filter out night images
 def filterNightParallel(pool, manager, directory, upperBorder, lowerBorder):
-    # setup queues
-    images_filtered_queue = manager.Queue()
-    filtered_names_queue = manager.Queue()
+    # setup lists
+    images_filtered = list()
+    filtered_names = list()
 
     # get file names
     images = tuple([file_name for file_name in os.listdir(directory)])
@@ -66,20 +65,14 @@ def filterNightParallel(pool, manager, directory, upperBorder, lowerBorder):
     # create list for pool
     tasks = list()
     for name in images:
-        tasks.append((name, directory, upperBorder, lowerBorder,
-            images_filtered_queue, filtered_names_queue))
+        tasks.append((name, directory, upperBorder, lowerBorder))
 
     # run tasks using pool
-    for _ in tqdm.tqdm(pool.imap_unordered(unpackArgs, tasks), total = len(tasks)):
+    for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total = len(tasks)):
+        if i != None:
+            images_filtered.append(i[0])
+            filtered_names.append(i[1])
         pass
-
-    # unpack queues
-    print "Unpacking Queues..."
-    images_filtered = list()
-    filtered_names = list()
-    while not images_filtered_queue.empty():
-        images_filtered.append(images_filtered_queue.get())
-        filtered_names.append(filtered_names_queue.get())
 
     # return lists
     return images_filtered, filtered_names
