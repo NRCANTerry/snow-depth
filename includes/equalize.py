@@ -63,19 +63,17 @@ def equalize_hist(img, clip_limit, tile_size):
     return bgr
 
 # function to perform all equalizations in pool
-def equalizeParallel(img, clipLimit, tileSize, name, debug, debug_directory,
-    equalizedQueue, filteredQueue):
+def equalizeParallel(img, clipLimit, tileSize, name, debug, debug_directory):
     # equalize image according to specified parameters
     img_eq_gray = equalize_hist(img, clipLimit, tileSize)
     img_eq = equalize_hist_colour(img, clipLimit, tileSize)
 
-    # add to queues
-    filteredQueue.put(img_eq)
-    equalizedQueue.put(img_eq_gray)
-
     # if debugging write to directory
     if(debug):
         cv2.imwrite((debug_directory + name), img_eq)
+
+    # return equalized images
+    return img_eq_gray, img_eq
 
 # function to unpack arguments explicitly
 def unpackArgs(args):
@@ -85,27 +83,20 @@ def unpackArgs(args):
 # parallel function to equalize images
 def equalizeImagesParallel(pool, manager, images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img, debug_directory_template):
-    # setup queues
-    images_equalized_queue = manager.Queue()
-    images_filtered_queue = manager.Queue()
+    # setup lists
+    images_equalized = list()
+    images_filtered_eq = list()
 
     # create task list for pool
     tasks = list()
     for i, img in enumerate(images_filtered):
-        tasks.append((img, clipLimit, tileSize, filtered_names[i], debug, debug_directory_img,
-            images_equalized_queue, images_filtered_queue))
+        tasks.append((img, clipLimit, tileSize, filtered_names[i], debug, debug_directory_img))
 
     # run tasks using pool
-    for _ in tqdm.tqdm(pool.imap_unordered(unpackArgs, tasks), total = len(tasks)):
+    for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total = len(tasks)):
+        images_equalized.append(i[0])
+        images_filtered_eq.append(i[1])
         pass
-
-    # unpack queues
-    print "Unpacking Queues..."
-    images_equalized = list()
-    images_filtered = list()
-    while not images_filtered_queue.empty():
-        images_filtered.append(images_filtered_queue.get())
-        images_equalized.append(images_equalized_queue.get())
 
     # equalize and crop template
     template = cv2.imread(templatePath)
@@ -118,7 +109,7 @@ def equalizeImagesParallel(pool, manager, images_filtered, filtered_names, templ
         cv2.imwrite((debug_directory_template + os.path.split(templatePath)[1]), template_eq)
 
     # return equalized images
-    return images_equalized, images_filtered, template_eq
+    return images_equalized, images_filtered_eq, template_eq
 
 # non parallel function to equalize small batches of images
 def equalizeImages(images_filtered, filtered_names, templatePath, upperBorder,
