@@ -1375,7 +1375,7 @@ class GUI:
         # open new window
         newWindow = tk.Toplevel(self.root)
         newWindow.geometry("500x650")
-        newWindow.configure(background='#ffffff')
+        newWindow.configure(background=self.gray)
         newWindow.withdraw()
 
         # configure window closing protocol
@@ -1390,53 +1390,65 @@ class GUI:
             #newWindow.geometry("500x650") # window size of 500 x 650
 
             # create widgets
-            HSVSlidersLabel = tk.Label(newWindow,text="HSV Sliders",bg='#ffffff',fg='#000000',font=("Calibri Light", 24))
-            LowerLabel = tk.Label(newWindow,text="Lower",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))
-            UpperLabel = tk.Label(newWindow,text="Upper",bg='#ffffff',fg='#000000',font=("Calibri Light", 15))
+            HSVSlidersLabel = tk.Label(newWindow,text="HSV Sliders",bg=self.gray,fg=self.white,font=("Calibri Light", 24))
+            LowerLabel = tk.Label(newWindow,text="Lower",bg=self.gray,fg=self.white,font=("Calibri Light", 15))
+            UpperLabel = tk.Label(newWindow,text="Upper",bg=self.gray,fg=self.white,font=("Calibri Light", 15))
 
             # button
-            savetoMain = tk.Button(newWindow, text = "Save Values",bg = '#ffffff',fg = '#000000',command = lambda: saveValuestoMain(),
+            savetoMain = tk.Button(newWindow, text = "Save Values",bg = self.gray,fg = self.white,command = lambda: saveValuestoMain(),
                 width = 20,font=("Calibri Light", 15))
 
             # frames
-            Frame1 = tk.Frame(newWindow, background='#ffffff')
-            Frame2 = tk.Frame(newWindow, background='#ffffff')
-            Frame3 = tk.Frame(newWindow, background='#ffffff')
-            Frame4 = tk.Frame(newWindow, background='#ffffff')
-            Frame5 = tk.Frame(newWindow, background='#ffffff')
-            Frame6 = tk.Frame(newWindow, background='#ffffff')
+            Frame1 = tk.Frame(newWindow, background=self.gray)
+            Frame2 = tk.Frame(newWindow, background=self.gray)
+            Frame3 = tk.Frame(newWindow, background=self.gray)
+            Frame4 = tk.Frame(newWindow, background=self.gray)
+            Frame5 = tk.Frame(newWindow, background=self.gray)
+            Frame6 = tk.Frame(newWindow, background=self.gray)
 
             # H, S, and V Labels
-            H1Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            S1Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            V1Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            H1Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            S1Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            V1Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+            H1Lower = tk.Label(Frame1, text = "H", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            S1Lower = tk.Label(Frame2, text = "S", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            V1Lower = tk.Label(Frame3, text = "V", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            H1Upper = tk.Label(Frame4, text = "H", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            S1Upper = tk.Label(Frame5, text = "S", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            V1Upper = tk.Label(Frame6, text = "V", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
 
             # sliders
-            H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            H1Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S1Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V1Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            H2Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S2Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V2Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
 
             # second range H, S, and V Labels
-            H2Lower = tk.Label(Frame1, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            S2Lower = tk.Label(Frame2, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            V2Lower = tk.Label(Frame3, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            H2Upper = tk.Label(Frame4, text = "H", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            S2Upper = tk.Label(Frame5, text = "S", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
-            V2Upper = tk.Label(Frame6, text = "V", background= '#ffffff', foreground='#000000', font=("Calibri Light", 14))
+            H2Lower = tk.Label(Frame1, text = "H", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            S2Lower = tk.Label(Frame2, text = "S", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            V2Lower = tk.Label(Frame3, text = "V", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            H2Upper = tk.Label(Frame4, text = "H", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            S2Upper = tk.Label(Frame5, text = "S", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
+            V2Upper = tk.Label(Frame6, text = "V", background= self.gray, foreground= self.white, font=("Calibri Light", 14))
 
             # second range sliders
-            H3Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            S3Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            V3Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            H4Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            S4Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
-            V4Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= '#ffffff', length = 350, font = ("Calibri Light", 14), command = updateValues)
+            H3Slider = tk.Scale(Frame1, from_=0, to=180, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S3Slider = tk.Scale(Frame2, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V3Slider = tk.Scale(Frame3, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            H4Slider = tk.Scale(Frame4, from_=0, to=180, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            S4Slider = tk.Scale(Frame5, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
+            V4Slider = tk.Scale(Frame6, from_=0, to=255, orient = 'horizontal', background= self.gray, activebackground=self.gray, foreground=self.white, highlightbackground=self.gray,
+                highlightcolor = self.white, length = 350, font = ("Calibri Light", 14), command = updateValues)
 
             # list containing widgets for second HSV range
             secondRangeWidgets = [H2Lower, S2Lower, V2Lower, H2Upper, S2Upper, V2Upper, H3Slider, S3Slider, V3Slider, \
@@ -1448,8 +1460,11 @@ class GUI:
                 newWindow,
                 text="Second HSV Range",
                 variable= previewsecondHSVFlag,
-                background='#ffffff',
-                foreground='#000000',
+                background=self.gray,
+                foreground=self.white,
+                selectcolor=self.gray,
+                activebackground=self.gray,
+                activeforeground=self.white,
                 command=lambda: togglesecondHSVFlag(),
                 font=("Calibri Light", 14))
 
