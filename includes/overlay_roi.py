@@ -1,6 +1,7 @@
 # import necessary modules
 import cv2
 from progress_bar import progress
+import tqdm
 
 # optional function to overlay template roi (stake and blob bounding boxes)
 # onto registered images
@@ -8,11 +9,11 @@ def overlay(imgs, templateIntersections, roiCoordinates, upperBorder, img_names,
     # number of images
     num_images = len(imgs)
 
-    # iterate through images
-    for count, img_ in enumerate(imgs):
-        # update progress bar
-        progress(count + 1, num_images, status=img_names[count])
+    # image iterator
+    iterator = 0
 
+    # iterate through images
+    for img_ in tqdm.tqdm(imgs):
         # create write copy of image
         img_write = img_.copy()
 
@@ -34,4 +35,7 @@ def overlay(imgs, templateIntersections, roiCoordinates, upperBorder, img_names,
                         (int(rectangle[1][0]), int(rectangle[1][1])-upperBorder), (0, 255, 0), 3)
 
         # write image to debug directory
-        cv2.imwrite(debug_directory + img_names[count], img_write)
+        cv2.imwrite(debug_directory + img_names[iterator], img_write)
+
+        # increment iterator
+        iterator += 1
