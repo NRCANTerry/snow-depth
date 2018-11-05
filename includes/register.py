@@ -66,7 +66,8 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 		img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,3,10,7)
 
 		# detect ORB features and compute descriptors
-		orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
+		orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scaleFactor = 1.15,
+			nlevels = 10)
 		kp1, desc1 = orb.detectAndCompute(img1Gray, None)
 		kp2, desc2 = orb.detectAndCompute(img2Gray, None)
 
@@ -241,8 +242,7 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 	#img1Gray = cv2.fastNlMeansDenoising(img1Gray, None, 3, 10, 7)
 
 	# detect ORB features and compute descriptors for input image
-	orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scaleFactor = 1.15,
-		nlevels = 10)
+	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
 	kp1, desc1 = orb.detectAndCompute(img1Gray, None)
 	kp2, desc2 = orb.detectAndCompute(template, None)
 
@@ -327,8 +327,8 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 	warp_matrix = np.eye(2, 3, dtype=np.float32)
 
 	# specify the number of iterations and threshold
-	number_iterations = 250
-	termination_thresh = 1e-5 if ORB_aligned_flag else 1e-7
+	number_iterations = 500
+	termination_thresh = 1e-7 if ORB_aligned_flag else 1e-9
 
 	# define termination criteria
 	criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
