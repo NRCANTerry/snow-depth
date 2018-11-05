@@ -5,11 +5,12 @@ import xlsxwriter
 import statistics
 from matplotlib import pyplot as plt
 import math
+import tqdm
 
 # function to calculate the change in snow depth for each stake
 # using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
-    upperBorder, tensors, intersectionDist, blobDistTemplate, debug, debug_directory):
+    upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory):
 
     # list containing median depths for each image
     median_depths = list()
@@ -45,11 +46,11 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     row = 1
     col = 0
 
-    # iterate through images
-    for count, img_ in enumerate(imgs):
-        # update progress bar
-        progress(count + 1, num_images, status=img_names[count])
+    # image iterator
+    iterator = 0
 
+    # iterate through images
+    for img_ in tqdm.tqdm(imgs):
         # create an image to overlay points on if debugging
         if(debug):
             img_overlay = img_.copy()
@@ -59,7 +60,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
         estimate_stake = list()
 
         # get image name
-        img_name = img_names[count]
+        img_name = img_names[iterator]
 
         # reset column
         col = 0
@@ -85,13 +86,14 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
                     cv2.circle(img_overlay, (int(stake["average"][0]), int(stake["average"][1])), 5, (0,255,0), 2)
 
                 # calculate change in snow depth in mm
-                depth_change = ((templateIntersections[i][1] - upperBorder) - stake["average"][1]) * tensors[i]
+                tensor = actualTensors[img_name][i] if actualTensors[img_name][i] != True else tensors[i]
+                depth_change = ((templateIntersections[i][1] - upperBorder) - stake["average"][1]) * tensor
 
                 # calculate change in snow depth using blob distances
                 distances_stake = list()
                 for w, x in enumerate(intersection_dist_stake[i]):
                     if x != False:
-                        distances_stake.append((abs(blobDistTemplate[i][w]) - abs(x)) * tensors[i])
+                        distances_stake.append((abs(blobDistTemplate[i][w]) - abs(x)) * tensor)
                 distance_estimate = statistics.median(distances_stake) if len(distances_stake) > 0 else 0
 
                 # write to excel file
@@ -146,6 +148,9 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
         # increment row
         row += 1
+
+        # increment iterator
+        iterator += 1
 
     # close workbook
     workbook.close()
