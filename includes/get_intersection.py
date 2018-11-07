@@ -179,6 +179,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
                         # determine snow cover before peak
                         peak_index = peaks[index]
                         left_edge = properties["left_ips"][index]
+                        right_edge = properties["right_ips"][index]
                         peak_range = lineVals[:int(left_edge)]
                         peak_intensity = lineVals[peak_index]
                         snow_threshold = peak_intensity * 0.65 if peak_intensity < 200 else 125
@@ -202,8 +203,15 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
 
                         # get rgb value of peak
                         rgb_peak = img_[int(y[peak_index]), int(x[peak_index])]
+                        rgb_left_edge = img_[int(y[int(left_edge)]), int(x[int(left_edge)])]
                         rgb_proximity = np.amax(rgb_peak.astype(np.int32)) - np.amin(rgb_peak.astype(np.int32))
                         rgb_min = np.amin(rgb_peak.astype(np.int32))
+                        rgb_proximity_edge = np.amax(rgb_left_edge.astype(np.int32)) - np.amin(rgb_left_edge.astype(np.int32))
+                        rgb_min_edge = np.amin(rgb_left_edge.astype(np.int32))
+                        rgb_right_edge = img_[int(y[int(right_edge)]), int(x[int(right_edge)])]
+                        rgb_proximity_right = np.amax(rgb_right_edge.astype(np.int32)) - np.amin(rgb_right_edge.astype(np.int32))
+
+                        rgb_intersection = [rgb_proximity, rgb_proximity_edge, rgb_proximity_right]
 
                         # if peak meets conditions select it
                         if (
@@ -211,10 +219,10 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
                             and stake_cover > 0.5 # majority stake before peak
                             and (snow_cover > 0.5 or peak_width > 150 or (snow_cover > 0.35 and peak_width > 100)) # snow after peak
                             and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 100
-                                and float(peak_intensity) / float(next_peak_height) > 0.5)) # peak is sufficiently large
-                            and (peak_width > 100 or ((peak_width + peak_width_next > 100) and proximity_peak < 125
-                                and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
-                            and rgb_proximity < 40 and rgb_min > 200 # peak is white in colour
+                                and float(peak_intensity) / float(next_peak_height) > 0.65)) # peak is sufficiently large
+                            and (peak_width > 200 or num - peak_index < 200 or (peak_width + peak_width_next > 200
+                                and proximity_peak < 100 and (float(peak_width) / float(peak_width_next) > 0.33))) # peak is wide
+                            #and sum(w < 60 for w in rgb_intersection) >= 2 and (rgb_min > maxLineVal or peak_intensity < maxLineVal) # peak is white in colour
                         ):
                             # select peak
                             selected_peak = index
@@ -234,19 +242,21 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
                             and stake_cover > 0.4 # stake before peak
                             and peak_intensity > float(maxLineVal) * 0.75 # large enough
                             and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
-                            and rgb_proximity < 40 and rgb_min > 200 # peak is white in colour
+                            #and sum(w < 60 for w in rgb_intersection) >= 2 and (rgb_min > maxLineVal or peak_intensity < maxLineVal) # peak is white in colour
                         ):
                             selected_peak = index
                             major_peak = index
                             break
 
                         # if peak resembling grass/ground is found exit
-                        elif (
-                            stake_cover > 0.4
-                            and peak_intensity > float(maxLineVal) * 0.75
-                            and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75)
-                            and rgb_proximity > 50 and rgb_min < 190 # peak is not white
-                        ): break # exit
+                        #elif (
+                        #    stake_cover > 0.4
+                        #    and peak_intensity > float(maxLineVal) * 0.75
+                        #    and (snow_cover > 0.5 or peak_index > float(len(lineVals)) * 0.75)
+                        #    and sum(w > 60 for w in rgb_intersection) == 3 and rgb_min < maxLineVal
+                        #    and rgb_min_edge < maxLineVal # peak is not white
+                        #    and max(peakWidths) * 0.65 < peak_width # there are no more strong peaks
+                        #): break # exit
 
                     # calculate gradient of line
                     line_gradients_full = np.gradient(lineVals)
@@ -518,6 +528,7 @@ def intersectParallel(img_, boxCoords, stakeValidity, roiCoordinates, name,
                     # determine snow cover before peak
                     peak_index = peaks[index]
                     left_edge = properties["left_ips"][index]
+                    right_edge = properties["right_ips"][index]
                     peak_range = lineVals[:int(left_edge)]
                     peak_intensity = lineVals[peak_index]
                     snow_threshold = peak_intensity * 0.65 if peak_intensity < 200 else 125
@@ -541,8 +552,15 @@ def intersectParallel(img_, boxCoords, stakeValidity, roiCoordinates, name,
 
                     # get rgb value of peak
                     rgb_peak = img_[int(y[peak_index]), int(x[peak_index])]
+                    rgb_left_edge = img_[int(y[int(left_edge)]), int(x[int(left_edge)])]
                     rgb_proximity = np.amax(rgb_peak.astype(np.int32)) - np.amin(rgb_peak.astype(np.int32))
                     rgb_min = np.amin(rgb_peak.astype(np.int32))
+                    rgb_proximity_edge = np.amax(rgb_left_edge.astype(np.int32)) - np.amin(rgb_left_edge.astype(np.int32))
+                    rgb_min_edge = np.amin(rgb_left_edge.astype(np.int32))
+                    rgb_right_edge = img_[int(y[int(right_edge)]), int(x[int(right_edge)])]
+                    rgb_proximity_right = np.amax(rgb_right_edge.astype(np.int32)) - np.amin(rgb_right_edge.astype(np.int32))
+
+                    rgb_intersection = [rgb_proximity, rgb_proximity_edge, rgb_proximity_right]
 
                     # if peak meets conditions select it
                     if (
@@ -550,10 +568,10 @@ def intersectParallel(img_, boxCoords, stakeValidity, roiCoordinates, name,
                         and stake_cover > 0.5 # majority stake before peak
                         and (snow_cover > 0.5 or peak_width > 150 or (snow_cover > 0.35 and peak_width > 100)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 100
-                            and float(peak_intensity) / float(next_peak_height) > 0.5)) # peak is sufficiently large
-                        and (peak_width > 100 or ((peak_width + peak_width_next > 100) and proximity_peak < 125
-                            and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
-                        and rgb_proximity < 40 and rgb_min > 200 # peak is white in colour
+                            and float(peak_intensity) / float(next_peak_height) > 0.65)) # peak is sufficiently large
+                        and (peak_width > 200 or num - peak_index < 200 or (peak_width + peak_width_next > 200
+                            and proximity_peak < 100 and (float(peak_width) / float(peak_width_next) > 0.33))) # peak is wide
+                        #and sum(w < 60 for w in rgb_intersection) >= 2 and (rgb_min > maxLineVal or peak_intensity < maxLineVal) # peak is white in colour
                     ):
                         # select peak
                         selected_peak = index
@@ -573,19 +591,21 @@ def intersectParallel(img_, boxCoords, stakeValidity, roiCoordinates, name,
                         and stake_cover > 0.4 # stake before peak
                         and peak_intensity > float(maxLineVal) * 0.75 # large enough
                         and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
-                        and rgb_proximity < 40 and rgb_min > 200 # peak is white in colour
+                        #and sum(w < 60 for w in rgb_intersection) >= 2 and (rgb_min > maxLineVal or peak_intensity < maxLineVal) # peak is white in colour
                     ):
                         selected_peak = index
                         major_peak = index
                         break
 
                     # if peak resembling grass/ground is found exit
-                    elif (
-                        stake_cover > 0.4
-                        and peak_intensity > float(maxLineVal) * 0.75
-                        and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75)
-                        and rgb_proximity > 50 and rgb_min < 190 # peak is not white
-                    ): break # exit
+                    #elif (
+                    #    stake_cover > 0.4
+                    #    and peak_intensity > float(maxLineVal) * 0.75
+                    #    and (snow_cover > 0.5 or peak_index > float(len(lineVals)) * 0.75)
+                    #    and sum(w > 60 for w in rgb_intersection) == 3 and rgb_min < maxLineVal
+                    #    and rgb_min_edge < maxLineVal # peak is not white
+                    #    and max(peakWidths) * 0.65 < peak_width # there are no more strong peaks
+                    #): break # exit
 
                 # calculate gradient of line
                 line_gradients_full = np.gradient(lineVals)
