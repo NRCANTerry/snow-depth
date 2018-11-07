@@ -1,14 +1,10 @@
 # import necessary modules
 import cv2
-import numpy as np
-from progress_bar import progress
 import os
-import statistics
-from colour_balance import balanceColour
 import tqdm
-import time
 import multiprocessing as m
 from numpy import squeeze, asarray
+from colour_balance import balanceColour
 
 # Constant
 MAX_NIGHT = 2 # maximum difference between weighted means for night image
