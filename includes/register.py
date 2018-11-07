@@ -148,6 +148,9 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			imgReg = img_apply
 			imgRegGray = img1Gray
 
+		# write matches to debug directory
+		cv2.imwrite(debug_directory_matches + img_names[count], imgMatches)
+
 		# define ECC motion model
 		warp_mode = cv2.MOTION_AFFINE
 
@@ -174,7 +177,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			std_dev = dataset[0][1]
 
 			# align image if warp is within spec
-			if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
+			if (mean_squared_error <= max_mean_squared_error):#<= (mean+(std_dev*NUM_STD_DEV))):
 				# align image
 				imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
 
@@ -200,9 +203,8 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 			# add image name to filtered list
 			images_names_registered.append(img_names[count])
 
-			# write images to debug directories
+			# write image to debug directory
 			cv2.imwrite(debug_directory_registered + img_names[count], imgECCAligned)
-			cv2.imwrite(debug_directory_matches + img_names[count], imgMatches)
 
 		# if in debugging mode
 		if(debug):
@@ -320,6 +322,9 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 		imgReg = img_apply
 		imgRegGray = img1Gray
 
+	# write matches to debug directory
+	cv2.imwrite(debug_directory_matches + name, imgMatches)
+
 	# define ECC motion model
 	warp_mode = cv2.MOTION_AFFINE
 
@@ -346,7 +351,7 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 		std_dev = dataset[0][1]
 
 		# align image if warp is within spec
-		if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
+		if (mean_squared_error <= max_mean_squared_error):#(mean+(std_dev*NUM_STD_DEV))):
 			# align image
 			imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
 
@@ -376,10 +381,9 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 
 	# only if image was aligned (is not the same as input image)
 	if(ORB_aligned_flag or ECC_aligned_flag):
-		# write images to debug directories
+		# write image to debug directory
 		if(debug):
 			cv2.imwrite(debug_directory_registered + name, imgECCAligned)
-			cv2.imwrite(debug_directory_matches + name, imgMatches)
 
 		# return image
 		return (imgECCAligned, name)
