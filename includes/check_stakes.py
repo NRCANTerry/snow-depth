@@ -13,12 +13,25 @@ import tqdm
 median_kernel_size = 5
 dilate_kernel = (5,5)
 
+TRAINING_DATA = True # temporary flag to output training data for neural network
+
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 	img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV):
+
+	# create directories for training images
+	if(debug):
+		validPath = debug_directory + "valid/"
+		invalidPath = debug_directory + "invalid/"
+		os.mkdir(validPath)
+		os.mkdir(invalidPath)
+
+	# indexes for image names
+	validIndex = 0
+	invalidIndex = 0
 
 	# contains output data
 	stake_output = {}
@@ -113,7 +126,6 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					mask_open[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])]
 
 				# find final coloured polygon regions
-				#contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 				contours = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 				contour_index = 0
 
@@ -142,6 +154,13 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 255, 0), 3)
 
+						# write to training folder
+						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+							int(rectangle[0][0]):int(rectangle[1][0])]
+						train_name = "%d.JPG" % validIndex
+						cv2.imwrite(validPath + train_name, train_img)
+						validIndex += 1
+
 				# else add invalid blob
 				else:
 					validBlobs.append(False)
@@ -153,6 +172,13 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					if(debug):
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
+
+						# write to training folder
+						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+							int(rectangle[0][0]):int(rectangle[1][0])]
+						train_name = "%d.JPG" % invalidIndex
+						cv2.imwrite(invalidPath + train_name, train_img)
+						invalidIndex += 1
 
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
