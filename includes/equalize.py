@@ -4,6 +4,7 @@ import cv2
 import os
 import sys
 import tqdm
+from colour_balance import balanceColour
 
 # function to increase the brightness of an image
 def increase_brightness(img, val):
@@ -102,7 +103,8 @@ def equalizeImagesParallel(pool, manager, images_filtered, filtered_names, templ
     template = cv2.imread(templatePath)
     h_temp = template.shape[:2][0]
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
-    template_eq = equalize_hist(template, clipLimit, tileSize)
+    template_balanced = balanceColour(template, 5)
+    template_eq = equalize_hist(template_balanced, clipLimit, tileSize)
 
     # if debugging write to directory
     if(debug):
@@ -143,7 +145,8 @@ def equalizeImages(images_filtered, filtered_names, templatePath, upperBorder,
     template = cv2.imread(templatePath)
     h_temp = template.shape[:2][0]
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
-    template_eq = equalize_hist(template, clipLimit, tileSize)
+    template_balanced = balanceColour(template, 5)
+    template_eq = equalize_hist(template_balanced, clipLimit, tileSize)
 
     # if debugging write to directory
     if(debug):
