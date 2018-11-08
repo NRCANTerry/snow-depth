@@ -167,7 +167,7 @@ if __name__ == '__main__':
     # get filtered images and image names
     if(num_imgs > 50):
         from filter_night import filterNightParallel
-        images_filtered, filtered_names = filterNightParallel(pool, manager, directory,
+        images_filtered, filtered_names = filterNightParallel(pool, directory,
             img_border_upper, img_border_lower)
     else:
         from filter_night import filterNight
@@ -199,13 +199,13 @@ if __name__ == '__main__':
 
     print("\n\nRegistering Images")
 
-    if(num_imgs > 5):
+    if(num_imgs > 500):
         from register import alignImagesParallel
         images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, manager, images_equalized,
             template_eq, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
             template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
     else:
-        from register import alignImages
+        from register2 import alignImages
         images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
             images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
             ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
@@ -245,12 +245,13 @@ if __name__ == '__main__':
     print("\n\nDetermining Intersection Points")
 
     # get intersection points
-    if(num_imgs > 5):
+    if(num_imgs > 500):
         from get_intersection import getIntersectionsParallel
         intersection_coords, intersection_dist = getIntersectionsParallel(pool, manager, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"])
     else:
-        from get_intersection import getIntersections
+        #from get_intersection import getIntersections
+        from intersection2 import getIntersections
         intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
             filtered_names_reg, debug, paths_dict["intersection"])
 
