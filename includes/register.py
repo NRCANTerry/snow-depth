@@ -7,7 +7,7 @@ import json
 import tqdm
 
 # global variables
-MAX_FEATURES = int(3e5)
+MAX_FEATURES = int(1e7)#int(3e5)
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
@@ -66,7 +66,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 		img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,3,10,7)
 
 		# detect ORB features and compute descriptors
-		orb = cv2.ORB_create(nfeatures = MAX_FEATURES, scaleFactor = 1.15,
+		orb = cv2.ORB_create(nfeatures = 20000000, scaleFactor = 1.15,
 			nlevels = 10)
 		kp1, desc1 = orb.detectAndCompute(img1Gray, None)
 		kp2, desc2 = orb.detectAndCompute(img2Gray, None)
@@ -241,7 +241,7 @@ def registerParallel(img, template, name, img_apply, debug, debug_directory_regi
 	img1Gray = cv2.medianBlur(img, 5)
 
 	# denoise grayscale image
-	#img1Gray = cv2.fastNlMeansDenoising(img1Gray, None, 3, 10, 7)
+	img1Gray = cv2.fastNlMeansDenoising(img1Gray, None, 3, 10, 7)
 
 	# detect ORB features and compute descriptors for input image
 	orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
