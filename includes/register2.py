@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error
 import json
 
 # global variables
-MAX_FEATURES = int(1e7)
+MAX_FEATURES = 262144#int(1e7)
 
 # function to align image to template
 # the first image and template are already grayscale from clahe application
@@ -37,7 +37,7 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 	# blur template
 	#img2Gray = cv2.medianBlur(template, 5)
-	img2Gray = cv2.bilateralFilter(template, 9, 75, 75)
+	#img2Gray = cv2.bilateralFilter(template, 9, 75, 75)
 
 	# create output list for images
 	registeredImages = list()
@@ -62,15 +62,17 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
 
 		# apply median blur to highlight foreground features
 		#img1Gray = cv2.medianBlur(img, 5)
-		img1Gray = cv2.bilateralFilter(img, 9, 75, 75)
+		#img1Gray = cv2.bilateralFilter(img, 9, 75, 75)
 
 		# denoise grayscale image
-		img1Gray = cv2.fastNlMeansDenoising(img1Gray,None,3,10,7)
+		img1Gray = cv2.fastNlMeansDenoising(img,None,3,10,7)
+		#img1Gray = img
+		img2Gray = template
 
 		# detect ORB features and compute descriptors
 		orb = cv2.ORB_create(nfeatures = MAX_FEATURES)
-		kp1, desc1 = orb.detectAndCompute(img1Gray, None)
-		kp2, desc2 = orb.detectAndCompute(img2Gray, None)
+		kp1, desc1 = orb.detectAndCompute(img, None)
+		kp2, desc2 = orb.detectAndCompute(template, None)
 
 		# create brute-force matcher object and match descriptors
 		bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
