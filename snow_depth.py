@@ -179,14 +179,12 @@ if __name__ == '__main__':
 
     print("\n\nEqualizing Images")
 
-    if(num_imgs > 50):
-        #from equalize import equalizeImagesParallel
+    if(num_imgs > 500):
         from equalize import equalizeImageSetParallel
         images_equalized, images_filtered, template_eq = equalizeImageSetParallel(pool,
             images_filtered, filtered_names, template_path, img_border_upper, img_border_lower,
             clip_limit, tile_size, debug, paths_dict["equalized"], paths_dict["equalized-template"])
     else:
-        #from equalize import equalizeImages
         from equalize import equalizeImageSet
         images_equalized, images_filtered, template_eq = equalizeImageSet(images_filtered, filtered_names,
             template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
@@ -201,13 +199,13 @@ if __name__ == '__main__':
 
     print("\n\nRegistering Images")
 
-    if(num_imgs > 500):
+    if(num_imgs > 5):
         from register import alignImagesParallel
-        images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, manager, images_equalized,
+        images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, images_equalized,
             template_eq, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
             template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
     else:
-        from register2 import alignImages
+        from register import alignImages
         images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
             images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
             ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
