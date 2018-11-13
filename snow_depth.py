@@ -180,13 +180,15 @@ if __name__ == '__main__':
     print("\n\nEqualizing Images")
 
     if(num_imgs > 50):
-        from equalize import equalizeImagesParallel
-        images_equalized, images_filtered, template_eq = equalizeImagesParallel(pool, manager,
+        #from equalize import equalizeImagesParallel
+        from equalize import equalizeImageSetParallel
+        images_equalized, images_filtered, template_eq = equalizeImageSetParallel(pool,
             images_filtered, filtered_names, template_path, img_border_upper, img_border_lower,
             clip_limit, tile_size, debug, paths_dict["equalized"], paths_dict["equalized-template"])
     else:
-        from equalize import equalizeImages
-        images_equalized, images_filtered, template_eq = equalizeImages(images_filtered, filtered_names,
+        #from equalize import equalizeImages
+        from equalize import equalizeImageSet
+        images_equalized, images_filtered, template_eq = equalizeImageSet(images_filtered, filtered_names,
             template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
             paths_dict["equalized"], paths_dict["equalized-template"])
 
