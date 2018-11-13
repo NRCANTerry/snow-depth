@@ -87,6 +87,10 @@ def isDay(img, name):
             if(abs(wMeans[j] - wMeans[i]) > max_diff):
                 max_diff = abs(wMeans[j] - wMeans[i])
 
+    # if image is day denoise using bilateral filter
+    if max_diff > MAX_NIGHT:
+        img = cv2.bilateralFilter(img, 15, 80, 80)
+
     # return whether image is day or night
     return (max_diff > MAX_NIGHT, img, name)
 
