@@ -3,9 +3,10 @@ import cv2
 import numpy as np
 import json
 import tqdm
+from matplotlib import pyplot as plt
 
 # constants
-MAX_FEATURES = 262144#int(1e7)
+MAX_FEATURES = 262144
 
 def register(img, name, template, img_apply, debug, debug_directory_registered,
     debug_directory_matches, dataset, dataset_enabled, NUM_STD_DEV,
@@ -124,7 +125,7 @@ def register(img, name, template, img_apply, debug, debug_directory_registered,
 
     # specify the number of iterations and threshold
     number_iterations = 500
-    termination_thresh = 1e-7 if mean_squared_error <= max_mean_squared_error else 1e-9
+    termination_thresh = 1e-6 if mean_squared_error <= max_mean_squared_error else 1e-7
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
@@ -140,7 +141,7 @@ def register(img, name, template, img_apply, debug, debug_directory_registered,
         std_dev = dataset[0][1]
 
         # align image if warp is within spec
-        if (mean_squared_error <= (mean+(std_dev*NUM_STD_DEV))):
+        if (mean_squared_error_ecc <= (mean+(std_dev*NUM_STD_DEV))):
             # align image
             imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
             ECC_aligned_flag = True
@@ -435,9 +436,9 @@ def alignImagesParallel(pool, imgs, template, img_names, imgs_apply, debug_direc
     # create task list for pool
     tasks = list()
     for i, img in enumerate(imgs):
-        tasks.append(img, img_names[i], template, imgs_apply[i], debug,
+        tasks.append((img, img_names[i], template, imgs_apply[i], debug,
             debug_directory_registered, debug_directory_matches, dataset,
-            dataset_enabled, NUM_STD_DEV, max_mean_squared_error)
+            dataset_enabled, NUM_STD_DEV, max_mean_squared_error))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
