@@ -4,14 +4,17 @@ from progress_bar import progress
 import xlsxwriter
 import statistics
 from matplotlib import pyplot as plt
+import math
+import tqdm
 
 # function to calculate the change in snow depth for each stake
 # using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
-    upperBorder, tensors, intersectionDist, blobDistTemplate, debug, debug_directory):
+    upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory):
 
     # list containing median depths for each image
     median_depths = list()
+    median_depths_est = list()
 
     # contains output data for JSON file
     depth_output = {}
@@ -26,7 +29,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     dest = str(debug_directory) + 'snow-depths.xlsx'
     workbook = xlsxwriter.Workbook(dest)
     worksheet = workbook.add_worksheet()
-    worksheet.set_column(0, len(tensors) + 1, 20)
+    worksheet.set_column(0, len(tensors) + 2, 25)
 
     # create format
     cell_format = workbook.add_format()
@@ -35,6 +38,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     # add titles
     worksheet.write(0, 0, "Image", cell_format)
     worksheet.write(0, len(tensors) + 1, "Median Depth (mm)", cell_format)
+    worksheet.write(0, len(tensors) + 2, "Median Estimate (mm)", cell_format)
     for i, j in enumerate(tensors):
         worksheet.write(0, i+1, ("Stake %s" % str(i)), cell_format)
 
@@ -42,20 +46,21 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     row = 1
     col = 0
 
-    # iterate through images
-    for count, img_ in enumerate(imgs):
-        # update progress bar
-        progress(count + 1, num_images, status=img_names[count])
+    # image iterator
+    iterator = 0
 
+    # iterate through images
+    for img_ in tqdm.tqdm(imgs):
         # create an image to overlay points on if debugging
         if(debug):
             img_overlay = img_.copy()
 
         # list to hold calculated depths
         depths_stake = list()
+        estimate_stake = list()
 
         # get image name
-        img_name = img_names[count]
+        img_name = img_names[iterator]
 
         # reset column
         col = 0
@@ -81,13 +86,14 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
                     cv2.circle(img_overlay, (int(stake["average"][0]), int(stake["average"][1])), 5, (0,255,0), 2)
 
                 # calculate change in snow depth in mm
-                depth_change = ((templateIntersections[i][1] - upperBorder) - stake["average"][1]) * tensors[i]
+                tensor = actualTensors[img_name][i] if actualTensors[img_name][i] != True else tensors[i]
+                depth_change = ((templateIntersections[i][1] - upperBorder) - stake["average"][1]) * tensor
 
                 # calculate change in snow depth using blob distances
                 distances_stake = list()
                 for w, x in enumerate(intersection_dist_stake[i]):
                     if x != False:
-                        distances_stake.append((abs(blobDistTemplate[i][w]) - abs(x)) * tensors[i])
+                        distances_stake.append((abs(blobDistTemplate[i][w]) - abs(x)) * tensor)
                 distance_estimate = statistics.median(distances_stake) if len(distances_stake) > 0 else 0
 
                 # write to excel file
@@ -95,6 +101,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
                 # add to list
                 depths_stake.append(depth_change)
+                estimate_stake.append(distance_estimate)
 
             # if stake wasn't valid or intersection point not found
             else:
@@ -107,6 +114,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
                 # append false to array
                 depths_stake.append(False)
+                estimate_stake.append(False)
 
         # output debug image
         if(debug):
@@ -117,22 +125,32 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
         # determine median depth
         valid_depths = [x for x in depths_stake if x != False]
+        valid_estimates = [x for x in estimate_stake if x != False]
+
         if(len(valid_depths) > 0):
             median = statistics.median(valid_depths)
+            median_est = statistics.median(valid_estimates)
         else:
             median = False
+            median_est = False
 
         # add to median depth list
         median_depths.append(median)
+        median_depths_est.append(median_est)
 
         # write median to excel file
         if median != False:
             worksheet.write(row, len(tensors) + 1, "%.2f" % median, cell_format)
+            worksheet.write(row, len(tensors) + 2, "%.2f" % median_est, cell_format)
         else:
             worksheet.write(row, len(tensors) + 1, "n/a", cell_format)
+            worksheet.write(row, len(tensors) + 2, "n/a", cell_format)
 
         # increment row
         row += 1
+
+        # increment iterator
+        iterator += 1
 
     # close workbook
     workbook.close()
@@ -140,6 +158,8 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     # generate plot
     fig,ax = plt.subplots(1)
     plt.plot(img_names, median_depths)
+    plt.plot(img_names, median_depths_est)
+    plt.legend(['Median Depth', 'Median Estimate'], loc='upper left')
     ax.set_xlabel("Images")
     ax.set_ylabel("Change (mm)")
     ax.set_title("Change in Snow Depth (mm)")

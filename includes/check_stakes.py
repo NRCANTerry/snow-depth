@@ -7,20 +7,31 @@ from order_points import orderPoints
 import os
 from get_tensor import getTensor
 import statistics
+import tqdm
 
 # parameters
 median_kernel_size = 5
 dilate_kernel = (5,5)
 
-# number of standard deviations away from the mean the tensor can be
-NUM_STD_DEV = 5
+TRAINING_DATA = True # temporary flag to output training data for neural network
 
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
-	img_names, debug_directory, dataset, dataset_enabled):
+	img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV):
+
+	# create directories for training images
+	if(debug):
+		validPath = debug_directory + "valid/"
+		invalidPath = debug_directory + "invalid/"
+		os.mkdir(validPath)
+		os.mkdir(invalidPath)
+
+	# indexes for image names
+	validIndex = 0
+	invalidIndex = 0
 
 	# contains output data
 	stake_output = {}
@@ -37,11 +48,14 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 	# dictionary for blob indexes
 	blobIndexes = dict()
 
-	# iterate through images
-	for count, img_ in enumerate(imgs):
-		# update progress bar
-		progress(count + 1, num_images, status=img_names[count])
+	# dictionary for stake tensosr
+	actualTensors = dict()
 
+	# image iterator
+	iterator = 0
+
+	# iterate through images
+	for img_ in tqdm.tqdm(imgs):
 		# duplicate image
 		img = img_.copy()
 		img_low_blob = img.copy()
@@ -60,6 +74,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 		# create list for actual blob coordinates
 		actualCoordsStake = list()
+
+		# create list for stake tensors
+		actualTensorsStake = list()
 
 		# reduce noise in image by local smoothing
 		img_blur = cv2.medianBlur(img, median_kernel_size)
@@ -105,11 +122,10 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				bottom_right = (rectangle[1][0], rectangle[1][1]-upper_border)
 
 				# copy ROI to zero image
-				mask[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]] = \
-					mask_open[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
+				mask[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])] = \
+					mask_open[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])]
 
 				# find final coloured polygon regions
-				#contours = cv2.findContours(mask_open.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 				contours = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
 				contour_index = 0
 
@@ -138,6 +154,13 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 255, 0), 3)
 
+						# write to training folder
+						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+							int(rectangle[0][0]):int(rectangle[1][0])]
+						train_name = "%d.JPG" % validIndex
+						cv2.imwrite(validPath + train_name, train_img)
+						validIndex += 1
+
 				# else add invalid blob
 				else:
 					validBlobs.append(False)
@@ -149,6 +172,13 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					if(debug):
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
+
+						# write to training folder
+						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+							int(rectangle[0][0]):int(rectangle[1][0])]
+						train_name = "%d.JPG" % invalidIndex
+						cv2.imwrite(invalidPath + train_name, train_img)
+						invalidIndex += 1
 
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
@@ -204,6 +234,12 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			if(not dataset_enabled[j]):
 				dataset[j][1].append(mean_tensor)
 
+				# add tensor to list
+				if(validBlobsOnStake > 4):
+					actualTensorsStake.append(mean_tensor)
+				else:
+					actualTensorsStake.append(True) # use template tensor
+
 			# if dataset is enabled, compare tensor to mean
 			else:
 				# get mean and standard deviation from dataset
@@ -221,9 +257,18 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					 			pow(std_dev, 2)) / new_vals_dataset))
 					dataset[j] = np.array([[new_mean, new_std_dev, new_vals_dataset], []])
 
+					# add tensor to list
+					if(validBlobsOnStake > 4):
+						actualTensorsStake.append(mean_tensor)
+					else:
+						actualTensorsStake.append(True) # use template tensor
+
 				# update flag to indicate bad tensor match
 				else:
 					tensorValid = False
+
+					# add False to list
+					actualTensorsStake.append(False)
 
 			# determine if stake is valid
 			# need at minimum 2 blobs for stake to be valid
@@ -266,8 +311,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		# if in debugging mode
 		if(debug):
 			# write images to debug directory
-			filename, file_extension = os.path.splitext(img_names[count])
-			cv2.imwrite(debug_directory + img_names[count], img)
+			filename, file_extension = os.path.splitext(img_names[iterator])
+			cv2.imwrite(debug_directory + img_names[iterator], img)
 			cv2.imwrite(debug_directory + filename + '-boxes' + file_extension, img_low_blob)
 
 			# create temporary dictionary
@@ -281,15 +326,19 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				stake_dict_coords_low['stake' + str(x)] = blobCoordsStake[x][0:4]
 				stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
 
-			stake_output[img_names[count]] = {
+			stake_output[img_names[iterator]] = {
 				"validity": stake_dict,
 				"lower blob": stake_dict_coords_low,
 				"upper blob": stake_dict_coords_high
 			}
 
 		# add data to return dictionaries
-		validImages[img_names[count]] = validStakes
-		blobCoords[img_names[count]] = actualCoordsStake
+		validImages[img_names[iterator]] = validStakes
+		blobCoords[img_names[iterator]] = actualCoordsStake
+		actualTensors[img_names[iterator]] = actualTensorsStake
+
+		# increment iterator
+		iterator += 1
 
 	# if in debugging mode
 	if(debug):
@@ -298,4 +347,4 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
 	# return list of valid stakes
-	return validImages, blobCoords, dataset
+	return validImages, blobCoords, dataset, actualTensors
