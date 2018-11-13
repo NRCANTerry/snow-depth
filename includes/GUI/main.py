@@ -20,7 +20,6 @@ from get_intersection import lineIntersections
 from scipy import ndimage
 import statistics
 from get_tensor import getTensor
-from equalize import equalize_hist_colour
 import matplotlib
 from matplotlib import pyplot as plt
 from progress_bar import progress
