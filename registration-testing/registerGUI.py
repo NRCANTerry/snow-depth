@@ -237,7 +237,7 @@ print("Aligning images ...")
 
 # Registered image stored in imReg
 # Estimated homography stored in h
-imReg, Matches, warp_matrix = alignImages3(img.copy(), imReference.copy())
+imReg, Matches, warp_matrix, k = alignImages3(img.copy(), imReference.copy())
 
 '''
 # Convert images to grayscale
@@ -279,10 +279,12 @@ else :
 # write aligned image to disk
 outputFile = "aligned.jpg"
 outputMatch = "matches.jpg"
+outputFilek = "alignedk.jpg"
 #outputFile = "MFD.jpg"
 print("Saving aligned image :", outputFile)
 cv2.imwrite(outputFile, imReg)
 cv2.imwrite(outputMatch, Matches)
+cv2.imwrite(outputFilek, k)
 #cv2.imwrite(outputFile, im2_aligned)
 
 # print estimated homography
