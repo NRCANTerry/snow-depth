@@ -106,8 +106,12 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     @return img_eq colour equalized image
     '''
 
+    # denoise using bilateral filter
+    img_filter = cv2.bilateralFilter(img.copy(), 9, 75, 75)
+    img_filter = cv2.fastNlMeansDenoising(img_filter, None, 3, 7, 7)
+
     # equqlize image according to specified parameters
-    img_eq_gray = equalizeHist(img, clipLimit, tileSize)
+    img_eq_gray = equalizeHist(img_filter, clipLimit, tileSize)
     img_eq = equalizeHistColour(img, clipLimit, tileSize)
 
     # if debugging write to directory
@@ -140,7 +144,7 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
 
     # return equalized template
-    return equalizeHist(balanceColour(template, 5), clipLimit, tileSize)
+    return equalizeHist(template, clipLimit, tileSize)#equalizeHist(balanceColour(template, 5), clipLimit, tileSize)
 
 def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
@@ -275,7 +279,7 @@ def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath
 
     # if debugging write to directory
     if(debug):
-        cv2.imwrite(debug_directory + os.path.split(templatePath)[1], template_eq)
+        cv2.imwrite(debug_directory_template + os.path.split(templatePath)[1], template_eq)
 
     # return equalized images
-    return images_equalized, images_filtered, template_eq
+    return images_equalized, images_filtered_eq, template_eq
