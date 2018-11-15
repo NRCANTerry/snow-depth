@@ -21,6 +21,7 @@ import time
 from colour_balance import balanceColour
 from update_dataset import createDataset
 from update_dataset import createDatasetTensor
+import tqdm
 
 if __name__ == '__main__':
     # create GUI window
@@ -137,7 +138,7 @@ if __name__ == '__main__':
         os.mkdir(paths_dict["intersection"])
 
     # ---------------------------------------------------------------------------------
-    # Setup paralell pool
+    # Setup parallel pool
     # ---------------------------------------------------------------------------------
 
     # number of images
@@ -171,7 +172,7 @@ if __name__ == '__main__':
             img_border_upper, img_border_lower)
     else:
         from filter_night import filterNight
-        images_filtered, filtered_names = filterNight(directory, img_border_upper, img_border_lower)
+        images_filtered, filtered_names, ratio = filterNight(directory, img_border_upper, img_border_lower)
 
     # ---------------------------------------------------------------------------------
     # Equalize Images
@@ -179,16 +180,16 @@ if __name__ == '__main__':
 
     print("\n\nEqualizing Images")
 
-    if(num_imgs > 500):
+    if(num_imgs > 50):
         from equalize import equalizeImageSetParallel
-        images_equalized, images_filtered, template_eq = equalizeImageSetParallel(pool,
+        images_equalized, images_filtered, template_eq, template = equalizeImageSetParallel(pool,
             images_filtered, filtered_names, template_path, img_border_upper, img_border_lower,
             clip_limit, tile_size, debug, paths_dict["equalized"], paths_dict["equalized-template"])
     else:
         from equalize import equalizeImageSet
-        images_equalized, images_filtered, template_eq = equalizeImageSet(images_filtered, filtered_names,
-            template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
-            paths_dict["equalized"], paths_dict["equalized-template"])
+        images_equalized, images_filtered, template_eq, template = equalizeImageSet(images_filtered,
+            filtered_names, template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
+            paths_dict["equalized"], paths_dict["equalized-template"], ratio)
 
     # ---------------------------------------------------------------------------------
     # Register Images to Template
@@ -202,16 +203,34 @@ if __name__ == '__main__':
     if(num_imgs > 5):
         from register import alignImagesParallel
         images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, images_equalized,
-            template_eq, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
+            template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
             template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
     else:
         from register import alignImages
-        images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, filtered_names,
-            images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set, dataset_enabled,
-            ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+        images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, template,
+            filtered_names,images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
+            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
     # update registration dataset
     createDataset(template_name, template_data_set, dataset_enabled)
+
+    # ---------------------------------------------------------------------------------
+    # Get Date and Time of Images from EXIF data
+    # ---------------------------------------------------------------------------------
+
+    print("\n\nExtracting EXIF Data")
+
+    from PIL import Image
+    from datetime import datetime
+
+    image_dates = list() # list for image EXIF data
+    for img in tqdm.tqdm(filtered_names_reg):
+        pil_im = Image.open(directory+img)
+        exif = pil_im._getexif()
+        if exif is not None: # if exif data exists
+            image_dates.append(datetime.strptime(exif[36867], '%Y:%m:%d %H:%M:%S'))
+        else:
+            image_dates.append(img)
 
     # ---------------------------------------------------------------------------------
     # Overlay ROI from template onto images
@@ -245,13 +264,15 @@ if __name__ == '__main__':
     print("\n\nDetermining Intersection Points")
 
     # get intersection points
-    if(num_imgs > 500):
-        from get_intersection import getIntersectionsParallel
-        intersection_coords, intersection_dist = getIntersectionsParallel(pool, manager, images_registered, blob_coords, stake_validity,
+    if(num_imgs > 5):
+        #from get_intersection import getIntersectionsParallel
+        from intersect import getIntersectionsParallel
+        intersection_coords, intersection_dist = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"])
     else:
         #from get_intersection import getIntersections
-        from intersection2 import getIntersections
+        #from intersection2 import getIntersections
+        from intersect import getIntersections
         intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
             filtered_names_reg, debug, paths_dict["intersection"])
 
@@ -264,9 +285,10 @@ if __name__ == '__main__':
     # get snow depths
     depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
         template_intersections, img_border_upper, template_tensor, actual_tensors, intersection_dist,
-        blob_distances_template, debug, paths_dict["snow-depth"])
+        blob_distances_template, debug, paths_dict["snow-depth"], image_dates)
 
     # display run time
-    print("\n\nRun Time: %.2f s" % (time.time() - start))
+    runtime = time.time() - start
+    print("\n\nRun Time: %.2f s (%.2f s/img)" % (runtime, runtime / float(num_imgs)))
 
     sys.exit()
