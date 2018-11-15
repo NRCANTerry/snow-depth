@@ -6,11 +6,14 @@ import statistics
 from matplotlib import pyplot as plt
 import math
 import tqdm
+import numpy as np
+import datetime
 
 # function to calculate the change in snow depth for each stake
 # using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
-    upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory):
+    upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory,
+    image_dates):
 
     # list containing median depths for each image
     median_depths = list()
@@ -29,7 +32,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     dest = str(debug_directory) + 'snow-depths.xlsx'
     workbook = xlsxwriter.Workbook(dest)
     worksheet = workbook.add_worksheet()
-    worksheet.set_column(0, len(tensors) + 2, 25)
+    worksheet.set_column(0, len(tensors) + 3, 25)
 
     # create format
     cell_format = workbook.add_format()
@@ -37,10 +40,11 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
     # add titles
     worksheet.write(0, 0, "Image", cell_format)
-    worksheet.write(0, len(tensors) + 1, "Median Depth (mm)", cell_format)
-    worksheet.write(0, len(tensors) + 2, "Median Estimate (mm)", cell_format)
+    worksheet.write(0, 1, "Date", cell_format)
+    worksheet.write(0, len(tensors) + 2, "Median Depth (mm)", cell_format)
+    worksheet.write(0, len(tensors) + 3, "Median Estimate (mm)", cell_format)
     for i, j in enumerate(tensors):
-        worksheet.write(0, i+1, ("Stake %s" % str(i)), cell_format)
+        worksheet.write(0, i+2, ("Stake %s" % str(i)), cell_format)
 
     # start from the first cell
     row = 1
@@ -67,7 +71,9 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
 
         # write to excel file
         worksheet.write(row, col, img_name, cell_format)
-        col = 1
+        if isinstance(image_dates[iterator], datetime.datetime):
+            worksheet.write(row, col + 1, image_dates[iterator].strftime('%x %X'), cell_format)
+        col = 2
 
         # get intersection coordiantes
         coords_stake = intersectionCoords[img_name]
@@ -139,12 +145,15 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
         median_depths_est.append(median_est)
 
         # write median to excel file
-        if median != False:
-            worksheet.write(row, len(tensors) + 1, "%.2f" % median, cell_format)
-            worksheet.write(row, len(tensors) + 2, "%.2f" % median_est, cell_format)
+        if median != False and median > 0:
+            worksheet.write(row, len(tensors) + 2, "%.2f" % median, cell_format)
+            worksheet.write(row, len(tensors) + 3, "%.2f" % median_est, cell_format)
+        elif median != False:
+            worksheet.write(row, len(tensors) + 2, "0.0", cell_format)
+            worksheet.write(row, len(tensors) + 3, "0.0", cell_format)
         else:
-            worksheet.write(row, len(tensors) + 1, "n/a", cell_format)
             worksheet.write(row, len(tensors) + 2, "n/a", cell_format)
+            worksheet.write(row, len(tensors) + 3, "n/a", cell_format)
 
         # increment row
         row += 1
@@ -155,10 +164,15 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     # close workbook
     workbook.close()
 
+    # remove negative values
+    median_depths = np.asarray(median_depths).clip(0)
+    median_depths_est = np.asarray(median_depths_est).clip(0)
+
     # generate plot
     fig,ax = plt.subplots(1)
-    plt.plot(img_names, median_depths)
-    plt.plot(img_names, median_depths_est)
+    plt.plot(image_dates, median_depths)
+    plt.plot(image_dates, median_depths_est)
+    plt.gcf().autofmt_xdate()
     plt.legend(['Median Depth', 'Median Estimate'], loc='upper left')
     ax.set_xlabel("Images")
     ax.set_ylabel("Change (mm)")
@@ -167,7 +181,7 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     plt.tight_layout()
 
     # only show ever 4th label
-    [label.set_visible(False) for (i,label) in enumerate(ax.get_xaxis().get_ticklabels()) if i % 4 != 0]
+    #[label.set_visible(False) for (i,label) in enumerate(ax.get_xaxis().get_ticklabels()) if i % 4 != 0]
 
     # save figure
     plt.savefig(debug_directory + "depth-graph.jpg")
