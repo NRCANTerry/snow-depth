@@ -8,9 +8,9 @@ from matplotlib import pyplot as plt
 # constants
 MAX_FEATURES = 262144
 
-def register(img, name, template, img_apply, debug, debug_directory_registered,
-    debug_directory_matches, dataset, dataset_enabled, NUM_STD_DEV,
-    max_mean_squared_error):
+def register(img, name, template, template_reduced_noise, img_apply, debug,
+    debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
+    NUM_STD_DEV, max_mean_squared_error):
     '''
     Function to align image to template
     @param img image to be aligned
@@ -61,7 +61,7 @@ def register(img, name, template, img_apply, debug, debug_directory_registered,
     # detect ORB features and compute descriptors
     orb = cv2.ORB_create(nfeatures=MAX_FEATURES)
     kp1, desc1 = orb.detectAndCompute(img, None)
-    kp2, desc2 = orb.detectAndCompute(template, None)
+    kp2, desc2 = orb.detectAndCompute(template_reduced_noise, None)
 
     # create brute-force matcher object and match descriptors
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -124,8 +124,8 @@ def register(img, name, template, img_apply, debug, debug_directory_registered,
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
     # specify the number of iterations and threshold
-    number_iterations = 500
-    termination_thresh = 1e-6 if mean_squared_error <= max_mean_squared_error else 1e-7
+    number_iterations = 250#1000
+    termination_thresh = 1e-5#1e-7
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
@@ -240,9 +240,9 @@ def updateDataset(dataset, MSE_vals, dataset_enabled):
     # return updated dataset
     return dataset
 
-def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registered,
-    debug_directory_matches, debug, dataset, dataset_enabled, MAX_ROTATION,
-    MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
+    debug_directory_registered, debug_directory_matches, debug, dataset,
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
     '''
     Align a set of images to the provided template
     @param imgs the images to be aligned
@@ -308,9 +308,9 @@ def alignImages(imgs, template, img_names, imgs_apply, debug_directory_registere
         img_apply = imgs_apply[count]
 
         # align image
-        output = register(img, img_names[count], template, img_apply, debug,
-            debug_directory_registered, debug_directory_matches, dataset,
-            dataset_enabled, NUM_STD_DEV, max_mean_squared_error)
+        output = register(img, img_names[count], template, template_reduced_noise,
+            img_apply, debug, debug_directory_registered, debug_directory_matches,
+            dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error)
 
         # if image was aligned
         if output[0] is not None:
@@ -371,9 +371,9 @@ def unpackArgs(args):
     '''
     return register(*args)
 
-def alignImagesParallel(pool, imgs, template, img_names, imgs_apply, debug_directory_registered,
-    debug_directory_matches, debug, dataset, dataset_enabled, MAX_ROTATION,
-    MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
+     imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
     '''
     Align a set of images to the provided template using a parallel pool to
         improve efficiency when working with large image sets
@@ -436,9 +436,9 @@ def alignImagesParallel(pool, imgs, template, img_names, imgs_apply, debug_direc
     # create task list for pool
     tasks = list()
     for i, img in enumerate(imgs):
-        tasks.append((img, img_names[i], template, imgs_apply[i], debug,
-            debug_directory_registered, debug_directory_matches, dataset,
-            dataset_enabled, NUM_STD_DEV, max_mean_squared_error))
+        tasks.append((img, img_names[i], template, template_reduced_noise,
+            imgs_apply[i], debug, debug_directory_registered, debug_directory_matches,
+            dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
