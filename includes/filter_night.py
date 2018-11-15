@@ -123,6 +123,12 @@ def filterNight(directory, upperBorder, lowerBorder):
         # crop image
         img = img[upperBorder:(h-lowerBorder), :, :]
 
+        # resize if too large
+        ratio = -1 # temp value
+        #if h - lowerBorder > 1080 or w > 1920:
+        #    ratio = min(1920.0/float(w), 1080.0/float(h-lowerBorder))
+        #    img = cv2.resize(img, None, fx=ratio, fy=ratio)
+
         # determine whether image is day or night
         output = isDay(img, img_name)
         if(output[0]):
@@ -131,7 +137,7 @@ def filterNight(directory, upperBorder, lowerBorder):
             filtered_names.append(img_name)
 
     # return lists
-    return images_filtered, filtered_names
+    return images_filtered, filtered_names, ratio
 
 def unpackArgs(args):
     '''
