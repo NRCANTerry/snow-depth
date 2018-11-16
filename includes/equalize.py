@@ -6,6 +6,10 @@ import sys
 import tqdm
 from colour_balance import balanceColour
 
+# image resizing parameters
+maxHeight = 1080.0
+maxWidth = 1920.0
+
 def brighten(img, val):
     '''
     Increases the brightness of an input image
@@ -107,9 +111,12 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     '''
 
     # denoise using bilateral filter
-    #img_filter = cv2.bilateralFilter(img.copy(), 9, 75, 75)
-    img_filter = cv2.bilateralFilter(img.copy(), 21, 75, 75)
-    img_filter = cv2.fastNlMeansDenoising(img_filter, None, 3, 7, 7)
+    img_filter = cv2.bilateralFilter(img.copy(), 9, 75, 75)
+    #img_filter = cv2.fastNlMeansDenoising(img_filter, None, 3, 7, 7)
+
+    # balance colour
+    img_filter = balanceColour(img_filter, 5)
+    img = balanceColour(img, 5)
 
     # equqlize image according to specified parameters
     img_eq_gray = equalizeHist(img_filter, clipLimit, tileSize)
@@ -122,8 +129,7 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     # return equalized images
     return img_eq_gray, img_eq
 
-def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder,
-    ratio):
+def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder):
     '''
     Crop and equalize template according to parameters
     @param templatePath path to template image
@@ -145,16 +151,15 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     h_temp = template.shape[:2][0]
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
 
-    # resize template if necssary
-    #if ratio != -1:
-    #    template = cv2.resize(template, None, fx=ratio, fy=ratio)
+    # get denoised template
+    template_noise = cv2.bilateralFilter(template.copy(), 9, 75, 75)
 
     # return equalized template
-    return equalizeHist(template, clipLimit, tileSize)#equalizeHist(balanceColour(template, 5), clipLimit, tileSize)
+    return equalizeHist(template, clipLimit, tileSize), equalizeHist(template_noise, clipLimit, tileSize)
 
 def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
-    debug_directory_template, ratio):
+    debug_directory_template):
     '''
     Equalize sets of images without using a parallel pool
     @param images_filtered set of images with night images removed
@@ -189,6 +194,7 @@ def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
 
     # list for equalized images
     images_equalized = list()
+    images_filtered_eq = list()
 
     # iterator
     index = 0
@@ -207,12 +213,8 @@ def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
         index += 1
 
     # equalize template
-    template_eq = equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder,
-        lowerBorder, ratio)
-
-    # get denoised template
-    #template_reduced_noise = cv2.bilateralFilter(template_eq, 9, 75, 75)
-    template_reduced_noise = cv2.bilateralFilter(template_eq, 21, 75, 75)
+    template_eq, template_reduced_noise = equalizeTemplate(templatePath, clipLimit, tileSize,
+        upperBorder, lowerBorder)
 
     # if debugging write to directory
     if(debug):
@@ -284,12 +286,8 @@ def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath
         pass
 
     # equalize template
-    template_eq = equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder,
-        lowerBorder)
-
-    # get denoised template
-    #template_reduced_noise = cv2.bilateralFilter(template_eq, 9, 75, 75)
-    template_reduced_noise = cv2.bilateralFilter(template_eq, 21, 75, 75)
+    template_eq, template_reduced_noise = equalizeTemplate(templatePath, clipLimit, tileSize,
+        upperBorder, lowerBorder)
 
     # if debugging write to directory
     if(debug):
