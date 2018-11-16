@@ -5,9 +5,14 @@ import tqdm
 import multiprocessing as m
 from numpy import squeeze, asarray
 from colour_balance import balanceColour
+from PIL import Image
+from datetime import datetime
+import numpy as np
 
 # Constant
 MAX_NIGHT = 2 # maximum difference between weighted means for night image
+maxHeight = 1080.0 # resize parameters
+maxWidth = 1920.0
 
 def calculate_weighted_means(data):
     '''
@@ -90,7 +95,7 @@ def isDay(img, name):
     # return whether image is day or night
     return (max_diff > MAX_NIGHT, img, name)
 
-def filterNight(directory, upperBorder, lowerBorder):
+def filterNight(directory, upperBorder, lowerBorder, dateRange):
     '''
     Returns filtered list of day images
     @param directory the path to the directory containing the image
@@ -114,8 +119,32 @@ def filterNight(directory, upperBorder, lowerBorder):
 
     # iterate through images
     for img_name in tqdm.tqdm(images):
-        # import image
-        img = cv2.imread(directory + img_name)
+        # if date range selected ensure image falls in date range
+        if(dateRange[3]):
+            # import using PIL
+            pil_im = Image.open(directory + img_name)
+
+            # check EXIF data
+            exif = pil_im._getexif()[36867]
+            date = datetime.strptime(exif, '%Y:%m:%d %H:%M:%S')
+            # check if image is valid
+            if(
+                ((dateRange[0] is None and dateRange[1] is None) or
+                    dateRange[0] <= date <= dateRange[1]) # date check
+                and (dateRange[2] == [None, None] or dateRange[2][0] == date.hour
+                    and dateRange[2][1] == date.minute) # time check
+            ):
+                # convert img to cv2
+                img = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+
+            # if image isn't in the date range skip it
+            else:
+                continue
+
+        # if no date range selected
+        else:
+            # import image
+            img = cv2.imread(directory + img_name)
 
         # get height and width
         h, w = img.shape[:2]
@@ -123,21 +152,16 @@ def filterNight(directory, upperBorder, lowerBorder):
         # crop image
         img = img[upperBorder:(h-lowerBorder), :, :]
 
-        # resize if too large
-        ratio = -1 # temp value
-        #if h - lowerBorder > 1080 or w > 1920:
-        #    ratio = min(1920.0/float(w), 1080.0/float(h-lowerBorder))
-        #    img = cv2.resize(img, None, fx=ratio, fy=ratio)
-
         # determine whether image is day or night
         output = isDay(img, img_name)
         if(output[0]):
             # add image to lists
-            images_filtered.append(balanceColour(output[1], 5))
+            #images_filtered.append(balanceColour(output[1], 5))
+            images_filtered.append(output[1])
             filtered_names.append(img_name)
 
     # return lists
-    return images_filtered, filtered_names, ratio
+    return images_filtered, filtered_names
 
 def unpackArgs(args):
     '''
@@ -191,7 +215,8 @@ def filterNightParallel(pool, directory, upperBorder, lowerBorder):
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
         if i[0]: # if day image
             # add to lists
-            images_filtered.append(balanceColour(i[1], 5))
+            #images_filtered.append(balanceColour(i[1], 5))
+            images_filtered.append(i[1])
             filtered_names.append(i[2])
         pass
 
