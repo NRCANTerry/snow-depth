@@ -63,6 +63,7 @@ if __name__ == '__main__':
     tensor_data_set = params[17]
     blob_distances_template = params[18]
     STD_DEV_REG, STD_DEV_TENSOR, ROTATION, TRANSLATION, SCALE = params[19]
+    date_range = params[20]
 
     # determine if the dataset for the template is established
     # must have registered at least 50 images to the template
@@ -147,7 +148,6 @@ if __name__ == '__main__':
     # only use parallel pool if there are more than 5 images
     if(num_imgs > 5):
         from multiprocessing import Pool
-        from multiprocessing import Manager
         from multiprocessing import cpu_count
         from multiprocessing import Queue
 
@@ -155,7 +155,6 @@ if __name__ == '__main__':
 
         # create pool with 75% as many processes as there are cores
         num_cores = float(cpu_count()) * 0.75
-        manager = Manager()
         pool = Pool(int(num_cores))
         print("Parallel Pool Created (%d Workers)" % int(num_cores))
 
@@ -166,13 +165,17 @@ if __name__ == '__main__':
     print("\nFiltering Night Images")
 
     # get filtered images and image names
-    if(num_imgs > 50):
+    if(num_imgs > 50 and not date_range[3]):
         from filter_night import filterNightParallel
         images_filtered, filtered_names = filterNightParallel(pool, directory,
             img_border_upper, img_border_lower)
     else:
         from filter_night import filterNight
-        images_filtered, filtered_names, ratio = filterNight(directory, img_border_upper, img_border_lower)
+        images_filtered, filtered_names = filterNight(directory, img_border_upper,
+            img_border_lower, date_range)
+
+    # output results of filtering
+    if(date_range[3]): print("Number of Valid Images: %d" % len(images_filtered))
 
     # ---------------------------------------------------------------------------------
     # Equalize Images
@@ -189,7 +192,7 @@ if __name__ == '__main__':
         from equalize import equalizeImageSet
         images_equalized, images_filtered, template_eq, template = equalizeImageSet(images_filtered,
             filtered_names, template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
-            paths_dict["equalized"], paths_dict["equalized-template"], ratio)
+            paths_dict["equalized"], paths_dict["equalized-template"])
 
     # ---------------------------------------------------------------------------------
     # Register Images to Template
