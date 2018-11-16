@@ -28,6 +28,8 @@ from scipy import signal
 from scipy import ndimage
 import math
 import template
+import time
+import datetime
 
 class GUI:
     def __init__(self, master):
@@ -280,9 +282,79 @@ class GUI:
         self.root.config(menu = self.menubar)
 
         # ---------------------------------------------------------------------------------
+        # Advanced Menu Widgets
+        # ---------------------------------------------------------------------------------
+
+        self.advancedFrame = tk.Frame(self.root, bg=self.gray)
+        self.advancedFrameWidgets =tk.Frame(self.advancedFrame, bg=self.gray)
+        self.advancedFrameOpen = False # flag indicating if advanced options are selected
+
+        # Button to open frame
+        def on_enter(e):
+            self.advancedButton['bg'] = 'white'
+            self.advancedButton['fg'] = self.gray
+        def on_leave(e):
+            time.sleep(0.10)
+            self.advancedButton['bg'] = self.gray
+            self.advancedButton['fg'] = 'white'
+
+        # advanced options button
+        self.advancedButton = tk.Button(self.advancedFrame, text=">", bg=self.gray, fg=self.white, borderwidth=0,
+            font=("Calibri Light", 20), command=lambda: self.openAdvancedOptions(0))
+        self.advancedButton.bind("<Enter>", on_enter)
+        self.advancedButton.bind("<Leave>", on_leave)
+
+        # Frames
+        self.startFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.endFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.timeFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+
+        # Labels
+        self.dateLabel = tk.Label(self.advancedFrameWidgets, text="Date Range", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 28))
+        self.timeLabel = tk.Label(self.timeFrame, text="Time", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+        self.startLabel = tk.Label(self.startFrame, text="Start", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+        self.endLabel = tk.Label(self.endFrame, text="End", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+        self.splitLabel = tk.Label(self.timeFrame, text=":", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+
+        # Time list
+        self.selectedTime = [None, None]
+
+        # Entries
+        from datePicker import Datepicker
+        advancedValidateCommand = self.root.register(self.validateAdvanced)
+        self.startDate = Datepicker(self.startFrame, entrywidth=12)
+        self.endDate = Datepicker(self.endFrame, entrywidth=12)
+        self.hourTime = tk.Entry(self.timeFrame, font=("Calibri Light", 14), width=5, validate="key",
+            validatecommand =((advancedValidateCommand, '%P', 0)))
+        self.minuteTime = tk.Entry(self.timeFrame, font=("Calibri Light", 14), width=5, validate="key",
+            validatecommand =((advancedValidateCommand, '%P', 1)))
+
+        # Advanced menu packing
+        self.dateLabel.pack(pady=10)
+        self.startFrame.pack(pady=(10,5))
+        self.startLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.startDate.pack(side=tk.LEFT, padx=5)
+        self.endFrame.pack(pady=(10,5))
+        self.endLabel.pack(side=tk.LEFT, padx=(20,5))
+        self.endDate.pack(side=tk.LEFT, padx=(5,0))
+
+        self.timeFrame.pack(pady=5)
+        self.timeLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.hourTime.pack(side=tk.LEFT, padx=(5,3))
+        self.splitLabel.pack(side=tk.LEFT)
+        self.minuteTime.pack(side=tk.LEFT, padx=(3,5))
+
+        # ---------------------------------------------------------------------------------
         # Packing
         # ---------------------------------------------------------------------------------
 
+        self.advancedFrame.pack(side=tk.RIGHT, fill=tk.Y)
+        self.advancedButton.pack(side=tk.RIGHT, fill=tk.Y)
         self.rootFrame.pack(side = tk.RIGHT)
         self.step1Label.pack(pady = (30,5))
         self.pathLabel.pack()
@@ -372,23 +444,53 @@ class GUI:
                 return False
 
     # ---------------------------------------------------------------------------------
+    # Validate method for time entry
+    # ---------------------------------------------------------------------------------
+
+    def validateAdvanced(self, new_text, index):
+        # the field is being cleared
+        if not new_text:
+            self.selectedTime[int(index)] = None
+        try:
+            if(new_text == ""):
+                self.selectedTime[int(index)] = None
+            elif (int(index) == 0 and int(new_text) in range(0, 25)) \
+                or (int(index) == 1 and int(new_text) in range(0,60)):
+                self.selectedTime[int(index)] = int(new_text)
+            else:
+                return False
+            return True
+
+        except ValueError:
+            return False
+
+    # ---------------------------------------------------------------------------------
     # Function to confirm that required fields are filled in
     # ---------------------------------------------------------------------------------
 
     def fieldsFilled(self, directory = True):
+        # flag indicating if date fields are properly filled in
+        dateValid = (self.startDate.current_date is None and self.endDate.current_date is None) or \
+            (self.startDate.current_date is not None and self.endDate.current_date is not None)
+        dateFilled = (self.startDate.current_date is not None and self.endDate.current_date is not None)
+        timeValid = (self.selectedTime[0] is not None and self.selectedTime[1] is not None)
+        timeEmpty = (self.selectedTime[0] is None and self.selectedTime[1] is None)
+
         if(directory):
             return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
                 and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
                 and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
                 and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
                 and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.systemParameters["Directory"] != "" \
-                and self.profileMenuVar.get() != "Select Profile")
+                and self.profileMenuVar.get() != "Select Profile" and
+                (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty)))))
         else:
             return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
                 and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
                 and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
                 and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
-                and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile")
+                and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile"
+                and (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty)))))
 
     # ---------------------------------------------------------------------------------
     # Function to confirm that required HSV fields are filled in
@@ -400,6 +502,33 @@ class GUI:
             and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
             and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
             and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1))
+
+    # ---------------------------------------------------------------------------------
+    # Function open advanced options (when arrow clicked)
+    # ---------------------------------------------------------------------------------
+
+    def openAdvancedOptions(self, status):
+        if(status==0):
+            # change button appearance
+            self.advancedButton.config(text="<", command=lambda: self.openAdvancedOptions(1))
+
+            # pack advanced widgets
+            self.advancedFrameWidgets.pack(side=tk.RIGHT, padx=40)
+            self.advancedFrameOpen = True # update flag
+        else:
+            # change button appearance
+            self.advancedButton.config(text=">", command=lambda: self.openAdvancedOptions(0))
+
+            # clear entries
+            self.selectedTime = [None, None]
+            self.hourTime.delete(0, tk.END)
+            self.minuteTime.delete(0, tk.END)
+            self.startDate.erase()
+            self.endDate.erase()
+
+            # unpack
+            self.advancedFrameWidgets.pack_forget()
+            self.advancedFrameOpen = False # update flag
 
     # ---------------------------------------------------------------------------------
     # Function to allow selection of directory/file where images are stored
@@ -463,6 +592,10 @@ class GUI:
     # ---------------------------------------------------------------------------------
 
     def getValues(self):
+        # increment end date by one
+        if self.endDate.current_date is not None:
+            self.endDate.current_date += datetime.timedelta(days=1)
+
         # return values in tuple format
         if(self.systemParameters["Window_Closed"]):
             return self.systemParameters["Directory"], self.systemParameters["Lower_HSV_1"], self.systemParameters["Upper_HSV_1"], \
@@ -472,7 +605,8 @@ class GUI:
                     self.systemParameters["Current_Template_Intersections"], self.systemParameters["Current_Template_Tensor"], \
                     self.systemParameters["Current_Template_Blob_Sizes"], self.systemParameters["Current_Template_Dataset"], \
                     self.systemParameters["Current_Template_Name"], self.systemParameters["Current_Tensor_Dataset"], \
-                    self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"]
+                    self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"], \
+                    [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen]
 
         # return False if run button wasn't pressed
         else:
