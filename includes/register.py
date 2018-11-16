@@ -25,7 +25,6 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     @param NUM_STD_DEV number of standard deviations away from the mean the
         MSE of the affine matrix can be
     @param max_mean_squared_error maximum magnitude of registration
-
     @type img cv2.image
     @type name string
     @type template cv2.image
@@ -37,7 +36,6 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     @type dataset_enabled bool
     @type NUM_STD_DEV int
     @type max_mean_squared_error float
-
     @return imgECCAligned the aligned image
     @return name the name of the image
     @return mean_squared_error the MSE for ORB feature alignment
@@ -124,8 +122,8 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
     # specify the number of iterations and threshold
-    number_iterations = 250#1000
-    termination_thresh = 1e-5#1e-7
+    number_iterations = 1000
+    termination_thresh = 1e-7
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
@@ -263,7 +261,6 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     @param MAX_SCALING maximum allowed scaling
     @param NUM_STD_DEV number of standard deviations away from the mean the
         MSE of the affine matrix can be
-
     @type imgs list(cv2.image)
     @type template cv2.image
     @type img_names list(string)
@@ -277,7 +274,6 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     @type MAX_TRANSLATION float
     @type MAX_SCALING float
     @type NUM_STD_DEV int
-
     @return registeredImages list of registered images
     @return dataset updated dataset
     @return images_names_registered names of registered images
@@ -396,7 +392,6 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
     @param MAX_SCALING maximum allowed scaling
     @param NUM_STD_DEV number of standard deviations away from the mean the
         MSE of the affine matrix can be
-
     @type pool multiprocessing pool
     @type imgs list(cv2.image)
     @type template cv2.image
@@ -411,7 +406,6 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
     @type MAX_TRANSLATION float
     @type MAX_SCALING float
     @type NUM_STD_DEV int
-
     @return registeredImages list of registered images
     @return dataset updated dataset
     @return images_names_registered names of registered images
