@@ -131,8 +131,8 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange):
             if(
                 ((dateRange[0] is None and dateRange[1] is None) or
                     dateRange[0] <= date <= dateRange[1]) # date check
-                and (dateRange[2] == [None, None] or dateRange[2][0] == date.hour
-                    and dateRange[2][1] == date.minute) # time check
+                and (dateRange[2] == [None, None] or (dateRange[2][0] == date.hour
+                    and dateRange[2][1] == date.minute)) # time check
             ):
                 # convert img to cv2
                 img = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
@@ -155,9 +155,11 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange):
         # determine whether image is day or night
         output = isDay(img, img_name)
         if(output[0]):
-            # add image to lists
-            #images_filtered.append(balanceColour(output[1], 5))
-            images_filtered.append(output[1])
+            # resize image
+            h, w = output[1].shape[:2]
+            resizeFactor = min(maxWidth/float(w), maxHeight/float(h))
+            images_filtered.append(cv2.resize(output[1], None, fx=resizeFactor, fy=resizeFactor))
+            #images_filtered.append(output[1])
             filtered_names.append(img_name)
 
     # return lists
