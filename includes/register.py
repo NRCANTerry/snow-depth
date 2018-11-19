@@ -8,6 +8,8 @@ import timeit
 
 # constants
 MAX_FEATURES = 262144
+MAX_WIDTH = 1920
+MAX_HEIGHT = 1080
 
 def register(img, name, template, template_reduced_noise, img_apply, debug,
     debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
