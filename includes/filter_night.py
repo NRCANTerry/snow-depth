@@ -13,6 +13,8 @@ import numpy as np
 MAX_NIGHT = 2 # maximum difference between weighted means for night image
 maxHeight = 1080.0 # resize parameters
 maxWidth = 1920.0
+maxWidth4K = 3840
+maxHeight4K = 2160
 
 def calculate_weighted_means(data):
     '''
@@ -155,11 +157,14 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange):
         # determine whether image is day or night
         output = isDay(img, img_name)
         if(output[0]):
-            # resize image
+            # constrain resolution of input images to 4K
             h, w = output[1].shape[:2]
-            resizeFactor = min(maxWidth/float(w), maxHeight/float(h))
-            images_filtered.append(cv2.resize(output[1], None, fx=resizeFactor, fy=resizeFactor))
-            #images_filtered.append(output[1])
+            if(w > maxWidth4K or h > maxHeight4K):
+                factor = min(maxWidth4K/float(w), maxHeight4K/float(h))
+                output[1] = cv2.resize(output[1], None, fx=factor, fy=factor)
+
+            # add images to list
+            images_filtered.append(output[1])
             filtered_names.append(img_name)
 
     # return lists
