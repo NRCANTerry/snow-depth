@@ -4,13 +4,11 @@ import sys
 sys.path.append('...')
 
 # import necessary modules
-import Tkinter as tk
-import tkFileDialog
-import tkMessageBox
-import tkSimpleDialog
-import ttk
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import messagebox
 import numpy as np
-import ConfigParser
+import configparser
 import ast
 import cv2
 import os
@@ -86,7 +84,7 @@ class GUI:
         }
 
         # ConfigParser object
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
 
         # open preferences file
         updated_parameters = self.getPreferences()
@@ -544,7 +542,7 @@ class GUI:
 
     def selectDirectory(self):
         # open directory selector
-        dirname = tkFileDialog.askdirectory(parent=self.root, initialdir="/", title='Select Directory')
+        dirname = filedialog.askdirectory(parent=self.root, initialdir="/", title='Select Directory')
 
         # if new directory selected
         if(len(dirname) > 0):
@@ -558,7 +556,7 @@ class GUI:
                 self.systemParameters["Directory"] = str(dirname)
             # else warn user
             else:
-                tkMessageBox.showinfo("Error", "Not all files in the selected directory are images")
+                messagebox.showinfo("Error", "Not all files in the selected directory are images")
 
     # ---------------------------------------------------------------------------------
     # Function to save inputted values and close window
@@ -577,7 +575,7 @@ class GUI:
             self.systemParameters["Window_Closed"] = True
 
             # write preferences to file
-            with open('./preferences.cfg', 'wb') as configfile:
+            with open('./preferences.cfg', 'w') as configfile:
                 self.config.write(configfile)
 
             # close window
@@ -585,7 +583,7 @@ class GUI:
 
         # else show error
         else:
-            tkMessageBox.showinfo("Error", "Not All Fields Populated")
+            messagebox.showinfo("Error", "Not All Fields Populated")
 
     # ---------------------------------------------------------------------------------
     # Accessor function to return parameters to main file
@@ -670,7 +668,7 @@ class GUI:
 
     def on_closing(self):
         # write preferences to file
-        with open('./preferences.cfg', 'wb') as configfile:
+        with open('./preferences.cfg', 'w') as configfile:
             self.config.write(configfile)
 
         # close window
@@ -781,7 +779,7 @@ class GUI:
 
     def restart(self):
         # write preferences to file
-        with open('./preferences.cfg', 'wb') as configfile:
+        with open('./preferences.cfg', 'w') as configfile:
             self.config.write(configfile)
 
         # close window
@@ -824,7 +822,7 @@ class GUI:
 
         # only run if all fields filled in
         if(not self.fieldsFilledHSV()):
-            tkMessageBox.showinfo("Error", "Not All HSV Fields Populated")
+            messagebox.showinfo("Error", "Not All HSV Fields Populated")
             return
 
         # create new frame
@@ -1030,14 +1028,14 @@ class GUI:
             templateName = templateSystemParams["Name"]
 
             # search for template directory
-            if(not os.path.isdir("./includes/templates")):
-                os.mkdir("./includes/templates")
+            if(not os.path.isdir("./AppData/templates")):
+                os.mkdir("./AppData/templates")
 
             # write images to directory
             current_dir = os.getcwd()
             filename, ext = os.path.splitext(os.path.split(templatePath)[1])
-            template_path = current_dir + "\\includes\\templates\\" + filename + "-" +  str(templateName) + ext
-            marked_template_path = current_dir + "\\includes\\templates\\" + filename + "-" +  str(templateName) + "-marked" + ext
+            template_path = current_dir + "\\AppData\\templates\\" + filename + "-" +  str(templateName) + ext
+            marked_template_path = current_dir + "\\AppData\\templates\\" + filename + "-" +  str(templateName) + "-marked" + ext
             cv2.imwrite(template_path, templateImage)
             cv2.imwrite(marked_template_path, templateMarked)
 
@@ -1124,7 +1122,7 @@ class GUI:
 
             # get fields are filled in
             if not all(v.get() != "" for v in entries) and templateMenuVar.get() != "Select Template":
-                tkMessageBox.showinfo("Error", "Not All Fields Populated")
+                messagebox.showinfo("Error", "Not All Fields Populated")
                 return
 
             # create new frame
@@ -1389,7 +1387,7 @@ class GUI:
             # wait until user closes window
             self.root.wait_window(newWindow)
         else:
-            tkMessageBox.showinfo("Error", "Please Select a Profile under Settings to Preview")
+            messagebox.showinfo("Error", "Please Select a Profile under Settings to Preview")
 
 
     # ---------------------------------------------------------------------------------
@@ -1515,7 +1513,7 @@ class GUI:
         newWindow.protocol("WM_DELETE_WINDOW", closeWindow)
 
         # get filename
-        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+        filename = filedialog.askopenfilename(initialdir = "/",title = "Select image",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
 
         # if valid file selected
         if(filename != ""):
