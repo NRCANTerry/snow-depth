@@ -111,6 +111,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				if(i == 0):
 					continue
 
+
 				# blob counter
 				num_blobs = 0
 
