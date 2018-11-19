@@ -31,6 +31,10 @@ from scipy import signal
 from scipy import ndimage
 import math
 
+# maximum dimensions for template image before resizing
+maxWidth4K = 3840
+maxHeight4K = 2160
+
 # create template window class
 class createTemplate:
     def __init__(self, master):
@@ -328,6 +332,13 @@ class createTemplate:
 
         # import template image
         self.cv2_img = cv2.imread(self.templatePath)
+
+        # if image has dimensions larger than 3840 x 2160 (4K)
+        w, h = self.cv2_img.size[:2]
+        if(w > maxWidth4K or h > maxHeight4K):
+            factor = min(maxWidth4K/float(w), maxHeight4K/float(h))
+            self.cv2_img = cv2.resize(self.cv2_img, None, fx=factor, fy=factor)
+
         self.outputImage = self.cv2_img.copy()
         self.equalized_img = equalizeHistColour(self.cv2_img.copy(), 5.0, (8,8))
         self.equalized_img = cv2.cvtColor(self.equalized_img, cv2.COLOR_BGR2RGB)
