@@ -151,6 +151,11 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     h_temp = template.shape[:2][0]
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
 
+    # resize template
+    h, w = template.shape[:2]
+    resizeFactor = min(maxWidth/float(w), maxHeight/float(h))
+    template = cv2.resize(template, None, fx=resizeFactor, fy=resizeFactor)
+
     # get denoised template
     template_noise = cv2.bilateralFilter(template.copy(), 9, 75, 75)
 
