@@ -8,6 +8,13 @@ includes/templates
 registration-testing/**/*.jpg
 registration-testing/**/*.JPG
 
+# ignore templates
+appData/**/*.jpg
+appData/**/*.JPG
+
+deep-learning/**/*.jpg
+deep-learning/**/*.JPG
+
 # ignore images in main directory
-*.JPG
-*.jpg
+#*.JPG
+#*.jpg
