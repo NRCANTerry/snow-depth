@@ -4,6 +4,7 @@ import numpy as np
 import json
 import tqdm
 from matplotlib import pyplot as plt
+import timeit
 
 # constants
 MAX_FEATURES = 262144
@@ -117,13 +118,17 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
             imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
             ORB_aligned_flag = True
 
+    # write matches to debug directory
+    if(debug):
+        cv2.imwrite(debug_directory_matches + name, imgMatches)
+
     # define ECC motion model
     warp_mode = cv2.MOTION_AFFINE
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
     # specify the number of iterations and threshold
-    number_iterations = 1000
-    termination_thresh = 1e-7
+    number_iterations = 750
+    termination_thresh = 1e-5
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
@@ -156,9 +161,6 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # doesn't meet criteria
     else: imgECCAligned = imgReg
-
-    # write matches to debug directory
-    cv2.imwrite(debug_directory_matches + name, imgMatches)
 
     # only if image was aligned (is not the same as input image)
     if(ORB_aligned_flag or ECC_aligned_flag):
