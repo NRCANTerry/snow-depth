@@ -46,10 +46,10 @@ def createDataset(template_name, dataset, dataset_enabled):
 
     # write changes to config file
     config = configparser.ConfigParser()
-    config.read('./preferences.cfg')
+    config.read('./AppData/preferences.cfg')
     config.set('Template Registration Dataset', template_name, \
         str(dataset).replace("array(", "").replace(")", ""))
-    with open('./preferences.cfg', 'w') as configfile:
+    with open('./AppData/preferences.cfg', 'w') as configfile:
         config.write(configfile)
 
 # function to update the dataset of tensor measurements
@@ -96,8 +96,8 @@ def createDatasetTensor(template_name, dataset, dataset_enabled):
 
     # write changes to config file
     config = configparser.ConfigParser()
-    config.read('./preferences.cfg')
+    config.read('./AppData/preferences.cfg')
     config.set('Tensor Dataset', template_name, \
         str(dataset).replace("array(", "").replace(")", ""))
-    with open('./preferences.cfg', 'w') as configfile:
+    with open('./AppData/preferences.cfg', 'w') as configfile:
         config.write(configfile)

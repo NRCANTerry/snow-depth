@@ -575,7 +575,7 @@ class GUI:
             self.systemParameters["Window_Closed"] = True
 
             # write preferences to file
-            with open('./preferences.cfg', 'w') as configfile:
+            with open('./AppData/preferences.cfg', 'w') as configfile:
                 self.config.write(configfile)
 
             # close window
@@ -637,7 +637,7 @@ class GUI:
 
     def getPreferences(self):
         # if no preferences file present, create one
-        if(str(self.config.read('./preferences.cfg')) == "[]"):
+        if(str(self.config.read('./AppData/preferences.cfg')) == "[]"):
             self.config.add_section('HSV Ranges')
             self.config.add_section('Profiles')
             self.config.add_section('Template Coordinates')
@@ -652,7 +652,7 @@ class GUI:
 
         # else read in existing file
         else:
-            self.config.read('./preferences.cfg')
+            self.config.read('./AppData/preferences.cfg')
 
         # load in preferences
         return [dict(self.config.items('HSV Ranges')), dict(self.config.items('Profiles')),
@@ -668,7 +668,7 @@ class GUI:
 
     def on_closing(self):
         # write preferences to file
-        with open('./preferences.cfg', 'w') as configfile:
+        with open('./AppData/preferences.cfg', 'w') as configfile:
             self.config.write(configfile)
 
         # close window
@@ -779,7 +779,7 @@ class GUI:
 
     def restart(self):
         # write preferences to file
-        with open('./preferences.cfg', 'w') as configfile:
+        with open('./AppData/preferences.cfg', 'w') as configfile:
             self.config.write(configfile)
 
         # close window
@@ -1030,6 +1030,8 @@ class GUI:
             # search for template directory
             if(not os.path.isdir("./AppData/templates")):
                 os.mkdir("./AppData/templates")
+            if(not os.path.isdir("./AppData/models")):
+                os.mkdir("./AppData/models")
 
             # write images to directory
             current_dir = os.getcwd()
