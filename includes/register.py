@@ -349,7 +349,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         count += 1
 
     # update dataset
-    print "Updating Dataset..."
+    print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
 
     # if in debugging mode
@@ -474,7 +474,7 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
             }
 
     # update dataset
-    print "Updating Dataset..."
+    print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
 
     # if in debugging mode

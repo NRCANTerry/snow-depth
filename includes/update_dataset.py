@@ -1,6 +1,6 @@
 # import necessary packages
 import numpy as np
-import ConfigParser
+import configparser
 from scipy.stats import trimboth
 import warnings
 
@@ -36,20 +36,20 @@ def createDataset(template_name, dataset, dataset_enabled):
         dataset = [[filtered_mean, filtered_std_dev, num_filtered_values],[]]
 
         # output to user
-        print "\n\nDataset Created:"
-        print "Mean: %0.2f" % filtered_mean
-        print "Standard Deviation: %0.2f" % filtered_std_dev
-        print "Number of Values: %d" % num_filtered_values
+        print("\n\nDataset Created:")
+        print("Mean: %0.2f" % filtered_mean)
+        print("Standard Deviation: %0.2f" % filtered_std_dev)
+        print("Number of Values: %d" % num_filtered_values)
 
     # convert from numpy to list
     elif dataset_enabled: dataset = np.array(dataset).tolist()
 
     # write changes to config file
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read('./preferences.cfg')
     config.set('Template Registration Dataset', template_name, \
         str(dataset).replace("array(", "").replace(")", ""))
-    with open('./preferences.cfg', 'wb') as configfile:
+    with open('./preferences.cfg', 'w') as configfile:
         config.write(configfile)
 
 # function to update the dataset of tensor measurements
@@ -86,18 +86,18 @@ def createDatasetTensor(template_name, dataset, dataset_enabled):
             dataset[j] = [[filtered_mean, filtered_std_dev, num_filtered_values],[]]
 
             # output to user
-            print "\n\nStake %d Dataset Created:" % j
-            print "Mean: %0.2f" % filtered_mean
-            print "Standard Deviation: %0.2f" % filtered_std_dev
-            print "Number of Values: %d" % num_filtered_values
+            print("\n\nStake %d Dataset Created:" % j)
+            print("Mean: %0.2f" % filtered_mean)
+            print("Standard Deviation: %0.2f" % filtered_std_dev)
+            print("Number of Values: %d" % num_filtered_values)
 
         # convert from numpy to list
         elif dataset_enabled[j]: dataset[j] = np.array(dataset[j]).tolist()
 
     # write changes to config file
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read('./preferences.cfg')
     config.set('Tensor Dataset', template_name, \
         str(dataset).replace("array(", "").replace(")", ""))
-    with open('./preferences.cfg', 'wb') as configfile:
+    with open('./preferences.cfg', 'w') as configfile:
         config.write(configfile)

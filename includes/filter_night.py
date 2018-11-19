@@ -31,7 +31,7 @@ def calculate_weighted_means(data):
     weighted_blue = 0
 
     # iterate through histogram intensities
-    for i in xrange(256):
+    for i in range(256):
         # add to weighted means
         weighted_red += (data["red"][i] * i)
         weighted_green += (data["green"][i] * i)

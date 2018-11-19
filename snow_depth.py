@@ -15,7 +15,7 @@ from check_stakes import getValidStakes
 from main import GUI
 from calculate_depth import getDepths
 from overlay_roi import overlay
-import Tkinter as tk
+import tkinter as tk
 import datetime
 import time
 from colour_balance import balanceColour
@@ -70,10 +70,10 @@ if __name__ == '__main__':
     dataset_enabled = True if template_data_set[0][2] != 0 else False
 
     # output to user the status of the dataset
-    print "\nStatus:"
-    print "Registration Dataset is %s" % ("ENABLED" if dataset_enabled else "DISABLED")
+    print("\nStatus:")
+    print("Registration Dataset is %s" % ("ENABLED" if dataset_enabled else "DISABLED"))
     if(not dataset_enabled):
-        print "Number of images required: %d\n" % (50-len(template_data_set[1]))
+        print("Number of images required: %d\n" % (50-len(template_data_set[1])))
 
     # determine if tensor dataset for the template is established
     # must have calculated at least 50 tensors
@@ -84,10 +84,10 @@ if __name__ == '__main__':
 
     # output to user the status of the tensor dataset
     for k, stake in enumerate(tensor_data_set):
-        print "Stake %d Dataset is %s" % (k, "ENABLED" if dataset_tensor_enabled[k] else "DISABLED")
+        print("Stake %d Dataset is %s" % (k, "ENABLED" if dataset_tensor_enabled[k] else "DISABLED"))
 
         if(not dataset_tensor_enabled[k]):
-            print "Number of images required: %d" % (50-len(stake[1]))
+            print("Number of images required: %d" % (50-len(stake[1])))
 
     # flag to run program in debug mode
     debug = params[11]

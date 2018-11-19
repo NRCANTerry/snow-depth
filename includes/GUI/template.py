@@ -4,14 +4,11 @@ import sys
 sys.path.append('...')
 
 # import necessary modules
-import Tkinter as tk
-from tkFont import Font
-import tkFileDialog
-import tkMessageBox
-import tkSimpleDialog
-import ttk
+import tkinter as tk
+from tkinter import font
+from tkinter import filedialog
+from tkinter import messagebox
 import numpy as np
-import ConfigParser
 import ast
 import cv2
 import sys
@@ -48,12 +45,12 @@ class createTemplate:
         # Setup
         #-----------------------------------------------------------------------
 
-        self.titleFont = Font(family = "Calibri Light", size = 30)
-        self.largeFont = Font(family  = "Calibri Light", size = 24)
-        self.mediumFont = Font(family = "Calibri Light", size = 18)
-        self.smallFont = Font(family = "Calibri Light", size = 16)
-        self.entryFont = Font(family = "Calibri Light", size = 14)
-        self.boldFont = Font(family = "Calibri", size = 19)
+        self.titleFont = font(family = "Calibri Light", size = 30)
+        self.largeFont = font(family  = "Calibri Light", size = 24)
+        self.mediumFont = font(family = "Calibri Light", size = 18)
+        self.smallFont = font(family = "Calibri Light", size = 16)
+        self.entryFont = font(family = "Calibri Light", size = 14)
+        self.boldFont = font(family = "Calibri", size = 19)
         self.gray = "#243447"
         self.white = '#ffffff'
 
@@ -220,7 +217,7 @@ class createTemplate:
 
     def getImage(self):
         # open file selector
-        filename = tkFileDialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + \
+        filename = filedialog.askopenfilename(initialdir = "/",title = "Select " + str(type) + \
             " template",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
         shortName = os.path.split(filename)[1]
 
@@ -266,7 +263,7 @@ class createTemplate:
     def generateTemplate(self):
         # check that all required fields are filled in
         if(not self.fieldsFilled() or self.templatePath == ""):
-            tkMessageBox.showinfo("Error", "Not All Fields Populated")
+            messagebox.showinfo("Error", "Not All Fields Populated")
             return
 
         # hide window
@@ -397,7 +394,7 @@ class createTemplate:
 
         # if window was closed early
         if(self.windowClosed):
-            tkMessageBox.showinfo("Error", "Template Window Was Closed")
+            messagebox.showinfo("Error", "Template Window Was Closed")
             return
 
         #-----------------------------------------------------------------------
@@ -419,7 +416,7 @@ class createTemplate:
 
         # if window was closed early
         if(self.windowClosed):
-            tkMessageBox.showinfo("Error", "Template Window Was Closed")
+            messagebox.showinfo("Error", "Template Window Was Closed")
             return
 
         # calculate tensors
@@ -556,7 +553,7 @@ class createTemplate:
 
         # if no stakes selected show error message
         elif(self.numRect <= 0 and index == -1):
-            tkMessageBox.showinfo("Error", "No Stakes Selected")
+            messagebox.showinfo("Error", "No Stakes Selected")
 
         # blob rectangles
         elif(self.numRect > 1):
@@ -671,7 +668,7 @@ class createTemplate:
 
         # if no blobs are selected show error message
         else:
-            tkMessageBox.showinfo("Error", "Not Enough Blobs Selected (Minimum 2)")
+            messagebox.showinfo("Error", "Not Enough Blobs Selected (Minimum 2)")
 
         # clear list of rectangles
         self.rectList = list()
@@ -904,7 +901,7 @@ class createTemplate:
                 self.root.deiconify()
 
                 # output error
-                tkMessageBox.showinfo("Error", "No Intersection Point Found")
+                messagebox.showinfo("Error", "No Intersection Point Found")
                 return
 
     #-----------------------------------------------------------------------
