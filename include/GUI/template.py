@@ -15,14 +15,13 @@ import sys
 import os
 from PIL import ImageTk, Image
 from order_points import orderPoints
-from get_intersection import lineIntersections
+from intersect import lineIntersections
 from scipy import ndimage
 import statistics
 from get_tensor import getTensor
 from equalize import equalizeHistColour
 import matplotlib
 from matplotlib import pyplot as plt
-from progress_bar import progress
 from scipy.signal import find_peaks
 from scipy import signal
 from scipy import ndimage
@@ -45,12 +44,12 @@ class createTemplate:
         # Setup
         #-----------------------------------------------------------------------
 
-        self.titleFont = font(family = "Calibri Light", size = 30)
-        self.largeFont = font(family  = "Calibri Light", size = 24)
-        self.mediumFont = font(family = "Calibri Light", size = 18)
-        self.smallFont = font(family = "Calibri Light", size = 16)
-        self.entryFont = font(family = "Calibri Light", size = 14)
-        self.boldFont = font(family = "Calibri", size = 19)
+        self.titleFont = font.Font(family = "Calibri Light", size = 30)
+        self.largeFont = font.Font(family  = "Calibri Light", size = 24)
+        self.mediumFont = font.Font(family = "Calibri Light", size = 18)
+        self.smallFont = font.Font(family = "Calibri Light", size = 16)
+        self.entryFont = font.Font(family = "Calibri Light", size = 14)
+        self.boldFont = font.Font(family = "Calibri", size = 19)
         self.gray = "#243447"
         self.white = '#ffffff'
 
@@ -78,6 +77,7 @@ class createTemplate:
         self.templateDistances = list()
         self.templateTensors = list()
         self.blobSizeRanges = list()
+        self.intersectPointHeights = list()
 
         self.templatePath = ""
         self.rectList = list()
@@ -91,6 +91,8 @@ class createTemplate:
         self.windowClosed = False
         self.templateSaved = False
         self.numPoint = 0
+        self.intersectSelect = False # flag to indicate whether user is selecting
+            # intersection point to avoid bug in window closing
 
         #-----------------------------------------------------------------------
         # Frames
@@ -297,8 +299,7 @@ class createTemplate:
 
         templateFrame = tk.Frame(self.templateWindow, bg=self.gray)
         leftFrame = tk.Frame(self.templateWindow, bg=self.gray)
-        self.manualDepthFrame = tk.Frame(self.templateWindow, bg=self.gray)
-        self.manualEntryFrame = tk.Frame(self.manualDepthFrame, bg=self.gray)
+        self.manualEntryFrame = tk.Frame(leftFrame, bg=self.gray)
 
         #-----------------------------------------------------------------------
         # Labels
@@ -309,7 +310,7 @@ class createTemplate:
         self.stakesLabel = tk.Label(leftFrame, text = "No Stakes Selected", bg = self.gray, fg = self.white, font = self.boldFont)
         coordinateTitleLabel = tk.Label(leftFrame, text = "Last Coordinate", bg = self.gray, fg = self.white, font = self.boldFont)
         self.coordinateLabel = tk.Label(leftFrame, text = "None", bg = self.gray, fg = self.white, font = self.mediumFont)
-        self.manualDepthLabel = tk.Label(self.manualDepthFrame, text="Height of selected point", bg=self.gray, fg=self.white, font=self.mediumFont)
+        self.manualDepthLabel = tk.Label(self.manualEntryFrame, text="Height", bg=self.gray, fg=self.white, font=self.boldFont)
         self.manualDepthUnitLabel = tk.Label(self.manualEntryFrame, text="mm", bg=self.gray, fg=self.white, font=self.mediumFont)
 
         #-----------------------------------------------------------------------
@@ -344,7 +345,7 @@ class createTemplate:
         self.cv2_img = cv2.imread(self.templatePath)
 
         # if image has dimensions larger than 3840 x 2160 (4K)
-        w, h = self.cv2_img.size[:2]
+        w, h = self.cv2_img.shape[:2]
         if(w > maxWidth4K or h > maxHeight4K):
             factor = min(maxWidth4K/float(w), maxHeight4K/float(h))
             self.cv2_img = cv2.resize(self.cv2_img, None, fx=factor, fy=factor)
@@ -420,10 +421,9 @@ class createTemplate:
         self.nextButton.config(command = lambda: self.next(self.blobIndex))
 
         # pack widgets for manual depth frame but don't pack frame
-        self.manualDepthLabel.pack(pady=10)
-        self.manualEntryFrame.pack(pady=10)
-        self.manualDepthEntry.pack()
-        self.manualDepthLabel.pack()
+        self.manualDepthLabel.pack(side=tk.LEFT, padx=10)
+        self.manualDepthEntry.pack(side=tk.LEFT, padx=5)
+        self.manualDepthUnitLabel.pack(side=tk.LEFT, padx=5)
 
         self.lastCoord = [0,0]
         self.firstCoord = True
@@ -451,10 +451,10 @@ class createTemplate:
     #-----------------------------------------------------------------------
 
     def _on_mousewheel(self, event):
-        self.canvas.yview_scroll(-1*(event.delta/120), "units")
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def _on_mousewheel_preview(self, event):
-        self.previewCanvas.yview_scroll(-1*(event.delta/120), "units")
+        self.previewCanvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     # ---------------------------------------------------------------------------------
     # Validate method for intersection height entry
@@ -467,7 +467,7 @@ class createTemplate:
         try:
             if new_text == "":
                 self.manualDepthVar = 0.0
-            else
+            else:
                 self.manualDepthVar = int(new_text)
             return True
 
@@ -622,6 +622,9 @@ class createTemplate:
                 blobNum += 1.0
                 self.blobNum += 1.0
 
+                # clear rectangle from canvas
+                self.canvas.delete(rect)
+
             # determine blob ranges for stake
             avgSize = float(blobArea) / float(blobNum)
             self.blobSizeRanges.append([avgSize * 0.7, avgSize * 1.50])
@@ -629,25 +632,27 @@ class createTemplate:
             # if no snow in template allow user to manually select intersection point
             if(not self.snowFlag.get()):
                 # update widgets
+                self.intersectSelect = True
                 self.instructionsLabelTemplate.config(text = "Select Intersection Point on Stake %d" \
                     % self.blobIndex)
                 self.stakesLabel.config(text = "No Point Selected")
                 self.coordinateLabel.config(text = "None")
                 self.numPoint = 0
-                self.manualDepthFrame.pack(side=tk.BOTTOM)
+                self.manualEntryFrame.pack(pady=(15,5))
 
                 # update click binding
                 self.canvas.tag_bind('image', '<Button-1>', self.windowClickIntersection)
 
                 # update buttons
-                waitVariable = tk.IntVar()
-                self.nextButton.config(command = lambda: waitVariable.set(1))
+                self.waitVariable = tk.IntVar()
+                self.nextButton.config(command = lambda: self.waitVariable.set(1))
                 self.undoButton.config(command = lambda: self.undoIntersection())
 
                 # wait until intersection point selected
-                self.templateWindow.wait_variable(waitVariable)
+                self.templateWindow.wait_variable(self.waitVariable)
 
                 # determine coordinates
+                if(not self.intersectSelect): return # break if window closed
                 coords_c = self.canvas.coords(self.lastCircle)
                 [x0_c, y0_c] = [(float(x) + 15) / self.cropRatio for x in coords_c][:2]
                 [x0_c, y0_c] = [x0_c + sx0, y0_c + sy0]
@@ -661,11 +666,19 @@ class createTemplate:
                     # update list with distance
                     self.templateDistances[self.blobIndex][j] = distance_blob
 
+                # update intersection point heights
+                self.intersectPointHeights.append(self.manualDepthVar)
+
                 # reassign button actions and click binding
                 self.canvas.tag_bind('image', '<Button-1>', self.windowClick)
                 self.nextButton.config(command = lambda: self.next(self.blobIndex))
                 self.undoButton.config(command = lambda: self.undo())
-                self.manualDepthFrame.pack_forget(0)
+                self.manualEntryFrame.pack_forget()
+                self.intersectSelect = False
+
+            # if snow append height of zero to intersection point height list
+            else:
+                self.intersectPointHeights.append(0)
 
             # update blob index
             self.blobIndex += 1
@@ -728,9 +741,13 @@ class createTemplate:
             # mean tensor
             meanTensor = 0
 
+            # get number of blobs
+            num_blobs = len(blobsFiltered)
+            if(num_blobs > 4): num_blobs = 4
+
             # get bottom tensor
             for x in range(0, 4):
-                for y in range(x+1, 4):
+                for y in range(x+1, num_blobs):
                     # calculate tensor
                     tensorsLow.append(getTensor(blobsFiltered[x][1], blobsFiltered[y][1],
                         ((y-x) * (80+56))))
@@ -757,6 +774,49 @@ class createTemplate:
 
             # append mean tensor to list
             self.templateTensors.append(meanTensor)
+
+            # adjust intersection point if user selected a non-zero height
+            if(self.intersectPointHeights[i] != 0):
+                # get upper and lower most blobs
+                lowerBlob = blobsFiltered[0]
+                upperBlob = blobsFiltered[len(blobsFiltered)-1]
+
+                # get center of upper and lower blobs
+                x0, y0 = (float(lowerBlob[0][0] + lowerBlob[1][0]) / 2.0, \
+                    float(lowerBlob[0][1] + lowerBlob[1][1]) / 2.0)
+                x1, y1 = (float(upperBlob[0][0] + upperBlob[1][0]) / 2.0, \
+                    float(upperBlob[0][1] + upperBlob[1][1]) / 2.0)
+
+                # extend line to stake boundary
+                x_end, y_end = (lineIntersections((x0, y0), (x1, y1), (stake[0][0][0],
+                    stake[0][1][1]), tuple(stake[0][1])))
+
+                # get equation of line passing through intersection point
+                m_int = (y_end - y0)/ float(x_end - x0)
+                x_c, y_c = self.templateIntersections[i]
+                c_int = y_c - (x_c * m_int)
+
+                # determine where new line intersects with stake boundary
+                x_m = 5 # arbitrary x value
+                y_m = x_m * m_int + c_int
+                x_end, y_end = (lineIntersections((x_c, y_c), (x_m, y_m), (stake[0][0][0],
+                    stake[0][1][1]), tuple(stake[0][1])))
+
+                # determine distance between x_c, y_c and x_end, y_end
+                d_ = float(np.sqrt(np.square(x_end - x_c) + np.square(y_end - y_c)))
+
+                # find pixel travel along line to intersection point
+                d = float(self.intersectPointHeights[i] / float(meanTensor))
+
+                # find final coordinates of intersection point
+                (x_n, y_n) = (x_c + ((d/d_) * (x_end - x_c)), y_c + ((d/d_) * (y_end - y_c)))
+
+                # update intersections list
+                self.templateIntersections[i] = [x_n, y_n]
+
+                # update template distances
+                old_distances = self.templateDistances[i]
+                self.templateDistances[i] = [x + d for x in old_distances]
 
     #-----------------------------------------------------------------------
     # Function to calculate intersections for each stake
@@ -1047,7 +1107,7 @@ class createTemplate:
 
         # create canvas to display image
         self.previewCanvas = tk.Canvas(imageFrame, width = imgWidth*0.75, height = imgHeight,
-            bg = self.gray, scrollregion = (0, 0, imgWidth, imgWidth))
+            bg = self.gray, scrollregion = (0, 0, imgWidth, imgHeight))
 
         self.previewCanvas.bind_all("<MouseWheel>", self._on_mousewheel_preview)
 
@@ -1133,6 +1193,9 @@ class createTemplate:
         self.windowClosed = True
         self.templateWindow.destroy()
         self.templateWindowClosed.set(1)
+        if(self.intersectSelect):
+            self.waitVariable.set(1)
+            self.intersectSelect = False
         self.root.deiconify()
 
     def closePreviewWindow(self):
