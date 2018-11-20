@@ -13,18 +13,6 @@ import ast
 import cv2
 import os
 from PIL import ImageTk, Image
-from order_points import orderPoints
-from get_intersection import lineIntersections
-from scipy import ndimage
-import statistics
-from get_tensor import getTensor
-import matplotlib
-from matplotlib import pyplot as plt
-from progress_bar import progress
-from scipy.signal import find_peaks
-from scipy import signal
-from scipy import ndimage
-import math
 import template
 import time
 import datetime
@@ -40,6 +28,10 @@ class GUI:
         self.root.configure(background='#243447')
         self.root.title("Measure Snow Depth")
         self.root.iconbitmap(default="include/GUI/transparent.ico")
+
+        # create AppData directory if it doesn't exist
+        if(not os.path.isdir("AppData")):
+            os.mkdir("./AppData")
 
         # ---------------------------------------------------------------------------------
         # Variables
@@ -1044,7 +1036,10 @@ class GUI:
             cv2.imwrite(marked_template_path, templateMarked)
 
             # create folder for training images
-            os.mkdir("./AppData/training/%s" % filename)
+            training_path = "./AppData/training/" + filename + "-" +  str(templateName) + "/"
+            os.mkdir(training_path)
+            os.mkdir(training_path + "/blob")
+            os.mkdir(training_path + "/non-blob")
 
             # create output strings
             outputString = str(templateCoords).replace("array(", "").replace(")", "")
