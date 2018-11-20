@@ -7,6 +7,7 @@ import os
 from get_tensor import getTensor
 import statistics
 import tqdm
+import random
 
 # parameters
 median_kernel_size = 5
@@ -14,23 +15,61 @@ dilate_kernel = (5,5)
 
 TRAINING_DATA = True # temporary flag to output training data for neural network
 
+def roiValid(coordinates, blobs):
+	'''
+	Function to determine if a randomly sampled roi intersects with any blobs
+	@param coordinates the coordinates of the randomly sampled roi
+	@param blobs list of blob coordinates
+	@type coordinates list([x0, y0], [x1, y1])
+	@type blobs list(blob1[[x0, y0], [x1, y1]], ...)
+	@return whether the randomly sampled roi is valid
+	@rtype bool
+	'''
+
+	# iterate through blobs
+	for blob in blobs:
+		# if one rectangle is to the side of the other
+		# if one rectangle is above the other
+		if(not((coordinates[0][0] > blob[1][0] or blob[0][0] > coordinates[1][0]) or
+			(coordinates[0][1] < blob[1][1] or blob[0][1] < coordinates[1][1]))):
+			return False
+
+	# return True if passes all tests
+	return True
+
 # function to determine which stakes are valid
 # verify that blobs are still within reference windows
 # need at least two blobs to have a valid stake
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
-	img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV):
+	img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
+	training_path, model_path):
 
-	# create directories for training images
-	if(debug):
-		validPath = debug_directory + "valid/"
-		invalidPath = debug_directory + "invalid/"
-		os.mkdir(validPath)
-		os.mkdir(invalidPath)
+	# determine paths for training images
+	validPath = training_path + "blob\\"
+	invalidPath = training_path + "non-blob\\"
 
-	# indexes for image names
-	validIndex = 0
-	invalidIndex = 0
+	# flag whether model is initialized
+	modelInitialized = False
+	if(os.path.isfile(model_path)):
+		modelInitialized = True
+
+	if not modelInitialized:
+		# indexes for image names
+		validFiles = [int(os.path.splitext(x)[0]) for x in os.listdir(validPath)]
+		invalidFiles = [int(os.path.splitext(x)[0]) for x in os.listdir(invalidPath)]
+		validIndex = max(validFiles) + 1 if len(validFiles) > 0 else 0 #int(os.path.splitext(max(validFiles))[0]) + 1 if len(validFiles) > 0 else 0
+		invalidIndex = max(invalidFiles) + 1 if len(invalidFiles) > 0 else 0#int(os.path.splitext(max(invalidFiles))[0]) + 1 if len(invalidFiles) > 0 else 0
+		print(validIndex, invalidIndex)
+
+		# flatten roi coordinates (get list of only blob roi)
+		# this is used to check whether randomly sample roi for deep learning
+		# algorithm contain any blob
+		flattened_list = list()
+		for stake in coordinates:
+			for a, roi in enumerate(stake):
+				if a == 0: continue
+				flattened_list.append(roi)
 
 	# contains output data
 	stake_output = {}
@@ -58,6 +97,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		# duplicate image
 		img = img_.copy()
 		img_low_blob = img.copy()
+
+		# get image size
+		h_img, w_img = img_.shape[:2]
 
 		# determine whether single or double HSV range
 		numRanges = len(hsvRanges)
@@ -160,6 +202,33 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 						cv2.imwrite(validPath + train_name, train_img)
 						validIndex += 1
 
+						# roi size
+						roi_width = abs(rectangle[0][0] - rectangle[1][0])
+						roi_height = abs(rectangle[0][1] - rectangle[1][1])
+
+						# sample an invalid blob (random roi from image) and write to invalid training folder
+						# generate random x and y coordinates
+						x_rand = random.randint(0, int(w_img - roi_width))
+						y_rand = random.randint(0, int(h_img - roi_height - upper_border))
+						print(w_img - roi_width)
+
+						# iterate until valid roi
+						while(not(roiValid([[x_rand, y_rand], [x_rand+roi_width, y_rand+roi_height]],
+							flattened_list))):
+							x_rand = random.randint(0, int(w_img - roi_width))
+							y_rand = random.randint(0, int(h_img - roi_height - upper_border))
+
+						print(x_rand, y_rand)
+
+						# write random roi to training folder
+						train_img_invalid = img_[int(y_rand):int(y_rand+roi_height),
+							int(x_rand):int(x_rand+roi_width)]
+						train_name_invalid = "%d.JPG" % invalidIndex
+						cv2.imwrite(invalidPath + train_name_invalid, train_img_invalid)
+						invalidIndex += 1
+						#cv2.imshow("img", train_img_invalid)
+						#cv2.waitKey()
+
 				# else add invalid blob
 				else:
 					validBlobs.append(False)
@@ -173,11 +242,11 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
 
 						# write to training folder
-						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
-							int(rectangle[0][0]):int(rectangle[1][0])]
-						train_name = "%d.JPG" % invalidIndex
-						cv2.imwrite(invalidPath + train_name, train_img)
-						invalidIndex += 1
+						#train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+						#	int(rectangle[0][0]):int(rectangle[1][0])]
+						#train_name = "%d.JPG" % invalidIndex
+						#cv2.imwrite(invalidPath + train_name, train_img)
+						#invalidIndex += 1
 
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
