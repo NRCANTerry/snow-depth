@@ -1,6 +1,5 @@
 # import necessary modules
 import cv2
-from progress_bar import progress
 import xlsxwriter
 import statistics
 from matplotlib import pyplot as plt

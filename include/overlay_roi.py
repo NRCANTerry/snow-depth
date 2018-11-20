@@ -1,6 +1,5 @@
 # import necessary modules
 import cv2
-from progress_bar import progress
 import tqdm
 
 # optional function to overlay template roi (stake and blob bounding boxes)
