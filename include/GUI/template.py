@@ -39,7 +39,7 @@ class createTemplate:
         self.root = master
         self.root.configure(bg='#243447')
         self.root.title("Generate Snow Depth Template")
-        self.root.iconbitmap(default="includes/GUI/transparent.ico")
+        self.root.iconbitmap(default="include/GUI/transparent.ico")
 
         #-----------------------------------------------------------------------
         # Setup
@@ -295,8 +295,10 @@ class createTemplate:
         # Frames
         #-----------------------------------------------------------------------
 
-        templateFrame = tk.Frame(self.templateWindow, bg = self.gray)
-        leftFrame = tk.Frame(self.templateWindow, bg = self.gray)
+        templateFrame = tk.Frame(self.templateWindow, bg=self.gray)
+        leftFrame = tk.Frame(self.templateWindow, bg=self.gray)
+        self.manualDepthFrame = tk.Frame(self.templateWindow, bg=self.gray)
+        self.manualEntryFrame = tk.Frame(self.manualDepthFrame, bg=self.gray)
 
         #-----------------------------------------------------------------------
         # Labels
@@ -307,6 +309,8 @@ class createTemplate:
         self.stakesLabel = tk.Label(leftFrame, text = "No Stakes Selected", bg = self.gray, fg = self.white, font = self.boldFont)
         coordinateTitleLabel = tk.Label(leftFrame, text = "Last Coordinate", bg = self.gray, fg = self.white, font = self.boldFont)
         self.coordinateLabel = tk.Label(leftFrame, text = "None", bg = self.gray, fg = self.white, font = self.mediumFont)
+        self.manualDepthLabel = tk.Label(self.manualDepthFrame, text="Height of selected point", bg=self.gray, fg=self.white, font=self.mediumFont)
+        self.manualDepthUnitLabel = tk.Label(self.manualEntryFrame, text="mm", bg=self.gray, fg=self.white, font=self.mediumFont)
 
         #-----------------------------------------------------------------------
         # Buttons
@@ -318,6 +322,15 @@ class createTemplate:
             width = 25, command = lambda: self.undo())
         self.nextButton = tk.Button(leftFrame, text = "Next", bg = self.gray, fg = self.white, font = self.smallFont,
             width = 25, command = lambda: self.next())
+
+        #-----------------------------------------------------------------------
+        # Entry
+        #-----------------------------------------------------------------------
+
+        validateCommand = self.root.register(self.validateHeight)
+        self.manualDepthVar = 0.0 # default height of 0 (user selects intersection point)
+        self.manualDepthEntry = tk.Entry(self.manualEntryFrame, validatecommand=((validateCommand, '%P')),
+            validate="key", font=self.mediumFont, width=10)
 
         #-----------------------------------------------------------------------
         # Setup canvas
@@ -406,13 +419,18 @@ class createTemplate:
         self.coordinateLabel.config(text = "None")
         self.nextButton.config(command = lambda: self.next(self.blobIndex))
 
+        # pack widgets for manual depth frame but don't pack frame
+        self.manualDepthLabel.pack(pady=10)
+        self.manualEntryFrame.pack(pady=10)
+        self.manualDepthEntry.pack()
+        self.manualDepthLabel.pack()
+
         self.lastCoord = [0,0]
         self.firstCoord = True
         self.numRect = 0
 
         # run window
         self.root.wait_variable(self.templateWindowClosed)
-        #self.root.wait_window(self.templateWindow)
 
         # if window was closed early
         if(self.windowClosed):
@@ -437,6 +455,24 @@ class createTemplate:
 
     def _on_mousewheel_preview(self, event):
         self.previewCanvas.yview_scroll(-1*(event.delta/120), "units")
+
+    # ---------------------------------------------------------------------------------
+    # Validate method for intersection height entry
+    # ---------------------------------------------------------------------------------
+
+    def validateHeight(self, new_text):
+        # the text field is being cleared
+        if not new_text:
+            self.manualDepthVar = 0.0
+        try:
+            if new_text == "":
+                self.manualDepthVar = 0.0
+            else
+                self.manualDepthVar = int(new_text)
+            return True
+
+        except ValueError:
+            return False
 
     #-----------------------------------------------------------------------
     # Function to handle click events
@@ -598,6 +634,7 @@ class createTemplate:
                 self.stakesLabel.config(text = "No Point Selected")
                 self.coordinateLabel.config(text = "None")
                 self.numPoint = 0
+                self.manualDepthFrame.pack(side=tk.BOTTOM)
 
                 # update click binding
                 self.canvas.tag_bind('image', '<Button-1>', self.windowClickIntersection)
@@ -628,6 +665,7 @@ class createTemplate:
                 self.canvas.tag_bind('image', '<Button-1>', self.windowClick)
                 self.nextButton.config(command = lambda: self.next(self.blobIndex))
                 self.undoButton.config(command = lambda: self.undo())
+                self.manualDepthFrame.pack_forget(0)
 
             # update blob index
             self.blobIndex += 1

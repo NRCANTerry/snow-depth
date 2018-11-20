@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 import json
-from progress_bar import progress
 from order_points import orderPoints
 import os
 from get_tensor import getTensor
@@ -110,7 +109,6 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				# skip stakes
 				if(i == 0):
 					continue
-
 
 				# blob counter
 				num_blobs = 0

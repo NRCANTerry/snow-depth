@@ -1,8 +1,8 @@
 # add to python path
 import sys
 
-sys.path.append('./includes')
-sys.path.append('./includes/GUI')
+sys.path.append('./include')
+sys.path.append('./include/GUI')
 
 # import necessary modules
 import cv2
@@ -10,7 +10,6 @@ import os
 import numpy as np
 import json
 import imutils
-from progress_bar import progress
 from check_stakes import getValidStakes
 from main import GUI
 from calculate_depth import getDepths

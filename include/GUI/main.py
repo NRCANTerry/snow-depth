@@ -39,7 +39,7 @@ class GUI:
         self.root = master
         self.root.configure(background='#243447')
         self.root.title("Measure Snow Depth")
-        self.root.iconbitmap(default="includes/GUI/transparent.ico")
+        self.root.iconbitmap(default="include/GUI/transparent.ico")
 
         # ---------------------------------------------------------------------------------
         # Variables
@@ -1032,6 +1032,8 @@ class GUI:
                 os.mkdir("./AppData/templates")
             if(not os.path.isdir("./AppData/models")):
                 os.mkdir("./AppData/models")
+            if(not os.path.isdir("./AppData/training")):
+                os.mkdir("./AppData/training")
 
             # write images to directory
             current_dir = os.getcwd()
@@ -1040,6 +1042,9 @@ class GUI:
             marked_template_path = current_dir + "\\AppData\\templates\\" + filename + "-" +  str(templateName) + "-marked" + ext
             cv2.imwrite(template_path, templateImage)
             cv2.imwrite(marked_template_path, templateMarked)
+
+            # create folder for training images
+            os.mkdir("./AppData/training/%s" % filename)
 
             # create output strings
             outputString = str(templateCoords).replace("array(", "").replace(")", "")
