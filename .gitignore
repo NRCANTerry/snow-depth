@@ -16,5 +16,5 @@ deep-learning/**/*.jpg
 deep-learning/**/*.JPG
 
 # ignore images in main directory
-#*.JPG
-#*.jpg
+*.JPG
+*.jpg
