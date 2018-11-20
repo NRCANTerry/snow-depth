@@ -345,7 +345,7 @@ class createTemplate:
         self.cv2_img = cv2.imread(self.templatePath)
 
         # if image has dimensions larger than 3840 x 2160 (4K)
-        w, h = self.cv2_img.shape[:2]
+        h, w = self.cv2_img.shape[:2]
         if(w > maxWidth4K or h > maxHeight4K):
             factor = min(maxWidth4K/float(w), maxHeight4K/float(h))
             self.cv2_img = cv2.resize(self.cv2_img, None, fx=factor, fy=factor)
