@@ -919,6 +919,16 @@ class GUI:
                     os.remove(path)
                     os.remove(path_marked)
 
+                    # delete training data for template
+                    training_path = "./AppData/training/" + filename + "/"
+                    import shutil
+                    shutil.rmtree(training_path)
+
+                    # delete model if exists
+                    model_path = "./AppData/models/" + filename + ".model"
+                    if(os.path.isfile(model_path)):
+                        os.remove(model_path)
+
                     self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
                     self.config.remove_option("Template Images", removetemplateMenuVar.get())
                     self.config.remove_option("Template Intersections", removetemplateMenuVar.get())
