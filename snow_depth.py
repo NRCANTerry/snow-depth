@@ -21,6 +21,7 @@ from colour_balance import balanceColour
 from update_dataset import createDataset
 from update_dataset import createDatasetTensor
 import tqdm
+from pathlib import Path
 
 if __name__ == '__main__':
     # create GUI window
@@ -91,12 +92,10 @@ if __name__ == '__main__':
     # flag to run program in debug mode
     debug = params[11]
 
-    # other parameters
-    median_kernal_size = 5
-    dilate_kernel = (5, 5)
-    angle_thresh = -45
-    bar_width_low = 15
-    bar_width_high = 300
+    # get path to training directories and model file
+    filename = os.path.splitext(os.path.split(template_path)[1])[0]
+    training_path = str(Path(template_path).parents[1]) + "\\training\\" + filename + "\\"
+    model_path = str(Path(template_path).parents[1]) + "\\model\\" + filename + ".model"
 
     # ---------------------------------------------------------------------------------
     # Create Directories
@@ -254,7 +253,7 @@ if __name__ == '__main__':
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
         upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
-        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR)
+        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path)
 
     # update tensor dataset
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
