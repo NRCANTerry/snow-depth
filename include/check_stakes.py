@@ -8,12 +8,14 @@ from get_tensor import getTensor
 import statistics
 import tqdm
 import random
+from lenet import LeNet
+from pathlib import Path
+from classify import classify
+from keras.models import load_model
 
 # parameters
 median_kernel_size = 5
 dilate_kernel = (5,5)
-
-TRAINING_DATA = True # temporary flag to output training data for neural network
 
 def roiValid(coordinates, blobs):
 	'''
@@ -29,10 +31,15 @@ def roiValid(coordinates, blobs):
 	# iterate through blobs
 	for blob in blobs:
 		# if one rectangle is to the side of the other
+		if(coordinates[0][0] > blob[1][0] or blob[0][0] > coordinates[1][0]):
+			continue # check next
+
 		# if one rectangle is above the other
-		if(not((coordinates[0][0] > blob[1][0] or blob[0][0] > coordinates[1][0]) or
-			(coordinates[0][1] < blob[1][1] or blob[0][1] < coordinates[1][1]))):
-			return False
+		if(coordinates[0][1] > blob[1][1] or blob[0][1] > coordinates[1][1]):
+			continue # check next
+
+		# if neither condition is met the rectangles overlap
+		return False
 
 	# return True if passes all tests
 	return True
@@ -58,9 +65,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		# indexes for image names
 		validFiles = [int(os.path.splitext(x)[0]) for x in os.listdir(validPath)]
 		invalidFiles = [int(os.path.splitext(x)[0]) for x in os.listdir(invalidPath)]
-		validIndex = max(validFiles) + 1 if len(validFiles) > 0 else 0 #int(os.path.splitext(max(validFiles))[0]) + 1 if len(validFiles) > 0 else 0
-		invalidIndex = max(invalidFiles) + 1 if len(invalidFiles) > 0 else 0#int(os.path.splitext(max(invalidFiles))[0]) + 1 if len(invalidFiles) > 0 else 0
-		print(validIndex, invalidIndex)
+		validIndex = max(validFiles) + 1 if len(validFiles) > 0 else 0
+		invalidIndex = max(invalidFiles) + 1 if len(invalidFiles) > 0 else 0
 
 		# flatten roi coordinates (get list of only blob roi)
 		# this is used to check whether randomly sample roi for deep learning
@@ -70,6 +76,10 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 			for a, roi in enumerate(stake):
 				if a == 0: continue
 				flattened_list.append(roi)
+
+	else:
+		# load model
+		model = load_model(model_path)
 
 	# contains output data
 	stake_output = {}
@@ -190,63 +200,75 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					# add to list of points for stake
 					actualCoords.append(orderPoints(box, False))
 
+					#train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+					#	int(rectangle[0][0]):int(rectangle[1][0])]
+
+					#print(classify(train_img, model))
+
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
 	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 255, 0), 3)
 
-						# write to training folder
-						train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
-							int(rectangle[0][0]):int(rectangle[1][0])]
-						train_name = "%d.JPG" % validIndex
-						cv2.imwrite(validPath + train_name, train_img)
-						validIndex += 1
+						# Generate Training Images for Deep Learning Model
+						if(not modelInitialized):
+							# write to training folder
+							train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+								int(rectangle[0][0]):int(rectangle[1][0])]
+							train_name = "%d.JPG" % validIndex
+							cv2.imwrite(validPath + train_name, train_img)
+							validIndex += 1
 
-						# roi size
-						roi_width = abs(rectangle[0][0] - rectangle[1][0])
-						roi_height = abs(rectangle[0][1] - rectangle[1][1])
+							# roi size
+							roi_width = abs(rectangle[0][0] - rectangle[1][0])
+							roi_height = abs(rectangle[0][1] - rectangle[1][1])
 
-						# sample an invalid blob (random roi from image) and write to invalid training folder
-						# generate random x and y coordinates
-						x_rand = random.randint(0, int(w_img - roi_width))
-						y_rand = random.randint(0, int(h_img - roi_height - upper_border))
-						print(w_img - roi_width)
-
-						# iterate until valid roi
-						while(not(roiValid([[x_rand, y_rand], [x_rand+roi_width, y_rand+roi_height]],
-							flattened_list))):
+							# sample an invalid blob (random roi from image) and write to invalid training folder
+							# generate random x and y coordinates
 							x_rand = random.randint(0, int(w_img - roi_width))
-							y_rand = random.randint(0, int(h_img - roi_height - upper_border))
+							y_rand = random.randint(0, int(h_img - roi_height))
 
-						print(x_rand, y_rand)
+							# iterate until valid roi
+							while(not(roiValid([[x_rand, y_rand], [x_rand+roi_width, y_rand+roi_height]],
+								flattened_list))):
+								x_rand = random.randint(0, int(w_img - roi_width))
+								y_rand = random.randint(0, int(h_img - roi_height))
 
-						# write random roi to training folder
-						train_img_invalid = img_[int(y_rand):int(y_rand+roi_height),
-							int(x_rand):int(x_rand+roi_width)]
-						train_name_invalid = "%d.JPG" % invalidIndex
-						cv2.imwrite(invalidPath + train_name_invalid, train_img_invalid)
-						invalidIndex += 1
-						#cv2.imshow("img", train_img_invalid)
-						#cv2.waitKey()
+							# write random roi to training folder
+							train_img_invalid = img_[int(y_rand):int(y_rand+roi_height),
+								int(x_rand):int(x_rand+roi_width)]
+							train_name_invalid = "%d.JPG" % invalidIndex
+							cv2.imwrite(invalidPath + train_name_invalid, train_img_invalid)
+							invalidIndex += 1
+
+							# add yellow rectangle for roi taken
+							cv2.rectangle(img, (int(x_rand), int(y_rand)),
+		                        (int(x_rand+roi_width), int(y_rand+roi_height)), (0, 255, 255), 3)
 
 				# else add invalid blob
 				else:
 					validBlobs.append(False)
+
+					# verify using deep learning network
+					if(modelInitialized):
+						subset = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
+							int(rectangle[0][0]):int(rectangle[1][0])]
+						output = classify(subset, model)
+						if(output[0] and output[1] > 0.9):
+							DLValid = True
+						else: DLValid = False
 
 					# add False to list
 					actualCoords.append(False)
 
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
-						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
-	                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
-
-						# write to training folder
-						#train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
-						#	int(rectangle[0][0]):int(rectangle[1][0])]
-						#train_name = "%d.JPG" % invalidIndex
-						#cv2.imwrite(invalidPath + train_name, train_img)
-						#invalidIndex += 1
+						if(modelInitialized and DLValid):
+							cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
+		                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 165, 255), 3)
+						else:
+							cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
+		                        (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 0, 255), 3)
 
 			# determine number of valid blobs on stake
 			validBlobsOnStake = validBlobs.count(True)
@@ -314,9 +336,9 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				mean = dataset[j][0][0]
 				std_dev = dataset[j][0][1]
 
-				# if tensor measurement is within defined range
-				if((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
-					mean_tensor <= (mean+(std_dev*NUM_STD_DEV))):
+				# if tensor measurement is within defined range or within 5%
+				if(((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
+					mean_tensor <= (mean+(std_dev*NUM_STD_DEV))) or abs(mean-mean_tensor)/mean_tensor < 0.05):
 					# update data set
 					num_vals_dataset = dataset[j][0][2]
 					new_vals_dataset = num_vals_dataset + 1
@@ -413,6 +435,16 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 		# output JSON file
 		file = open(debug_directory + 'stakes.json', 'w')
 		json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
+
+	# determine whether model should be initialized
+	if(not modelInitialized and validIndex > 1000 and invalidIndex > 1000):
+		# create neural network
+		print("\nInitializing Deep Learning Model")
+		LeNet(model_path, validPath, invalidPath)
+
+		# delete training images
+		import shutil
+		shutil.rmtree(str(Path(validPath).parents[0]))
 
 	# return list of valid stakes
 	return validImages, blobCoords, dataset, actualTensors
