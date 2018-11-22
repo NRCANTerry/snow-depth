@@ -36,7 +36,7 @@ class createTemplate:
     def __init__(self, master):
         # setup window
         self.root = master
-        self.root.configure(bg='#243447')
+        self.root.configure(bg='#2B3137')
         self.root.title("Generate Snow Depth Template")
         self.root.iconbitmap(default="include/GUI/transparent.ico")
 
@@ -50,7 +50,7 @@ class createTemplate:
         self.smallFont = font.Font(family = "Calibri Light", size = 16)
         self.entryFont = font.Font(family = "Calibri Light", size = 14)
         self.boldFont = font.Font(family = "Calibri", size = 19)
-        self.gray = "#243447"
+        self.gray = "#2B3137"
         self.white = '#ffffff'
 
         #-----------------------------------------------------------------------
