@@ -112,7 +112,6 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
 
     # denoise using bilateral filter
     img_filter = cv2.bilateralFilter(img.copy(), 9, 75, 75)
-    #img_filter = cv2.fastNlMeansDenoising(img_filter, None, 3, 7, 7)
 
     # balance colour
     img_filter = balanceColour(img_filter, 5)
