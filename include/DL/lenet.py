@@ -1,4 +1,10 @@
 # import necessary packages
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import sys
+stderr = sys.stderr
+sys.stderr = open(os.devnull, 'w')
+
 from keras.models import Sequential
 from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
@@ -13,8 +19,8 @@ from sklearn.model_selection import train_test_split
 from keras.utils import to_categorical
 import numpy as np
 import cv2
-import os
 import random
+sys.stderr = stderr
 
 # training parameters
 EPOCHS = 25
@@ -57,7 +63,6 @@ class LeNet:
 		# loop over input images
 		for i, image in enumerate(validImages + invalidImages):
 			# load the image, resize and store in data list
-			print(image)
 			img = cv2.imread(image)
 			img = cv2.resize(img, (28, 28))
 			img = img_to_array(img)
