@@ -162,7 +162,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                 # get sorted indexes (decreasing distance down the line)
                 sorted_index = np.argsort(peaks)
-                last_index = sorted_index[len(sorted_index)-1]
+                last_index = sorted_index[len(sorted_index)-1] if len(sorted_index) > 0 else 0
 
                 # index of selected peak in sorted list of peaks
                 selected_peak = -1
@@ -216,6 +216,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                             and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
                         #and (not noisy_signal_after or peak_width > 150 or peak_width + peak_width_next > 150)
                         #and (np.amin(lineVals[peak_index:peaks[index+1]]) > 60 or peak_width_next < 50) # no stake after peak
+                        and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75)
                     ):
                         # select peak
                         selected_peak = index
