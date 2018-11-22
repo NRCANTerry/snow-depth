@@ -25,7 +25,7 @@ class GUI:
         # ---------------------------------------------------------------------------------
 
         self.root = master
-        self.root.configure(background='#243447')
+        self.root.configure(background='#2B3137')
         self.root.title("Measure Snow Depth")
         self.root.iconbitmap(default="include/GUI/transparent.ico")
 
@@ -102,7 +102,7 @@ class GUI:
         # Labels
         # ---------------------------------------------------------------------------------
 
-        self.gray = "#243447"
+        self.gray = "#2B3137"
         self.white = "#ffffff"
 
         # main frame
@@ -145,7 +145,7 @@ class GUI:
 
         # configure title labels
         for label in self.titleLabels:
-            label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 28))
+            label.config(bg = self.gray, fg = self.white, font=("Calibri", 30))
 
         # configure other labels
         for label in self.otherLabels:
@@ -544,7 +544,11 @@ class GUI:
 
             # if valid update label
             if(valid):
-                self.pathLabel.config(text=dirname)
+                displayName = (dirname[len(dirname)-55:]) if len(dirname) > 55 else dirname
+                if(displayName is not dirname and displayName[0] is not "/"):
+                    displayName = "..." + displayName[displayName.find("/"):]
+
+                self.pathLabel.config(text=displayName)
                 self.systemParameters["Directory"] = str(dirname)
             # else warn user
             else:
