@@ -3,6 +3,7 @@ import sys
 
 sys.path.append('./include')
 sys.path.append('./include/GUI')
+sys.path.append('./include/DL')
 
 # import necessary modules
 import cv2
@@ -95,7 +96,7 @@ if __name__ == '__main__':
     # get path to training directories and model file
     filename = os.path.splitext(os.path.split(template_path)[1])[0]
     training_path = str(Path(template_path).parents[1]) + "\\training\\" + filename + "\\"
-    model_path = str(Path(template_path).parents[1]) + "\\model\\" + filename + ".model"
+    model_path = str(Path(template_path).parents[1]) + "\\models\\" + filename + ".model"
 
     # ---------------------------------------------------------------------------------
     # Create Directories
