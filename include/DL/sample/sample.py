@@ -1,6 +1,6 @@
 # import necessary packages
 import sys
-sys.path.append('C:\\Users\\tbaricia\\Documents\\GitHub\\snow-depth\\includes\\DL')
+sys.path.append('C:\\Users\\tbaricia\\Documents\\GitHub\\snow-depth\\include\\DL')
 from lenet import LeNet
 from classify import classify
 from keras.models import load_model
@@ -8,7 +8,7 @@ import cv2
 import time
 
 # create neural network
-LeNet("test_model.model", "./valid/", "./invalid/")
+#LeNet("test_model.model", "./valid/", "./invalid/")
 
 # test network
 img = cv2.imread("test.JPG")
