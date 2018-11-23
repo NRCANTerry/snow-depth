@@ -194,29 +194,16 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     # get size of next peak
                     if(index != last_index): next_peak_height = lineVals[peaks[index+1]]
 
-                    # check for noise after peak (indicating grass)
-                    '''
-                    num_peaks_after = 0
-                    for w in sorted_index:
-                        if w > index and (properties["left_ips"][w] - lineVals[peaks[w]] > 100 or
-                            properties["right_ips"][w] - lineVals[peaks[w]] > 100):
-                            num_peaks_after += 1
-                    num_points_after = float(num - peak_index)
-                    noisy_signal_after = False if num_peaks_after == 0 else num_points_after / num_peaks_after < 200
-                    '''
-
                     # if peak meets conditions select it
                     if (
                         index != last_index # peak isn't last
                         and stake_cover > 0.5 # majority stake before peak
                         and (snow_cover > 0.5 or peak_width > 150 or (snow_cover > 0.35 and peak_width > 100)) # snow after peak
-                        and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 100
+                        and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                             and float(peak_intensity) / float(next_peak_height) > 0.5)) # peak is sufficiently large
                         and (peak_width > 100 or ((peak_width + peak_width_next > 100) and proximity_peak < 125
                             and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
-                        #and (not noisy_signal_after or peak_width > 150 or peak_width + peak_width_next > 150)
-                        #and (np.amin(lineVals[peak_index:peaks[index+1]]) > 60 or peak_width_next < 50) # no stake after peak
-                        and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75)
+                        and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75) # no stake after peak
                     ):
                         # select peak
                         selected_peak = index
