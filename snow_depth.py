@@ -23,6 +23,19 @@ from update_dataset import createDataset
 from update_dataset import createDatasetTensor
 import tqdm
 from pathlib import Path
+from generate_report import generate
+
+
+# class to allow dot functionality with dict
+class Map(dict):
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def __setattr__(self, key, value):
+        self.__setitem__(key, value)
 
 if __name__ == '__main__':
     # create GUI window
@@ -39,6 +52,9 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
     # Get parameters from GUI
     # ---------------------------------------------------------------------------------
+
+    # dictionary to hold program output data
+    summary = Map()
 
     # window closed without executing
     if(params == False):
@@ -65,6 +81,14 @@ if __name__ == '__main__':
     blob_distances_template = params[18]
     STD_DEV_REG, STD_DEV_TENSOR, ROTATION, TRANSLATION, SCALE = params[19]
     date_range = params[20]
+
+    # update summary
+    summary.start = datetime.datetime.now()
+    summary.HSVRange = [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2]
+    summary["Borders (Upper, Lower)"] = [img_border_upper, img_border_lower]
+    summary.Debug = params[11]
+    summary["Image Directory"] = + os.path.basename(os.path.normpath(directory))
+    summary.Template = template_name
 
     # determine if the dataset for the template is established
     # must have registered at least 50 images to the template
@@ -97,6 +121,12 @@ if __name__ == '__main__':
     filename = os.path.splitext(os.path.split(template_path)[1])[0]
     training_path = str(Path(template_path).parents[1]) + "\\training\\" + filename + "\\"
     model_path = str(Path(template_path).parents[1]) + "\\models\\" + filename + ".model"
+
+    # update summary
+    summary["Registration Dataset Enabled"] = dataset_enabled
+    summary["Tensor Datasets Enabled"] = dataset_tensor_enabled
+    summary["Training Path"] = os.path.basename(os.path.normpath(training_path))
+    summary["Model Path"] = os.path.basename(os.path.normpath(model_path))
 
     # ---------------------------------------------------------------------------------
     # Create Directories
@@ -143,6 +173,7 @@ if __name__ == '__main__':
 
     # number of images
     num_imgs = len([file_name for file_name in os.listdir(directory)])
+    summary["Number of Images"] = num_imgs
 
     # only use parallel pool if there are more than 5 images
     if(num_imgs > 5):
@@ -157,11 +188,19 @@ if __name__ == '__main__':
         pool = Pool(int(num_cores))
         print("Parallel Pool Created (%d Workers)" % int(num_cores))
 
+        # update summary
+        summary["Parallel Pool"] = True
+        summary["Number of Cores"] = num_cores
+
+    # update summary
+    else: summary["Parallel Pool"] = False
+
     # ---------------------------------------------------------------------------------
     # Filter Out Night Images
     # ---------------------------------------------------------------------------------
 
     print("\nFiltering Night Images")
+    intervalTime = time.time()
 
     # get filtered images and image names
     if(num_imgs > 50 and not date_range[3]):
@@ -176,11 +215,19 @@ if __name__ == '__main__':
     # output results of filtering
     if(date_range[3]): print("Number of Valid Images: %d" % len(images_filtered))
 
+    # update summary
+    summary["Filtering Time"] = time.time() - intervalTime
+    summary["Per Image Filtering Time"] = summary["Filtering Time"] / float(num_imgs)
+
+    # update number of images
+    num_imgs = len(images_filtered)
+
     # ---------------------------------------------------------------------------------
     # Equalize Images
     # ---------------------------------------------------------------------------------
 
     print("\n\nEqualizing Images")
+    intervalTime = time.time()
 
     if(num_imgs > 50):
         from equalize import equalizeImageSetParallel
@@ -193,6 +240,12 @@ if __name__ == '__main__':
             filtered_names, template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
             paths_dict["equalized"], paths_dict["equalized-template"])
 
+    # update summary
+    summary["Equalization Time"] = time.time() - intervalTime
+    summary["Per Image Equalization Time"] = summary["Equalization Time"] / float(num_imgs)
+    summary["Clip Limit"] = clip_limit
+    summary["Tile Size"] = tile_size
+
     # ---------------------------------------------------------------------------------
     # Register Images to Template
     # ---------------------------------------------------------------------------------
@@ -201,6 +254,7 @@ if __name__ == '__main__':
     num_imgs = len(images_equalized)
 
     print("\n\nRegistering Images")
+    intervalTime = time.time()
 
     if(num_imgs > 5):
         from register import alignImagesParallel
@@ -210,8 +264,13 @@ if __name__ == '__main__':
     else:
         from register import alignImages
         images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, template,
-            filtered_names,images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
+            filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
             dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+
+    # update summary
+    summary["Registration Time"] = time.time() - intervalTime
+    summary["Per Image Registration Time"] = summary["Registration Time"] / float(num_imgs)
+    summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
 
     # update registration dataset
     createDataset(template_name, template_data_set, dataset_enabled)
@@ -250,6 +309,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nValidating Stakes")
+    intervalTime = time.time()
 
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
@@ -259,38 +319,54 @@ if __name__ == '__main__':
     # update tensor dataset
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
 
+    # update summary
+    summary["Check Time"] = time.time() - intervalTime
+    summary["Per Image Check Time"] = summary["Check Time"] / float(num_imgs)
+
     # ---------------------------------------------------------------------------------
     # Determine Snow Intersection Point
     # ---------------------------------------------------------------------------------
 
     print("\n\nDetermining Intersection Points")
+    intervalTime = time.time()
 
     # get intersection points
     if(num_imgs > 5):
-        #from get_intersection import getIntersectionsParallel
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"])
     else:
-        #from get_intersection import getIntersections
-        #from intersection2 import getIntersections
         from intersect import getIntersections
         intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
             filtered_names_reg, debug, paths_dict["intersection"])
+
+    # update summary
+    summary["Intersection Time"] = time.time() - intervalTime
+    summary["Per Image Intersection Time"] = summary["Intersection Time"] / float(num_imgs)
 
     # ---------------------------------------------------------------------------------
     # Calculate Change in Snow Depth
     # ---------------------------------------------------------------------------------
 
     print("\n\nCalculating Change in Snow Depth")
+    intervalTime = time.time()
 
     # get snow depths
     depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
         template_intersections, img_border_upper, template_tensor, actual_tensors, intersection_dist,
         blob_distances_template, debug, paths_dict["snow-depth"], image_dates)
 
+    # update summary
+    summary["Calculation Time"] = time.time() - intervalTime
+    summary["Per Image Calculation Time"] = summary["Calculation Time"] / float(num_imgs)
+
     # display run time
     runtime = time.time() - start
     print("\n\nRun Time: %.2f s (%.2f s/img)" % (runtime, runtime / float(num_imgs)))
 
-    sys.exit()
+    # ---------------------------------------------------------------------------------
+    # Generate Report
+    # ---------------------------------------------------------------------------------
+
+    print("\n\nGenerating Report...")
+    generate(summary, paths_dict["snow-depth"])
