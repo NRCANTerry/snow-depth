@@ -17,6 +17,13 @@ import template
 import time
 import datetime
 
+# class to hold preferences for each helper function
+class Preferences:
+    # init function
+    def __init__(self, **kwargs):
+        # create dictionary with given preferences
+        self.__dict__.update(kwargs)
+
 class GUI:
     def __init__(self, master):
 
@@ -38,6 +45,7 @@ class GUI:
         # ---------------------------------------------------------------------------------
 
         # dictionary with options for program
+        '''
         self.systemParameters = {
             "Directory": "",
             "Lower_HSV_1": np.array([0,0,0]),
@@ -74,6 +82,10 @@ class GUI:
             "Current_Template_Settings": list(),
             "Window_Closed": False,
         }
+        '''
+
+        # dictionary with options for program
+        self.systemParameters = dict()
 
         # ConfigParser object
         self.config = configparser.ConfigParser()
@@ -591,7 +603,7 @@ class GUI:
             self.endDate.current_date += datetime.timedelta(days=1)
 
         # return values in tuple format
-        if(self.systemParameters["Window_Closed"]):
+        if("Window_Closed" in self.systemParameters.keys() and self.systemParameters["Window_Closed"]):
             return self.systemParameters["Directory"], self.systemParameters["Lower_HSV_1"], self.systemParameters["Upper_HSV_1"], \
                     self.systemParameters["Lower_HSV_2"], self.systemParameters["Upper_HSV_2"], self.systemParameters["Upper_Border"], \
                     self.systemParameters["Lower_Border"], self.systemParameters["Current_Template_Coords"], self.systemParameters["Current_Template_Path"], \
