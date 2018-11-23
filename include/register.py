@@ -222,6 +222,10 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
 
+    # counter for successful ORB and ECC registrations
+    validORB = 0
+    validECC = 0
+
     # get maximum mean squared error
     max_mean_squared_error = getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING)
 
@@ -266,6 +270,10 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
             registeredImages.append(imgAligned)
             images_names_registered.append(name)
 
+            # update registration lists
+            validORB += ORBFlag
+            validECC += ECCFlag
+
             # add MSE to list
             MSE_vals.append(MSE)
 
@@ -296,7 +304,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered
+    return registeredImages, dataset, images_names_registered, [validORB, validECC]
 
 # unpack arguments of parallel pool tasks
 def unpackArgs(args):
@@ -306,6 +314,10 @@ def unpackArgs(args):
 def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
      imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+
+    # counter for successful ORB and ECC registrations
+    validORB = 0
+    validECC = 0
 
     # get maximum mean squared error
     max_mean_squared_error = getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING)
@@ -347,6 +359,10 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
             registeredImages.append(imgAligned)
             images_names_registered.append(name)
 
+            # update registration lists
+            validORB += ORBFlag
+            validECC += ECCFlag
+
             # add MSE to list
             MSE_vals.append(MSE)
 
@@ -374,4 +390,4 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered
+    return registeredImages, dataset, images_names_registered, [validORB, validECC]

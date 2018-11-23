@@ -87,7 +87,7 @@ if __name__ == '__main__':
     summary.HSVRange = [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2]
     summary["Borders (Upper, Lower)"] = [img_border_upper, img_border_lower]
     summary.Debug = params[11]
-    summary["Image Directory"] = + os.path.basename(os.path.normpath(directory))
+    summary["Image Directory"] = os.path.basename(os.path.normpath(directory))
     summary.Template = template_name
 
     # determine if the dataset for the template is established
@@ -258,12 +258,12 @@ if __name__ == '__main__':
 
     if(num_imgs > 5):
         from register import alignImagesParallel
-        images_registered, template_data_set, filtered_names_reg = alignImagesParallel(pool, images_equalized,
+        images_registered, template_data_set, filtered_names_reg, valid = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
             template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
     else:
         from register import alignImages
-        images_registered, template_data_set, filtered_names_reg = alignImages(images_equalized, template_eq, template,
+        images_registered, template_data_set, filtered_names_reg, valid = alignImages(images_equalized, template_eq, template,
             filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
             dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
@@ -271,6 +271,9 @@ if __name__ == '__main__':
     summary["Registration Time"] = time.time() - intervalTime
     summary["Per Image Registration Time"] = summary["Registration Time"] / float(num_imgs)
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
+    summary["ORB Registration"] = "%d/%d" % (valid[0], num_imgs)
+    summary["ECC Registration"] = "%d/%d" % (valid[1], num_imgs)
+    summary["Failed Registration"] = "%d/%d" % (num_imgs - len(images_registered), num_imgs)
 
     # update registration dataset
     createDataset(template_name, template_data_set, dataset_enabled)
