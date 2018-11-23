@@ -44,7 +44,6 @@ def generate(summary, path):
     for key, value in summary.items():
         if key != "start" and key != "HSVRange" and key != "regRestrictions":
             data.append((key, value))
-            print(key, value)
 
         if key == "HSVRange":
             data.append(("Lower HSV 1", value[0]))
