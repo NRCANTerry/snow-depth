@@ -141,12 +141,12 @@ if __name__ == '__main__':
     paths_dict = dict()
 
     # create directories
-    if(not os.path.isdir("Data")):
-        os.mkdir("./Data")
+    if(not os.path.isdir("Results")):
+        os.mkdir("./Results")
 
     # add folder for run
     date = datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "-").replace(":", "-")
-    path = "./Data/" + date
+    path = "./Results/" + date
     os.mkdir(path)
 
     # add optional directories
