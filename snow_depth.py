@@ -9,22 +9,18 @@ sys.path.append('./Include/DL')
 import cv2
 import os
 import numpy as np
-import json
-import imutils
+import tkinter as tk
 from check_stakes import getValidStakes
 from main import GUI
 from calculate_depth import getDepths
 from overlay_roi import overlay
-import tkinter as tk
-import datetime
-import time
-from colour_balance import balanceColour
+from datetime import datetime
+from time import time
 from update_dataset import createDataset
 from update_dataset import createDatasetTensor
-import tqdm
+from tqdm import tqdm
 from pathlib import Path
 from generate_report import generate
-
 
 # class to allow dot functionality with dict
 class Map(dict):
@@ -47,7 +43,7 @@ if __name__ == '__main__':
     params = gui.getValues()
 
     # start timer
-    start = time.time()
+    start = time()
 
     # ---------------------------------------------------------------------------------
     # Get parameters from GUI
@@ -83,7 +79,7 @@ if __name__ == '__main__':
     date_range = params[20]
 
     # update summary
-    summary.start = datetime.datetime.now()
+    summary.start = datetime.now()
     summary.HSVRange = [lower_hsv1, upper_hsv1, lower_hsv2, upper_hsv2]
     summary["Borders (Upper, Lower)"] = [img_border_upper, img_border_lower]
     summary.Debug = params[11]
@@ -149,7 +145,7 @@ if __name__ == '__main__':
         os.mkdir("./Data")
 
     # add folder for run
-    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "-").replace(":", "-")
+    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "-").replace(":", "-")
     path = "./Data/" + date
     os.mkdir(path)
 
@@ -209,7 +205,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\nFiltering Night Images")
-    intervalTime = time.time()
+    intervalTime = time()
 
     # get filtered images and image names
     if(num_imgs > 50 and not date_range[3]):
@@ -225,7 +221,7 @@ if __name__ == '__main__':
     if(date_range[3]): print("Number of Valid Images: %d" % len(images_filtered))
 
     # update summary
-    filteringTime = time.time() - intervalTime
+    filteringTime = time() - intervalTime
     summary["Filtering Time"] = "%0.2fs" % filteringTime
     summary["Per Image Filtering Time"] = "%0.2f" % (filteringTime / float(num_imgs))
     #summary["Number of Input Images"] =
@@ -239,7 +235,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nEqualizing Images")
-    intervalTime = time.time()
+    intervalTime = time()
 
     if(num_imgs > 50):
         from equalize import equalizeImageSetParallel
@@ -253,7 +249,7 @@ if __name__ == '__main__':
             paths_dict["equalized"], paths_dict["equalized-template"])
 
     # update summary
-    equalizationTime = time.time() - intervalTime
+    equalizationTime = time() - intervalTime
     summary["Equalization Time"] = "%0.2fs" % equalizationTime
     summary["Per Image Equalization Time"] = "%0.2fs" % (equalizationTime / float(num_imgs))
     summary["Clip Limit"] = clip_limit
@@ -267,7 +263,7 @@ if __name__ == '__main__':
     num_imgs = len(images_equalized)
 
     print("\n\nRegistering Images")
-    intervalTime = time.time()
+    intervalTime = time()
 
     if(num_imgs > 5):
         from register import alignImagesParallel
@@ -281,7 +277,7 @@ if __name__ == '__main__':
             dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
     # update summary
-    registrationTime = time.time() - intervalTime
+    registrationTime = time() - intervalTime
     summary["Registration Time"] = "%0.2fs" % registrationTime
     summary["Per Image Registration Time"] = "%0.2fs" % (registrationTime / float(num_imgs))
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
@@ -300,10 +296,9 @@ if __name__ == '__main__':
     print("\n\nExtracting EXIF Data")
 
     from PIL import Image
-    from datetime import datetime
 
     image_dates = list() # list for image EXIF data
-    for img in tqdm.tqdm(filtered_names_reg):
+    for img in tqdm(filtered_names_reg):
         pil_im = Image.open(directory+img)
         exif = pil_im._getexif()
         if exif is not None: # if exif data exists
@@ -327,7 +322,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nValidating Stakes")
-    intervalTime = time.time()
+    intervalTime = time()
 
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
@@ -338,7 +333,7 @@ if __name__ == '__main__':
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
 
     # update summary
-    checkTime = time.time() - intervalTime
+    checkTime = time() - intervalTime
     summary["Check Time"] = "%0.2fs" % checkTime
     summary["Per Image Check Time"] = "%0.2fs" % (checkTime / float(num_imgs))
 
@@ -347,7 +342,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nDetermining Intersection Points")
-    intervalTime = time.time()
+    intervalTime = time()
 
     # get intersection points
     if(num_imgs > 5):
@@ -360,7 +355,7 @@ if __name__ == '__main__':
             filtered_names_reg, debug, paths_dict["intersection"])
 
     # update summary
-    intersectionTime = time.time() - intervalTime
+    intersectionTime = time() - intervalTime
     summary["Intersection Time"] = "%0.2fs" % intersectionTime
     summary["Per Image Intersection Time"] = "%0.2fs" % (intersectionTime / float(num_imgs))
 
@@ -369,7 +364,7 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nCalculating Change in Snow Depth")
-    intervalTime = time.time()
+    intervalTime = time()
 
     # get snow depths
     depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
@@ -377,12 +372,12 @@ if __name__ == '__main__':
         blob_distances_template, debug, paths_dict["snow-depth"], image_dates)
 
     # update summary
-    calcTime = time.time() - intervalTime
+    calcTime = time() - intervalTime
     summary["Calculation Time"] = "%0.2fs" % calcTime
     summary["Per Image Calculation Time"] = "%0.2fs" % (calcTime / float(num_imgs))
 
     # display run time
-    runtime = time.time() - start
+    runtime = time() - start
     print("\n\nRun Time: %.2f s (%.2f s/img)" % (runtime, runtime / float(num_imgs)))
 
     # ---------------------------------------------------------------------------------
