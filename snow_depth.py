@@ -122,6 +122,15 @@ if __name__ == '__main__':
     training_path = str(Path(template_path).parents[1]) + "\\training\\" + filename + "\\"
     model_path = str(Path(template_path).parents[1]) + "\\models\\" + filename + ".model"
 
+    # output status of deep learning model
+    if(os.path.isfile(model_path)):
+        print("Deep Learning Blob Model is ENABLED")
+    else:
+        print("Deep Learning Blob Model is DISABLED")
+        validTrainingDir = [int(os.path.splitext(x)[0]) for x in os.listdir(training_path + "blob\\")]
+        currentIndex = max(validTrainingDir) + 1 if len(validTrainingDir) > 0 else 0
+        print("Number of training samples required: %d" % (1000-currentIndex))
+
     # update summary
     summary["Registration Dataset Enabled"] = dataset_enabled
     summary["Tensor Datasets Enabled"] = dataset_tensor_enabled
@@ -184,7 +193,7 @@ if __name__ == '__main__':
         print("\nCreating Parallel Pool...")
 
         # create pool with 75% as many processes as there are cores
-        num_cores = float(cpu_count()) * 0.75
+        num_cores = float(cpu_count()) * 0.25#75
         pool = Pool(int(num_cores))
         print("Parallel Pool Created (%d Workers)" % int(num_cores))
 
@@ -216,8 +225,11 @@ if __name__ == '__main__':
     if(date_range[3]): print("Number of Valid Images: %d" % len(images_filtered))
 
     # update summary
-    summary["Filtering Time"] = time.time() - intervalTime
-    summary["Per Image Filtering Time"] = summary["Filtering Time"] / float(num_imgs)
+    filteringTime = time.time() - intervalTime
+    summary["Filtering Time"] = "%0.2fs" % filteringTime
+    summary["Per Image Filtering Time"] = "%0.2f" % (filteringTime / float(num_imgs))
+    #summary["Number of Input Images"] =
+    #summary["Number of Night Images"] = len(images_filtered) -
 
     # update number of images
     num_imgs = len(images_filtered)
@@ -241,8 +253,9 @@ if __name__ == '__main__':
             paths_dict["equalized"], paths_dict["equalized-template"])
 
     # update summary
-    summary["Equalization Time"] = time.time() - intervalTime
-    summary["Per Image Equalization Time"] = summary["Equalization Time"] / float(num_imgs)
+    equalizationTime = time.time() - intervalTime
+    summary["Equalization Time"] = "%0.2fs" % equalizationTime
+    summary["Per Image Equalization Time"] = "%0.2fs" % (equalizationTime / float(num_imgs))
     summary["Clip Limit"] = clip_limit
     summary["Tile Size"] = tile_size
 
@@ -258,22 +271,24 @@ if __name__ == '__main__':
 
     if(num_imgs > 5):
         from register import alignImagesParallel
-        images_registered, template_data_set, filtered_names_reg, valid = alignImagesParallel(pool, images_equalized,
+        images_registered, template_data_set, filtered_names_reg, stats = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
             template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
     else:
         from register import alignImages
-        images_registered, template_data_set, filtered_names_reg, valid = alignImages(images_equalized, template_eq, template,
+        images_registered, template_data_set, filtered_names_reg, stats = alignImages(images_equalized, template_eq, template,
             filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
             dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
 
     # update summary
-    summary["Registration Time"] = time.time() - intervalTime
-    summary["Per Image Registration Time"] = summary["Registration Time"] / float(num_imgs)
+    registrationTime = time.time() - intervalTime
+    summary["Registration Time"] = "%0.2fs" % registrationTime
+    summary["Per Image Registration Time"] = "%0.2fs" % (registrationTime / float(num_imgs))
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
-    summary["ORB Registration"] = "%d/%d" % (valid[0], num_imgs)
-    summary["ECC Registration"] = "%d/%d" % (valid[1], num_imgs)
+    summary["ORB Registration"] = "%d/%d" % (stats[0], num_imgs)
+    summary["ECC Registration"] = "%d/%d" % (stats[1], num_imgs)
     summary["Failed Registration"] = "%d/%d" % (num_imgs - len(images_registered), num_imgs)
+    summary["Average Mean Squared Error"] = "%0.2f" % stats[2]
 
     # update registration dataset
     createDataset(template_name, template_data_set, dataset_enabled)
@@ -323,8 +338,9 @@ if __name__ == '__main__':
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
 
     # update summary
-    summary["Check Time"] = time.time() - intervalTime
-    summary["Per Image Check Time"] = summary["Check Time"] / float(num_imgs)
+    checkTime = time.time() - intervalTime
+    summary["Check Time"] = "%0.2fs" % checkTime
+    summary["Per Image Check Time"] = "%0.2fs" % (checkTime / float(num_imgs))
 
     # ---------------------------------------------------------------------------------
     # Determine Snow Intersection Point
@@ -344,8 +360,9 @@ if __name__ == '__main__':
             filtered_names_reg, debug, paths_dict["intersection"])
 
     # update summary
-    summary["Intersection Time"] = time.time() - intervalTime
-    summary["Per Image Intersection Time"] = summary["Intersection Time"] / float(num_imgs)
+    intersectionTime = time.time() - intervalTime
+    summary["Intersection Time"] = "%0.2fs" % intersectionTime
+    summary["Per Image Intersection Time"] = "%0.2fs" % (intersectionTime / float(num_imgs))
 
     # ---------------------------------------------------------------------------------
     # Calculate Change in Snow Depth
@@ -360,8 +377,9 @@ if __name__ == '__main__':
         blob_distances_template, debug, paths_dict["snow-depth"], image_dates)
 
     # update summary
-    summary["Calculation Time"] = time.time() - intervalTime
-    summary["Per Image Calculation Time"] = summary["Calculation Time"] / float(num_imgs)
+    calcTime = time.time() - intervalTime
+    summary["Calculation Time"] = "%0.2fs" % calcTime
+    summary["Per Image Calculation Time"] = "%0.2fs" % (calcTime / float(num_imgs))
 
     # display run time
     runtime = time.time() - start
