@@ -5,6 +5,7 @@ import json
 import tqdm
 from matplotlib import pyplot as plt
 import os
+import time
 
 # constants
 MAX_FEATURES = 262144
@@ -102,17 +103,47 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
         cv2.imwrite(debug_directory_matches + name, imgMatches)
         cv2.imwrite(debug_directory_matches + filename + "-ORB" + ext, imgReg) # ORB aligned image
 
+    # remove black space from image for ECC registration
+    y_transform = affine_matrix[1][2]
+    x_transform = affine_matrix[0][2]
+
+    # upper and lower coordinates
+    upperX = 0
+    upperY = 0
+    lowerX = width
+    lowerY = height
+
+    # update coordinates based on affine matrix
+    if y_transform > 0:
+        upperY += y_transform
+    else:
+        lowerY += y_transform
+
+    if x_transform > 0:
+        upperX += x_transform
+    else:
+        lowerX += x_transform
+
+    # crop registered image and template
+    imgCrop = imgRegGray[int(upperY):int(lowerY), int(upperX):int(lowerX)]
+    templateCrop = template[int(upperY):int(lowerY), int(upperX):int(lowerX)]
+
+    # write to matches directory
+    cv2.imwrite(debug_directory_matches + filename + "-crop" + ext, imgCrop)
+    cv2.imwrite(debug_directory_matches + filename + "-template-crop" + ext, templateCrop)
+
     # define ECC motion model
     warp_mode = cv2.MOTION_AFFINE
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
     # specify the number of iterations and threshold
     number_iterations = 1000 if ORB_aligned_flag else 2000
-    termination_thresh = 1e-6 if ORB_aligned_flag else 1e-7
+    termination_thresh = 1e-5 if ORB_aligned_flag else 1e-7
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
-    warp_matrix = cv2.findTransformECC(template, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+    #warp_matrix = cv2.findTransformECC(template, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+    warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
 
     # compare warp matrix to data set
     mean_squared_error_ecc = np.sum(np.square(abs(warp_matrix) - zero_matrix))
@@ -296,6 +327,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     # update dataset
     print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
+    avg_MSE = sum(MSE_vals) / len(MSE_vals)
 
     # if in debugging mode
     if(debug):
@@ -304,7 +336,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered, [validORB, validECC]
+    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE]
 
 # unpack arguments of parallel pool tasks
 def unpackArgs(args):
@@ -382,6 +414,7 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
     # update dataset
     print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
+    avg_MSE = sum(MSE_vals) / len(MSE_vals)
 
     # if in debugging mode
     if(debug):
@@ -390,4 +423,4 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered, [validORB, validECC]
+    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE]
