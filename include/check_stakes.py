@@ -200,11 +200,6 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 					# add to list of points for stake
 					actualCoords.append(orderPoints(box, False))
 
-					#train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
-					#	int(rectangle[0][0]):int(rectangle[1][0])]
-
-					#print(classify(train_img, model))
-
 					# if in debugging mode draw green (valid) rectangle
 					if(debug):
 						cv2.rectangle(img, (int(rectangle[0][0]), int(rectangle[0][1])-upper_border),
@@ -247,19 +242,33 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 				# else add invalid blob
 				else:
-					validBlobs.append(False)
-
 					# verify using deep learning network
+					DLValid = False
 					if(modelInitialized):
 						subset = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
 							int(rectangle[0][0]):int(rectangle[1][0])]
 						output = classify(subset, model)
 						if(output[0] and output[1] > 0.9):
 							DLValid = True
-						else: DLValid = False
 
-					# add False to list
-					actualCoords.append(False)
+					# if identified as blob by deep learning network
+					if(DLValid):
+						validBlobs.append(True)
+
+						# use template blob coordinates
+						blobWidth = abs(top_left[0] - bottom_right[0]) / 1.6666
+						dilate_px = int(float(blobWidth) * 0.33)
+						actualCoords.append((
+							[top_left[0]+dilate_px, top_left[1]+dilate_px],
+							[bottom_right[0]-dilate_px, top_left[1]+dilate_px],
+							[bottom_right[0]-dilate_px, bottom_right[1]-dilate_px],
+							[top_left[0]+dilate_px, bottom_right[1]-dilate_px]
+						))
+
+					# else it is not a blob
+					else:
+						validBlobs.append(False)
+						actualCoords.append(False)
 
 					# if in debugging mode draw red (invalid) rectangle
 					if(debug):
@@ -337,7 +346,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				std_dev = dataset[j][0][1]
 
 				# if tensor measurement is within defined range or within 5%
-				if(((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
+				if(mean_tensor != 0 and ((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
 					mean_tensor <= (mean+(std_dev*NUM_STD_DEV))) or abs(mean-mean_tensor)/mean_tensor < 0.05):
 					# update data set
 					num_vals_dataset = dataset[j][0][2]
@@ -389,10 +398,10 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 				# write labelled image if in debugging mode
 				if(debug):
 					# draw rectangles
-					cv2.rectangle(img_low_blob, tuple(ordered_coordinates_low[0]), tuple(ordered_coordinates_low[2]),
-						(0,255,0), 3)
-					cv2.rectangle(img_low_blob, tuple(ordered_coordinates_high[0]), tuple(ordered_coordinates_high[2]),
-						(0,255,0), 3)
+					cv2.rectangle(img_low_blob, tuple(map(int, ordered_coordinates_low[0])),
+						tuple(map(int, ordered_coordinates_low[2])), (0,255,0), 3)
+					cv2.rectangle(img_low_blob, tuple(map(int, ordered_coordinates_high[0])),
+						tuple(map(int, ordered_coordinates_high[2])), (0,255,0), 3)
 			else:
 				# if stake is invalid add zero box
 				blobCoordsStake.append([0,0,0,0,0,0,0,0])
