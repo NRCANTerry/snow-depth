@@ -1,9 +1,9 @@
 # add to python path
 import sys
 
-sys.path.append('./include')
-sys.path.append('./include/GUI')
-sys.path.append('./include/DL')
+sys.path.append('./Include')
+sys.path.append('./Include/GUI')
+sys.path.append('./Include/DL')
 
 # import necessary modules
 import cv2
@@ -145,12 +145,12 @@ if __name__ == '__main__':
     paths_dict = dict()
 
     # create directories
-    if(not os.path.isdir("measure-depth")):
-        os.mkdir("./measure-depth")
+    if(not os.path.isdir("Data")):
+        os.mkdir("./Data")
 
     # add folder for run
     date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "-").replace(":", "-")
-    path = "./measure-depth/" + date
+    path = "./Data/" + date
     os.mkdir(path)
 
     # add optional directories
