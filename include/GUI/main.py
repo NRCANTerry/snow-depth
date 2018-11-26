@@ -45,7 +45,6 @@ class GUI:
         # ---------------------------------------------------------------------------------
 
         # dictionary with options for program
-        '''
         self.systemParameters = {
             "Directory": "",
             "Lower_HSV_1": np.array([0,0,0]),
@@ -82,10 +81,9 @@ class GUI:
             "Current_Template_Settings": list(),
             "Window_Closed": False,
         }
-        '''
 
         # dictionary with options for program
-        self.systemParameters = dict()
+        #self.systemParameters = dict()
 
         # ConfigParser object
         self.config = configparser.ConfigParser()
