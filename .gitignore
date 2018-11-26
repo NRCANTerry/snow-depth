@@ -1,5 +1,5 @@
 # ignore output files
-measure-depth/
+Data/
 
 # ignore template files
 includes/templates
