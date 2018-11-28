@@ -171,6 +171,7 @@ class GUI:
 
         # choose directory button
         self.directoryButton = tk.Button(self.rootFrame, text = "Select", command = lambda: self.selectDirectory())
+        createHoverLabel(self.directoryButton, "Select the folder containing the images to be processed")
 
         # execute button
         self.runButton = tk.Button(self.rootFrame, text = "Run", command = lambda: self.saveValues())
@@ -221,10 +222,13 @@ class GUI:
         self.secondHSVFlag = tk.IntVar()
         self.checkBox = tk.Checkbutton(self.rootFrame, text="Second HSV Range", bg = self.gray, fg = self.white, selectcolor = self.gray,
             activebackground = self.gray, activeforeground = self.white, variable = self.secondHSVFlag, command = lambda:self.updateSelections(), font=("Calibri Light", 14))
+        createHoverLabel(self.checkBox, "Add a second range to the HSV filter")
+
 
         self.debug = tk.IntVar()
         self.debugCheckBox = tk.Checkbutton(self.rootFrame, text="Debug", bg = self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
             activeforeground = self.white, variable = self.debug, font=("Calibri Light", 14))
+        createHoverLabel(self.debugCheckBox, "Debug mode outputs images at each step of the algorithm")
 
         #===========================================================================
         # Drop Down Menus
@@ -805,7 +809,6 @@ class GUI:
             self.systemParameters["Current_Template_Settings"] = ast.literal_eval(self.systemParameters["Template_Settings"][str(optionsList[2])])
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
-
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1689,3 +1692,41 @@ class GUI:
 
             # wait until user closes window
             self.root.wait_window(newWindow)
+
+# class to enable hovering over widgets for additional info
+class createHoverLabel(object):
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.close)
+        self.gray = "#282c34"
+
+    # function which is run when the user hovers over a widget
+    def enter(self, event=None):
+        # delay
+        time.sleep(1)
+
+        # get window geometry
+        x, y, cx, cy = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 20
+
+        # create Toplevel window
+        self.tw = tk.Toplevel(self.widget)
+
+        # Leave only label
+        self.tw.wm_overrideredirect(True)
+        self.tw.wm_geometry("+%d+%d" % (x, y))
+
+        # Insert label
+        label = tk.Label(self.tw, text=self.text, justify='left',
+            bg='white', fg=self.gray, relief='solid', borderwidth=1,
+            font=("Calibri Light", 12))
+        label.pack(ipadx=1)
+        label.after(5000, self.close)
+
+    # function which is run when the user stops hovering over a widget
+    def close(self, event=None):
+        if self.tw:
+            self.tw.destroy() # destroy top level window if it exists
