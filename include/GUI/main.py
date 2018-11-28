@@ -80,6 +80,8 @@ class GUI:
             "Current_Blob_Distances": list(),
             "Current_Template_Settings": list(),
             "Window_Closed": False,
+            "Reg_Params": [0, 0, 0, 0, 0],
+            "Int_Params": [0, 0, 0, 0 , 0]
         }
 
         # dictionary with options for program
@@ -116,7 +118,7 @@ class GUI:
         self.white = "#f1f1f1"
 
         # main frame
-        self.rootFrame = tk.Frame(self.root, bg = self.gray)
+        self.rootFrame = tk.Frame(self.root, bg=self.gray)
 
         # Step 1
         self.step1Label = tk.Label(self.rootFrame, text = "Image Folder")
@@ -126,7 +128,7 @@ class GUI:
         self.step2Label = tk.Label(self.rootFrame, text = "HSV Range")
 
         # H, S, V for Range 1
-        self.range1Frame = tk.Frame(self.rootFrame, bg = self.gray)
+        self.range1Frame = tk.Frame(self.rootFrame, bg=self.gray)
         self.lowerH1 = tk.Label(self.range1Frame, text = "H")
         self.lowerS1 = tk.Label(self.range1Frame, text = "S")
         self.lowerV1 = tk.Label(self.range1Frame, text = "V")
@@ -136,7 +138,7 @@ class GUI:
         self.upperV1 = tk.Label(self.range1Frame, text = "V")
 
         # H, S, V for Range 2
-        self.range2Frame = tk.Frame(self.rootFrame, bg = self.gray)
+        self.range2Frame = tk.Frame(self.rootFrame, bg=self.gray)
         self.lowerH2 = tk.Label(self.range2Frame, text = "H")
         self.lowerS2 = tk.Label(self.range2Frame, text = "S")
         self.lowerV2 = tk.Label(self.range2Frame, text = "V")
@@ -155,15 +157,15 @@ class GUI:
 
         # configure title labels
         for label in self.titleLabels:
-            label.config(bg = self.gray, fg = self.white, font=("Calibri", 30))
+            label.config(bg=self.gray, fg = self.white, font=("Calibri", 30))
 
         # configure other labels
         for label in self.otherLabels:
-            label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 16))
+            label.config(bg=self.gray, fg = self.white, font=("Calibri Light", 16))
 
         # configure gray labels
         for label in self.grayLabels:
-            label.config(bg = self.gray, fg = "#787d84", font=("Calibri Light", 16))
+            label.config(bg=self.gray, fg = "#787d84", font=("Calibri Light", 16))
 
         #===========================================================================
         # Buttons
@@ -181,7 +183,7 @@ class GUI:
 
         # configure buttons
         for button in self.buttons:
-            button.config(bg = self.gray, fg = self.white, font=("Calibri Light", 14), width = 17)
+            button.config(bg=self.gray, fg = self.white, font=("Calibri Light", 14), width = 17)
 
         #===========================================================================
         # Entries
@@ -220,13 +222,13 @@ class GUI:
         #===========================================================================
 
         self.secondHSVFlag = tk.IntVar()
-        self.checkBox = tk.Checkbutton(self.rootFrame, text="Second HSV Range", bg = self.gray, fg = self.white, selectcolor = self.gray,
+        self.checkBox = tk.Checkbutton(self.rootFrame, text="Second HSV Range", bg=self.gray, fg = self.white, selectcolor = self.gray,
             activebackground = self.gray, activeforeground = self.white, variable = self.secondHSVFlag, command = lambda:self.updateSelections(), font=("Calibri Light", 14))
         createHoverLabel(self.checkBox, "Add a second range to the HSV filter")
 
 
         self.debug = tk.IntVar()
-        self.debugCheckBox = tk.Checkbutton(self.rootFrame, text="Debug", bg = self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
+        self.debugCheckBox = tk.Checkbutton(self.rootFrame, text="Debug", bg=self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
             activeforeground = self.white, variable = self.debug, font=("Calibri Light", 14))
         createHoverLabel(self.debugCheckBox, "Debug mode outputs images at each step of the algorithm")
 
@@ -237,7 +239,7 @@ class GUI:
         self.colourMenuVar = tk.StringVar(self.root)
         self.colourMenuVar.set('Select HSV Range')
         self.colourMenu = tk.OptionMenu(self.rootFrame, self.colourMenuVar, 'Select HSV Range', *self.systemParameters["Colour_Options"])
-        self.colourMenu.config(font=("Calibri Light", 14), width = 15, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.colourMenu.config(font=("Calibri Light", 14), width = 15, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
         self.colourMenu["menu"].config(bg=self.gray, fg = self.white)
         self.colourMenuVar.trace('w', self.change_HSV_dropdown)
@@ -245,7 +247,7 @@ class GUI:
         self.profileMenuVar = tk.StringVar(self.root)
         self.profileMenuVar.set('Select Profile')
         self.profileMenu = tk.OptionMenu(self.rootFrame, self.profileMenuVar, 'Select Profile', *self.systemParameters["Profile_Options"])
-        self.profileMenu.config(font=("Calibri Light", 14), width = 15, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.profileMenu.config(font=("Calibri Light", 14), width = 15, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
         self.profileMenu["menu"].config(bg=self.gray, fg = self.white)
         self.profileMenuVar.trace('w', self.change_Preferences_dropdown)
@@ -255,17 +257,17 @@ class GUI:
         #===========================================================================
 
         # create menu bar
-        self.menubar = tk.Menu(self.root, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.menubar = tk.Menu(self.root, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
-        self.filemenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.filemenu = tk.Menu(self.menubar, tearoff=0, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
-        self.HSVmenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.HSVmenu = tk.Menu(self.menubar, tearoff=0, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
-        self.prefMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.prefMenu = tk.Menu(self.menubar, tearoff=0, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
-        self.tempMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.tempMenu = tk.Menu(self.menubar, tearoff=0, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
-        self.DLMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.DLMenu = tk.Menu(self.menubar, tearoff=0, bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
 
         # add commands
@@ -444,7 +446,7 @@ class GUI:
     # Validate method for text entry
     #===========================================================================
 
-    def validate(self, new_text, entry_field, index):
+    def validate(self, new_text, entry_field, index, divisor=1.0):
         if(index != "-1"):
             # the field is being cleared
             if not new_text:
@@ -454,7 +456,7 @@ class GUI:
                 if(new_text == ""):
                     self.systemParameters[str(entry_field)][int(index)] = 0
                 else:
-                    self.systemParameters[str(entry_field)][int(index)] = int(new_text)
+                    self.systemParameters[str(entry_field)][int(index)] = int(new_text) / float(divisor)
                 return True
 
             except ValueError:
@@ -641,7 +643,8 @@ class GUI:
                     self.systemParameters["Current_Template_Blob_Sizes"], self.systemParameters["Current_Template_Dataset"], \
                     self.systemParameters["Current_Template_Name"], self.systemParameters["Current_Tensor_Dataset"], \
                     self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"], \
-                    [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen]
+                    [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen], \
+                    self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"]
 
         # return False if run button wasn't pressed
         else:
@@ -809,6 +812,10 @@ class GUI:
             self.systemParameters["Current_Template_Settings"] = ast.literal_eval(self.systemParameters["Template_Settings"][str(optionsList[2])])
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
+            self.systemParameters["Reg_Params"] = [int(optionsList[6]), float(optionsList[7]), float(optionsList[8]), float(optionsList[9]),
+                float(optionsList[10])]
+            self.systemParameters["Int_Params"] = [int(optionsList[11]), float(optionsList[12]), float(optionsList[13]), float(optionsList[14]),
+                float(optionsList[15])]
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1208,7 +1215,9 @@ class GUI:
                     outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + \
                         str(self.systemParameters["Lower_Border"]) + "," + '"' + \
                         str(self.templateMenuVar.get()) + '"' + "," + str(self.systemParameters["Clip_Limit"]) + \
-                        "," + str(self.systemParameters["Tile_Size"][0]) + "," + str(self.systemParameters["Tile_Size"][1]) + "]"
+                        "," + str(self.systemParameters["Tile_Size"][0]) + "," + str(self.systemParameters["Tile_Size"][1]) + \
+                        "," + str(self.systemParameters["Reg_Params"]).replace("[","").replace("]", "") + \
+                        "," + str(self.systemParameters["Int_Params"]).replace("[","").replace("]", "") + "]"
 
                     # add to config file
                     self.config.set('Profiles', var.get(), outputString)
@@ -1228,11 +1237,13 @@ class GUI:
                 self.profileOpen = False # update flag for window
 
             # get fields are filled in
-            if not all(v.get() != "" for v in entries) and self.templateMenuVar.get() != "Select Template":
+            if not all(v.get() != "" for v in entries) or self.templateMenuVar.get() == "Select Template" \
+                or not all(v.get() != "" for v in regEntries) or not all(v.get() != "" for v in intEntries):
                 messagebox.showinfo("Error", "Not All Fields Populated")
                 return
 
             # get widgets
+            menuFrame.pack_forget()
             execute, exit, var, frame, separator = self.getSavePageWidgets(newWindow, pack=1)
             execute.config(command=lambda: close(True))
             exit.config(command=lambda: close(False))
@@ -1242,39 +1253,87 @@ class GUI:
             self.profileOpen = False
             newWindow.destroy()
 
+        # function to change between option menus
+        def changeMenu(newFrame):
+            # unpack all frames
+            defaultFrame.pack_forget()
+            regFrame.pack_forget()
+            intFrame.pack_forget()
+
+            # pack selected frame
+            newFrame.pack(side=tk.RIGHT, pady=(10, 20), padx=50)
+
         # create window
         self.profileOpen = True
         newWindow = tk.Toplevel(self.root)
         newWindow.configure(bg=self.gray)
         newWindow.protocol("WM_DELETE_WINDOW", closeProfile)
 
+        # establish frames/pages
+        defaultFrame = tk.Frame(newWindow, bg=self.gray)
+        regFrame = tk.Frame(newWindow, bg=self.gray)
+        intFrame = tk.Frame(newWindow, bg=self.gray)
+
+        #==================================================================
+        # Side Menu
+        #==================================================================
+
+        menuFrame = tk.Frame(newWindow, bg=self.gray)
+        menuLabel = tk.Label(menuFrame, text="Menus", bg=self.gray, fg=self.white,
+            font=("Calibri Bold", 16), justify=tk.LEFT, anchor="w")
+        from tkinter import font
+        f = font.Font(menuLabel, menuLabel.cget("font"))
+        f.configure(underline=True)
+        menuLabel.configure(font=f)
+
+        # buttons
+        defaultMenuButton = tk.Button(menuFrame, text="Basic", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 14), borderwidth=0,
+            justify=tk.LEFT, anchor="w", command=lambda: changeMenu(defaultFrame))
+        regMenuButton = tk.Button(menuFrame, text="Registration", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 14), borderwidth=0,
+            justify=tk.LEFT, anchor="w", command=lambda: changeMenu(regFrame))
+        intMenuButton = tk.Button(menuFrame, text="Intersection", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 14), borderwidth=0,
+            justify=tk.LEFT, anchor="w", command=lambda: changeMenu(intFrame))
+
+        # packing
+        menuLabel.pack(pady=(10,0), fill=tk.X)
+        defaultMenuButton.pack(pady=2, fill=tk.X)
+        regMenuButton.pack(pady=2, fill=tk.X)
+        intMenuButton.pack(pady=2, fill=tk.X)
+
+        #==================================================================
+        # Default Page
+        #==================================================================
+
+        # setup validate command
         validateCommand = self.root.register(self.validate)
 
         # frames
-        preferencesFrame = tk.Frame(newWindow, bg = self.gray)
-        upperBorderFrame = tk.Frame(preferencesFrame, bg = self.gray)
-        lowerBorderFrame = tk.Frame(preferencesFrame, bg = self.gray)
-        templateFrame = tk.Frame(preferencesFrame, bg = self.gray)
-        clipLimitFrame = tk.Frame(preferencesFrame, bg = self.gray)
-        tileSizeFrame = tk.Frame(preferencesFrame, bg = self.gray)
-        buttonFrame = tk.Frame(preferencesFrame, bg = self.gray)
+        upperBorderFrame = tk.Frame(defaultFrame, bg=self.gray)
+        lowerBorderFrame = tk.Frame(defaultFrame, bg=self.gray)
+        templateFrame = tk.Frame(defaultFrame, bg=self.gray)
+        clipLimitFrame = tk.Frame(defaultFrame, bg=self.gray)
+        tileSizeFrame = tk.Frame(defaultFrame, bg=self.gray)
+        buttonFrame = tk.Frame(defaultFrame, bg=self.gray)
 
         # labels
-        titleLabel = tk.Label(preferencesFrame, text = "Preferences", bg = self.gray, fg = self.white, font=("Calibri Light", 24))
-        upperBorderLabel = tk.Label(upperBorderFrame, text = "Upper Border")
-        lowerBorderLabel = tk.Label(lowerBorderFrame, text = "Lower Border")
-        templateLabel = tk.Label(templateFrame, text = "Template")
-        clipLimitLabel = tk.Label(clipLimitFrame, text = "Clip Limit")
-        tileSizeLabel1 = tk.Label(tileSizeFrame, text = "Tile Size")
-        tileSizeLabel2 = tk.Label(tileSizeFrame, text = "(")
-        tileSizeLabel3 = tk.Label(tileSizeFrame, text = ",")
-        tileSizeLabel4 = tk.Label(tileSizeFrame, text = ")")
+        titleLabel = tk.Label(defaultFrame, text="Preferences", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 24))
+        upperBorderLabel = tk.Label(upperBorderFrame, text="Upper Border")
+        lowerBorderLabel = tk.Label(lowerBorderFrame, text="Lower Border")
+        templateLabel = tk.Label(templateFrame, text="Template")
+        clipLimitLabel = tk.Label(clipLimitFrame, text="Clip Limit")
+        tileSizeLabel1 = tk.Label(tileSizeFrame, text="Tile Size")
+        tileSizeLabel2 = tk.Label(tileSizeFrame, text="(")
+        tileSizeLabel3 = tk.Label(tileSizeFrame, text=",")
+        tileSizeLabel4 = tk.Label(tileSizeFrame, text=")")
 
         labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel1,
             tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
-
         for label in labels:
-            label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 16))
+            label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
 
         # entries
         upperBorderEntry = tk.Entry(upperBorderFrame, validatecommand =((validateCommand, '%P', "Upper_Border", -1)))
@@ -1291,24 +1350,22 @@ class GUI:
         self.systemParameters["Tile_Size"] = [8,8]
 
         entries = [upperBorderEntry, lowerBorderEntry, clipLimitEntry, tileSizeEntry1, tileSizeEntry2]
-
         for entry in entries:
             entry.config(validate = "key", font=("Calibri Light", 14), width = 6)
 
         # drop down
-        self.templateMenuVar = tk.StringVar(preferencesFrame)
+        self.templateMenuVar = tk.StringVar(defaultFrame)
         self.templateMenuVar.set('Select Template')
         self.templateMenu = tk.OptionMenu(templateFrame, self.templateMenuVar, 'Select Template', *self.systemParameters["Templates_Options"])
-        self.templateMenu.config(font=("Calibri Light", 14), bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.templateMenu.config(font=("Calibri Light", 14), bg=self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white, width = 15)
-        self.templateMenu["menu"].config(bg = self.gray, fg = self.white)
+        self.templateMenu["menu"].config(bg=self.gray, fg = self.white)
 
         # button
-        createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg = self.gray,
+        createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg=self.gray,
             fg = self.white, font=("Calibri Light", 15), width = 17)
 
         # packing
-        preferencesFrame.pack(side = tk.RIGHT, pady = (10,20), padx = 50)
         titleLabel.pack(pady = 20)
         upperBorderFrame.pack(pady = 10)
         upperBorderLabel.pack(side = tk.LEFT, padx = 10)
@@ -1336,6 +1393,166 @@ class GUI:
 
         buttonFrame.pack(pady = 20)
         createProfileButton.pack(side = tk.LEFT, padx = (5, 20))
+
+        #==================================================================
+        # Registration Page
+        #==================================================================
+
+        # frames
+        featureFrame = tk.Frame(regFrame, bg=self.gray)
+        ECCParamFrame1 = tk.Frame(regFrame, bg=self.gray)
+        ECCParamFrame2 = tk.Frame(regFrame, bg=self.gray)
+        ECCParamFrame3 = tk.Frame(regFrame, bg=self.gray)
+        ECCParamFrame4 = tk.Frame(regFrame, bg=self.gray)
+        buttonFrameReg = tk.Frame(regFrame, bg=self.gray)
+
+        # labels
+        titleLabel = tk.Label(regFrame, text="Registration", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 24))
+        featuresLabel = tk.Label(featureFrame, text="ORB Features")
+        ECCLabel1 = tk.Label(regFrame, text="ECC Params (w/ ORB)",
+            font=("Calibri Light", 16), bg=self.gray, fg=self.white)
+        fECC = font.Font(ECCLabel1, ECCLabel1.cget("font"))
+        fECC.config(underline=True)
+        ECCLabel1.config(font=fECC)
+        ECCLabel2 = tk.Label(ECCParamFrame1, text="Threshold (1e-)")
+        ECCLabel3 = tk.Label(ECCParamFrame2, text="Iterations")
+        ECCLabel4 = tk.Label(regFrame, text="ECC Params (no ORB)",
+            font=fECC, bg=self.gray, fg=self.white)
+        ECCLabel5 = tk.Label(ECCParamFrame3, text="Threshold (1e-)")
+        ECCLabel6 = tk.Label(ECCParamFrame4, text="Iterations")
+
+        labels = [featuresLabel, ECCLabel2, ECCLabel3, ECCLabel5, ECCLabel6]
+        for label in labels:
+            label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
+
+        # entries
+        featureEntry = tk.Entry(featureFrame, validatecommand =((validateCommand, '%P', "Reg_Params", 0)))
+        thresholdEntry1 = tk.Entry(ECCParamFrame1, validatecommand =((validateCommand, '%P', "Reg_Params", 1)))
+        iterationsEntry1 = tk.Entry(ECCParamFrame2, validatecommand =((validateCommand, '%P', "Reg_Params", 2)))
+        thresholdEntry2 = tk.Entry(ECCParamFrame3, validatecommand =((validateCommand, '%P', "Reg_Params", 3)))
+        iterationsEntry2 = tk.Entry(ECCParamFrame4, validatecommand =((validateCommand, '%P', "Reg_Params", 4)))
+
+        # set default values
+        featureEntry.insert(0, 262144)
+        thresholdEntry1.insert(0, 5)
+        iterationsEntry1.insert(0, 1000)
+        thresholdEntry2.insert(0, 7)
+        iterationsEntry2.insert(0, 2000)
+        self.systemParameters["Reg_Params"] = [262144, 5, 1000, 7, 2000]
+
+        regEntries = [featureEntry, thresholdEntry1, iterationsEntry1, thresholdEntry2, iterationsEntry2]
+        for entry in regEntries:
+            entry.config(validate = "key", font=("Calibri Light", 14), width = 7)
+
+        # button
+        createProfileButtonReg = tk.Button(buttonFrameReg, text = "Create Profile",
+            command = lambda: getName(), bg=self.gray, fg = self.white,
+            font=("Calibri Light", 15), width = 17)
+
+        # packing
+        titleLabel.pack(pady = 20)
+        featureFrame.pack(pady=10, padx=50)
+        featuresLabel.pack(side=tk.LEFT, padx=10)
+        featureEntry.pack(side=tk.LEFT, padx=10)
+
+        ECCLabel1.pack(pady=(15,10))
+        ECCParamFrame1.pack(pady=5)
+        ECCLabel2.pack(side=tk.LEFT, padx=(25,10))
+        thresholdEntry1.pack(side=tk.LEFT, padx=(10,40))
+        ECCParamFrame2.pack(pady=5)
+        ECCLabel3.pack(side=tk.LEFT, padx=(32,10))
+        iterationsEntry1.pack(side=tk.LEFT, padx=(10,0))
+
+        ECCLabel4.pack(pady=(15,10))
+        ECCParamFrame3.pack(pady=5)
+        ECCLabel5.pack(side=tk.LEFT, padx=(25,10))
+        thresholdEntry2.pack(side=tk.LEFT, padx=(10,40))
+        ECCParamFrame4.pack(pady=5)
+        ECCLabel6.pack(side=tk.LEFT, padx=(32,10))
+        iterationsEntry2.pack(side=tk.LEFT, padx=(10,0))
+
+        buttonFrameReg.pack(pady = 20)
+        createProfileButtonReg.pack(side = tk.LEFT, padx = (5, 20))
+
+        #==================================================================
+        # Intersection Page
+        #==================================================================
+
+        # frames
+        peakFrame = tk.Frame(intFrame, bg=self.gray)
+        snowThresholdFrame = tk.Frame(intFrame, bg=self.gray)
+        minSnowThresholdFrame = tk.Frame(intFrame, bg=self.gray)
+        stakeCoverFrame = tk.Frame(intFrame, bg=self.gray)
+        snowCoverFrame = tk.Frame(intFrame, bg=self.gray)
+        buttonFrameInt = tk.Frame(intFrame, bg=self.gray)
+
+        # labels
+        titleLabel = tk.Label(intFrame, text="Intersection", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 24))
+        peakLabel = tk.Label(peakFrame, text="Peak Height")
+        snowThresholdLabel = tk.Label(snowThresholdFrame, text="Peak Threshold (%)")
+        minSnowThresholdLabel = tk.Label(minSnowThresholdFrame, text="Min Threshold")
+        stakeCoverLabel = tk.Label(stakeCoverFrame, text="Stake Coverage (%)")
+        snowCoverLabel = tk.Label(snowCoverFrame, text="Snow Coverage (%)")
+
+        labels = [peakLabel, snowThresholdLabel, minSnowThresholdLabel, stakeCoverLabel,
+            snowCoverLabel]
+        for label in labels:
+            label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
+
+        # entries
+        peakEntry = tk.Entry(peakFrame, validatecommand =((validateCommand, '%P', "Int_Params", 0)))
+        snowThresholdEntry = tk.Entry(snowThresholdFrame, validatecommand =((validateCommand, '%P', "Int_Params", 1, 100.0)))
+        minSnowThresholdEntry = tk.Entry(minSnowThresholdFrame, validatecommand =((validateCommand, '%P', "Int_Params", 2)))
+        stakeCoverEntry = tk.Entry(stakeCoverFrame, validatecommand =((validateCommand, '%P', "Int_Params", 3, 100.0)))
+        snowCoverEntry = tk.Entry(snowCoverFrame, validatecommand =((validateCommand, '%P', "Int_Params", 4, 100.0)))
+
+        # set default values
+        peakEntry.insert(0, 90)
+        snowThresholdEntry.insert(0, 65)
+        minSnowThresholdEntry.insert(0, 125)
+        stakeCoverEntry.insert(0, 50)
+        snowCoverEntry.insert(0, 50)
+        self.systemParameters["Int_Params"] = [90, 0.65, 125, 0.50, 0.50]
+
+        intEntries = [peakEntry, snowThresholdEntry, minSnowThresholdEntry, stakeCoverEntry,
+            snowCoverEntry]
+        for entry in intEntries:
+            entry.config(validate = "key", font=("Calibri Light", 14), width = 7)
+
+        # button
+        createProfileButtonInt = tk.Button(buttonFrameInt, text = "Create Profile",
+            command = lambda: getName(), bg=self.gray, fg = self.white,
+            font=("Calibri Light", 15), width = 17)
+
+        # packing
+        titleLabel.pack(pady = 20)
+        peakFrame.pack(pady=15, padx=50)
+        peakLabel.pack(side=tk.LEFT, padx=10)
+        peakEntry.pack(side=tk.LEFT, padx=10)
+
+        snowThresholdFrame.pack(pady=15)
+        snowThresholdLabel.pack(side=tk.LEFT, padx=10)
+        snowThresholdEntry.pack(side=tk.LEFT, padx=10)
+
+        minSnowThresholdFrame.pack(pady=15)
+        minSnowThresholdLabel.pack(side=tk.LEFT, padx=10)
+        minSnowThresholdEntry.pack(side=tk.LEFT, padx=10)
+
+        stakeCoverFrame.pack(pady=15)
+        stakeCoverLabel.pack(side=tk.LEFT, padx=10)
+        stakeCoverEntry.pack(side=tk.LEFT, padx=10)
+
+        snowCoverFrame.pack(pady=15)
+        snowCoverLabel.pack(side=tk.LEFT, padx=10)
+        snowCoverEntry.pack(side=tk.LEFT, padx=10)
+
+        buttonFrameInt.pack(pady = 20)
+        createProfileButtonInt.pack(side = tk.LEFT, padx = (5, 20))
+
+        menuFrame.pack(side=tk.LEFT, anchor=tk.N, pady=(20,0), padx=(20,0))
+        defaultFrame.pack(side = tk.RIGHT, pady = (10,20), padx = 50)
 
         # wait until user inputs name
         self.root.wait_window(newWindow)
@@ -1382,11 +1599,11 @@ class GUI:
             newWindow.configure(bg=self.gray)
 
             # frames
-            leftFrame = tk.Frame(newWindow, bg = self.gray)
-            rightFrame = tk.Frame(newWindow, bg = self.gray)
+            leftFrame = tk.Frame(newWindow, bg=self.gray)
+            rightFrame = tk.Frame(newWindow, bg=self.gray)
 
             # labels
-            titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg = self.gray, fg = self.white, font=("Calibri Light", 24))
+            titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg=self.gray, fg = self.white, font=("Calibri Light", 24))
             upperBorderLabel = tk.Label(leftFrame, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
             lowerBorderLabel = tk.Label(leftFrame, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
             templateLabel = tk.Label(leftFrame, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
@@ -1396,7 +1613,7 @@ class GUI:
             labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel]
 
             for label in labels:
-                label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 16))
+                label.config(bg=self.gray, fg = self.white, font=("Calibri Light", 16))
 
             # canvas
             screen_width = float(self.root.winfo_screenwidth())
@@ -1417,7 +1634,7 @@ class GUI:
             im = im.resize((imgWidth, imgHeight))
             im = ImageTk.PhotoImage(im)
             previewCanvas = tk.Canvas(rightFrame, width = imgWidth * 0.8, height = imgHeight,
-                bg = self.gray, scrollregion = (0, 0, imgWidth, imgHeight))
+                bg=self.gray, scrollregion = (0, 0, imgWidth, imgHeight))
 
             # packing
             leftFrame.pack(side = tk.LEFT, padx = 40)
@@ -1583,7 +1800,7 @@ class GUI:
             UpperLabel = tk.Label(newWindow,text="Upper",bg=self.gray,fg=self.white,font=("Calibri Light", 15))
 
             # button
-            savetoMain = tk.Button(newWindow, text = "Save Values",bg = self.gray,fg = self.white,command = lambda: saveValuestoMain(),
+            savetoMain = tk.Button(newWindow, text = "Save Values",bg=self.gray,fg = self.white,command = lambda: saveValuestoMain(),
                 width = 20,font=("Calibri Light", 15))
 
             # frames
