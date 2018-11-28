@@ -16,14 +16,15 @@ MAX_DISTANCE = 0.05 # used to filter out bad matches
 # Function to align image to template (https://github.com/NRCANTerry/snow-depth/wiki/register.py)
 def register(img, name, template, template_reduced_noise, img_apply, debug,
     debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
-    NUM_STD_DEV, max_mean_squared_error, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING):
+    NUM_STD_DEV, max_mean_squared_error, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING,
+    params):
 
     # flags for whether image was aligned
     ORB_aligned_flag = False
     ECC_aligned_flag = False
 
     # detect ORB features and compute descriptors
-    orb = cv2.ORB_create(nfeatures=MAX_FEATURES)
+    orb = cv2.ORB_create(nfeatures=params[0])
     kp1, desc1 = orb.detectAndCompute(img, None)
     kp2, desc2 = orb.detectAndCompute(template_reduced_noise, None)
 
@@ -137,8 +138,8 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     warp_matrix = np.eye(2, 3, dtype=np.float32)
 
     # specify the number of iterations and threshold
-    number_iterations = 1000 if ORB_aligned_flag else 2000
-    termination_thresh = 1e-5 if ORB_aligned_flag else 1e-7
+    number_iterations = int(params[2]) if ORB_aligned_flag else int(params[4])
+    termination_thresh = 1.0 / pow(10, params[1]) if ORB_aligned_flag else 1.0 / pow(10, params[3])
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
@@ -251,7 +252,7 @@ def updateDataset(dataset, MSE_vals, dataset_enabled):
 # align a set of images to the provided template
 def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     debug_directory_registered, debug_directory_matches, debug, dataset,
-    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params):
 
     # counter for successful ORB and ECC registrations
     validORB = 0
@@ -282,7 +283,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         output = register(img, img_names[count], template, template_reduced_noise,
             img_apply, debug, debug_directory_registered, debug_directory_matches,
             dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
-            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING)
+            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params)
 
         # if image was aligned
         if output[0] is not None:
@@ -345,7 +346,7 @@ def unpackArgs(args):
 # align a set of images to the given template using a parallel pool
 def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
      imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
-    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV):
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params):
 
     # counter for successful ORB and ECC registrations
     validORB = 0
@@ -370,7 +371,7 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         tasks.append((img, img_names[i], template, template_reduced_noise,
             imgs_apply[i], debug, debug_directory_registered, debug_directory_matches,
             dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
-            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING))
+            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
