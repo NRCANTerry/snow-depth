@@ -391,7 +391,6 @@ def updateDatset(dataset, tensor_vals, dataset_enabled):
 
     # run for all stakes
     for i, x in enumerate(dataset):
-        print(i)
         # if dataset enabled
         if dataset_enabled[i]:
             # get mean and standard deviation from dataset
