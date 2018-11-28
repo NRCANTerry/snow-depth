@@ -27,12 +27,12 @@ class Preferences:
 class GUI:
     def __init__(self, master):
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Create window
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         self.root = master
-        self.root.configure(background='#2B3137')
+        self.root.configure(background='#282c34')
         self.root.title("Measure Snow Depth")
         self.root.iconbitmap(default="include/GUI/transparent.ico")
 
@@ -40,9 +40,9 @@ class GUI:
         if(not os.path.isdir("AppData")):
             os.mkdir("./AppData")
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Variables
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         # dictionary with options for program
         self.systemParameters = {
@@ -108,12 +108,12 @@ class GUI:
         # window closing protocol
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Labels
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
-        self.gray = "#2B3137"
-        self.white = "#ffffff"
+        self.gray = "#282c34"
+        self.white = "#f1f1f1"
 
         # main frame
         self.rootFrame = tk.Frame(self.root, bg = self.gray)
@@ -165,9 +165,9 @@ class GUI:
         for label in self.grayLabels:
             label.config(bg = self.gray, fg = "#787d84", font=("Calibri Light", 16))
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Buttons
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         # choose directory button
         self.directoryButton = tk.Button(self.rootFrame, text = "Select", command = lambda: self.selectDirectory())
@@ -182,9 +182,9 @@ class GUI:
         for button in self.buttons:
             button.config(bg = self.gray, fg = self.white, font=("Calibri Light", 14), width = 17)
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Entries
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         validateCommand = self.root.register(self.validate)
 
@@ -214,9 +214,9 @@ class GUI:
         for entry in self.entries2:
             entry.config(validate = "key", font=("Calibri Light", 14), width = 4, state = "disabled")
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Checkbox
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         self.secondHSVFlag = tk.IntVar()
         self.checkBox = tk.Checkbutton(self.rootFrame, text="Second HSV Range", bg = self.gray, fg = self.white, selectcolor = self.gray,
@@ -226,9 +226,9 @@ class GUI:
         self.debugCheckBox = tk.Checkbutton(self.rootFrame, text="Debug", bg = self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
             activeforeground = self.white, variable = self.debug, font=("Calibri Light", 14))
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Drop Down Menus
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         self.colourMenuVar = tk.StringVar(self.root)
         self.colourMenuVar.set('Select HSV Range')
@@ -246,9 +246,9 @@ class GUI:
         self.profileMenu["menu"].config(bg=self.gray, fg = self.white)
         self.profileMenuVar.trace('w', self.change_Preferences_dropdown)
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Top Menu
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         # create menu bar
         self.menubar = tk.Menu(self.root, bg = self.gray, fg = self.white, activebackground = self.gray,
@@ -259,6 +259,10 @@ class GUI:
             activeforeground = self.white)
         self.prefMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white)
+        self.tempMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+            activeforeground = self.white)
+        self.DLMenu = tk.Menu(self.menubar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
+            activeforeground = self.white)
 
         # add commands
         self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
@@ -268,22 +272,31 @@ class GUI:
         self.menubar.add_cascade(label = "File", menu = self.filemenu)
 
         # HSV menu
-        self.HSVmenu.add_command(label = "Save HSV Range", command = lambda: self.saveRanges())
-        self.HSVmenu.add_command(label = "Remove HSV Range", command = lambda: self.removeRanges())
-        self.menubar.add_cascade(label = "HSV Options", menu = self.HSVmenu)
+        self.HSVmenu.add_command(label = "Save HSV Range", command = lambda: self.addHSVRange())
+        self.HSVmenu.add_command(label = "Remove HSV Range", command = lambda: self.removeSavedHSVRange())
+        self.menubar.add_cascade(label = "Colours", menu = self.HSVmenu)
 
         # Preferences menu
         self.prefMenu.add_command(label = "Create Profile", command = lambda: self.createProfile())
         self.prefMenu.add_command(label = "Remove Profile", command = lambda: self.removeProfile())
         self.prefMenu.add_command(label = "Preview Profile", command = lambda: self.previewProfile())
-        self.menubar.add_cascade(label = "Preferences", menu = self.prefMenu)
+        self.menubar.add_cascade(label = "Profiles", menu = self.prefMenu)
+
+        # Template Menu
+        self.tempMenu.add_command(label="Create Template", command=lambda: self.addTemplate())
+        self.tempMenu.add_command(label="Remove Template", command=lambda: self.removeTemplate())
+        self.menubar.add_cascade(label="Templates", menu=self.tempMenu)
+
+        # Deep Learning menu
+        self.DLMenu.add_command(label = "Reset Blob Neural Network", command = lambda: self.resetBlobNet())
+        self.menubar.add_cascade(label = "Deep Learning", menu=self.DLMenu)
 
         # configure menu bar
         self.root.config(menu = self.menubar)
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Advanced Menu Widgets
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         self.advancedFrame = tk.Frame(self.root, bg=self.gray)
         self.advancedFrameWidgets =tk.Frame(self.advancedFrame, bg=self.gray)
@@ -300,7 +313,7 @@ class GUI:
 
         # advanced options button
         self.advancedButton = tk.Button(self.advancedFrame, text=">", bg=self.gray, fg=self.white, borderwidth=0,
-            font=("Calibri Light", 20), command=lambda: self.openAdvancedOptions(0))
+            font=("Calibri Light", 20), command=lambda: self.toggleAdvancedOptions(0))
         self.advancedButton.bind("<Enter>", on_enter)
         self.advancedButton.bind("<Leave>", on_leave)
 
@@ -349,9 +362,9 @@ class GUI:
         self.splitLabel.pack(side=tk.LEFT)
         self.minuteTime.pack(side=tk.LEFT, padx=(3,5))
 
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
         # Packing
-        # ---------------------------------------------------------------------------------
+        #===========================================================================
 
         self.advancedFrame.pack(side=tk.RIGHT, fill=tk.Y)
         self.advancedButton.pack(side=tk.RIGHT, fill=tk.Y)
@@ -405,13 +418,27 @@ class GUI:
         self.runButton.pack(pady = (20,10))
         self.debugCheckBox.pack(pady = (10,20))
 
-    # ---------------------------------------------------------------------------------
-    # Functions
-    # ---------------------------------------------------------------------------------
+        self.kwargs = {
+            "bg": self.gray,
+            "fg": self.white
+        }
 
-    # ---------------------------------------------------------------------------------
+        self.menuKwargs = {
+            "bg": self.gray,
+            "fg": self.white,
+            "activebackground": self.gray,
+            "activeforeground": self.white
+        }
+
+        self.profileOpen = False
+
+    #===========================================================================
+    # Functions
+    #===========================================================================
+
+    #===========================================================================
     # Validate method for text entry
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def validate(self, new_text, entry_field, index):
         if(index != "-1"):
@@ -443,9 +470,9 @@ class GUI:
             except ValueError:
                 return False
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Validate method for time entry
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def validateAdvanced(self, new_text, index):
         # the field is being cleared
@@ -464,9 +491,9 @@ class GUI:
         except ValueError:
             return False
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to confirm that required fields are filled in
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def fieldsFilled(self, directory = True):
         # flag indicating if date fields are properly filled in
@@ -492,9 +519,9 @@ class GUI:
                 and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile"
                 and (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty)))))
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to confirm that required HSV fields are filled in
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def fieldsFilledHSV(self):
         return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
@@ -503,21 +530,21 @@ class GUI:
             and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
             and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1))
 
-    # ---------------------------------------------------------------------------------
-    # Function open advanced options (when arrow clicked)
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
+    # Function to toggle advanced options window (when arrow clicked)
+    #===========================================================================
 
-    def openAdvancedOptions(self, status):
+    def toggleAdvancedOptions(self, status):
         if(status==0):
             # change button appearance
-            self.advancedButton.config(text="<", command=lambda: self.openAdvancedOptions(1))
+            self.advancedButton.config(text="<", command=lambda: self.toggleAdvancedOptions(1))
 
             # pack advanced widgets
             self.advancedFrameWidgets.pack(side=tk.RIGHT, padx=40)
             self.advancedFrameOpen = True # update flag
         else:
             # change button appearance
-            self.advancedButton.config(text=">", command=lambda: self.openAdvancedOptions(0))
+            self.advancedButton.config(text=">", command=lambda: self.toggleAdvancedOptions(0))
 
             # clear entries
             self.selectedTime = [None, None]
@@ -530,9 +557,9 @@ class GUI:
             self.advancedFrameWidgets.pack_forget()
             self.advancedFrameOpen = False # update flag
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to allow selection of directory/file where images are stored
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     # function to check whether a file is an image
     def checkImage(self, path):
@@ -564,9 +591,9 @@ class GUI:
             else:
                 messagebox.showinfo("Error", "Not all files in the selected directory are images")
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to save inputted values and close window
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def saveValues(self):
         # if second HSV range is not selected
@@ -591,9 +618,9 @@ class GUI:
         else:
             messagebox.showinfo("Error", "Not All Fields Populated")
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Accessor function to return parameters to main file
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def getValues(self):
         # increment end date by one
@@ -616,9 +643,9 @@ class GUI:
         else:
             return False
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to update appearance of GUI based on status of checkbox
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def updateSelections(self):
         if (self.secondHSVFlag.get() == 1):
@@ -637,9 +664,9 @@ class GUI:
                 field.delete(0, tk.END)
                 field.config(state = "disabled")
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to fetch preferences from preferences.cfg file
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def getPreferences(self):
         # if no preferences file present, create one
@@ -668,9 +695,9 @@ class GUI:
             dict(self.config.items('Tensor Dataset')), dict(self.config.items('Template Blob Distances')),
             dict(self.config.items('Template Settings'))]
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function that is run when user closes window
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def on_closing(self):
         # write preferences to file
@@ -680,9 +707,9 @@ class GUI:
         # close window
         self.root.destroy()
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to update HSV values on menu selection
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def change_HSV_dropdown(self, *args):
         # if menu selection has changed
@@ -753,9 +780,9 @@ class GUI:
             self.systemParameters["Lower_HSV_2"] = np.array([0,0,0])
             self.systemParameters["Upper_HSV_2"] = np.array([0,0,0])
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to update preferences based on drop down
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def change_Preferences_dropdown(self, *args):
         # if menu selection has changed
@@ -779,9 +806,10 @@ class GUI:
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
 
-    # ---------------------------------------------------------------------------------
+
+    #===========================================================================
     # Function to restart script to load changes
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def restart(self):
         # write preferences to file
@@ -794,36 +822,84 @@ class GUI:
         # restart program
         os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
 
-    # ---------------------------------------------------------------------------------
-    # Function to allow user to save HSV ranges to preferences file
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
+    # Function to provide widgets to build a save page
+    #===========================================================================
 
-    def saveRanges(self):
-        # function to close window
-        def closing(status):
-            # if name was inputted
-            if(name.get() != "" and status == True):
+    def getSavePageWidgets(self, master, pack=0):
+        def on_enter(e):
+            exit['bg'] = 'white'
+            exit['fg'] = self.gray
+        def on_leave(e):
+            time.sleep(0.10)
+            exit['bg'] = self.gray
+            exit['fg'] = 'white'
+
+        # create widgets
+        frame = tk.Frame(master, bg=self.gray)
+        label = tk.Label(frame, text="Name", font=("Calibri Light", 20), **self.kwargs)
+        var = tk.StringVar(master)
+        entry = tk.Entry(frame, font=("Calibri Light", 14), textvariable=var, width=20)
+
+        # buttons
+        execute = tk.Button(frame, text="Save", **self.kwargs, width=20, font=("Calibri Light", 14))
+        exit = tk.Button(frame, text="x", **self.kwargs, width=2, height=1,
+            font=("Calibri Light", 16), borderwidth=0)
+        exit.bind("<Enter>", on_enter)
+        exit.bind("<Leave>", on_leave)
+
+        # separator
+        separator = tk.Frame(master, relief=tk.SUNKEN, width=1,
+            height=int(master.winfo_reqheight() * 0.85), bg=self.white)
+
+        # packing
+        if(pack == 0):
+            frame.pack(side=tk.LEFT, padx=25)
+            separator.pack(side=tk.LEFT, fill=tk.X)
+            exit.pack(padx=(200,0), pady=(0,150))
+            label.pack(pady=(20,5))
+            entry.pack(pady=10)
+            execute.pack(pady=(5,300))
+        else: # profile window packing
+            frame.pack(side=tk.LEFT, padx=25)
+            separator.pack(side=tk.LEFT, fill=tk.X)
+            exit.pack(padx=(200,0), pady=(0,60))
+            label.pack(pady=(20,5))
+            entry.pack(pady=10)
+            execute.pack(pady=(5,185))
+
+        # return widgets
+        return execute, exit, var, frame, separator
+
+
+    #===========================================================================
+    # Function to add an HSV Range to the preferences file
+    #===========================================================================
+
+    def addHSVRange(self):
+        def format(array): # format numpy arrays as string
+            return np.array2string(array, separator = ',').replace("[","(").replace("]", ")")
+
+        def close(status): # function to handle closing
+            if(var.get() != "" and status): # name was given
                 # create output string
-                outputString = "[" + np.array2string(self.systemParameters["Lower_HSV_1"], separator = ',').replace("[","(").replace("]", ")") + "," + \
-                    np.array2string(self.systemParameters["Upper_HSV_1"], separator = ',').replace("[","(").replace("]", ")")
+                output = "[" + format(self.systemParameters["Lower_HSV_1"]) + "," + \
+                    format(self.systemParameters["Upper_HSV_1"])
 
-                if(self.secondHSVFlag.get() == 1):
-                    outputString += "," + np.array2string(self.systemParameters["Lower_HSV_2"], separator = ',').replace("[","(").replace("]", ")")
-                    outputString += "," + np.array2string(self.systemParameters["Upper_HSV_2"], separator = ',').replace("[","(").replace("]", ")")
-
-                outputString += "]"
+                if(self.secondHSVFlag.get()):
+                    output += "," + format(self.systemParameters["Lower_HSV_2"]) + "," + \
+                        format(self.systemParameters["Upper_HSV_2"])
+                output += "]"
 
                 # add to config file
-                self.config.set('HSV Ranges', name.get(), outputString)
+                self.config.set('HSV Ranges', var.get(), output)
+                self.colourMenu['menu'].add_command(label=var.get(), command=tk._setit(self.colourMenuVar, var.get()))
+                self.systemParameters["Saved_Colours"][var.get()] = output
+                self.systemParameters["Colour_Options"].append(var.get())
+                self.colourMenuVar.set(var.get())
 
-                # update menu
-                self.colourMenu['menu'].add_command(label = name.get(), command = tk._setit(self.colourMenuVar, name.get()))
-                self.systemParameters["Saved_Colours"][name.get()] = outputString
-                self.systemParameters["Colour_Options"].append(name.get())
-                self.colourMenuVar.set(name.get())
-
-            # unpack frame
-            leftFrame.pack_forget()
+            # unpack frames
+            frame.pack_forget()
             separator.pack_forget()
 
         # only run if all fields filled in
@@ -831,357 +907,343 @@ class GUI:
             messagebox.showinfo("Error", "Not All HSV Fields Populated")
             return
 
-        # create new frame
-        leftFrame = tk.Frame(self.root, bg = self.gray)
+        # get widgets
+        execute, exit, var, frame, separator = self.getSavePageWidgets(self.root)
+        execute.config(command=lambda: close(True))
+        exit.config(command=lambda: close(False))
 
-        # Labels
-        nameLabel = tk.Label(leftFrame, text = "Name", bg = self.gray, fg = self.white, font = ("Calibri Light", 20))
+    #===========================================================================
+    # Function to provide widgets to build a remove page
+    #===========================================================================
 
-        # Entry
-        name = tk.StringVar()
-        nameEntry = tk.Entry(leftFrame, font=("Calibri Light", 14),textvariable = name, width = 20)
+    def getRemovePageWidgets(self, master, text, options):
+        def on_enter(e):
+            exit['bg'] = 'white'
+            exit['fg'] = self.gray
+        def on_leave(e):
+            time.sleep(0.10)
+            exit['bg'] = self.gray
+            exit['fg'] = 'white'
+
+        # create widgets
+        frame = tk.Frame(master, bg=self.gray)
+        label = tk.Label(frame, text="Name", font=("Calibri Light", 20), **self.kwargs)
+        var = tk.StringVar(master)
+        var.set(text)
+        removeMenu = tk.OptionMenu(frame, var, text, *options)
+        removeMenu.config(**self.menuKwargs, font=("Calibri Light", 14))
+        removeMenu["menu"].config(**self.kwargs)
 
         # buttons
-        executeButton = tk.Button(leftFrame, text = "Save", bg = self.gray, fg = self.white, command = lambda: closing(True),
-            width = 20, font = ("Calibri Light", 14))
-        exitButton = tk.Button(leftFrame, text = "x", bg = self.gray, fg = self.white, command = lambda: closing(False),
-            width = 2, height = 1, font = ("Calibri Light", 14))
+        execute = tk.Button(frame, text="Save", **self.kwargs, width=20, font=("Calibri Light", 14))
+        exit = tk.Button(frame, text="x", **self.kwargs, width=2, height=1,
+            font=("Calibri Light", 16), borderwidth=0)
+        exit.bind("<Enter>", on_enter)
+        exit.bind("<Leave>", on_leave)
 
         # separator
-        separator_height = self.root.winfo_reqheight() * 0.85
-        separator = tk.Frame(self.root, relief = tk.SUNKEN, width = 1, height = int(separator_height), bg = self.white)
+        separator = tk.Frame(master, relief=tk.SUNKEN, width=1,
+            height=int(master.winfo_reqheight() * 0.85), bg=self.white)
 
         # packing
-        leftFrame.pack(side = tk.LEFT, padx = 25)
-        separator.pack(side = tk.LEFT, fill = tk.X)
-        exitButton.pack(padx = (200,0), pady = (0,150))
-        nameLabel.pack(pady = (20,5))
-        nameEntry.pack(pady = 10)
-        executeButton.pack(pady = (5,300))
+        frame.pack(side=tk.LEFT, padx=25)
+        separator.pack(side=tk.LEFT, fill=tk.X)
+        exit.pack(padx=(200,0), pady=(0,150))
+        label.pack(pady=(20,5))
+        removeMenu.pack(pady=10)
+        execute.pack(pady=(5,300))
 
-    # ---------------------------------------------------------------------------------
+        # return widgets
+        return execute, exit, var, frame, separator
+
+
+    #===========================================================================
     # Function to remove an HSV range from the preferences file
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
-    def removeRanges(self):
-        # function to close window
-        def closing(status):
-            # remove selected option from menu
-            if(removecolourMenuVar.get() != 'Select Profile to Remove' and status == True):
-                self.config.remove_option("HSV Ranges", removecolourMenuVar.get())
-                self.systemParameters["Colour_Options"].remove(removecolourMenuVar.get())
-                self.systemParameters["Saved_Colours"].pop(removecolourMenuVar.get())
+    def removeSavedHSVRange(self):
+        # function to handle closing
+        def close(status):
+            if(var.get() != 'Select Profile to Remove' and status):
+                self.config.remove_option("HSV Ranges", var.get())
+                self.systemParameters["Colour_Options"].remove(var.get())
+                self.systemParameters["Saved_Colours"].pop(var.get())
 
                 # update menu
                 self.colourMenuVar.set('Select HSV Range')
                 self.colourMenu['menu'].delete(0, 'end')
 
                 for option in self.systemParameters["Colour_Options"]:
-                    self.colourMenu['menu'].add_command(label = option, command = tk._setit(self.colourMenuVar, option))
+                    self.colourMenu['menu'].add_command(label=option,
+                        command=tk._setit(self.colourMenuVar, option))
 
-            # unpack frame
-            leftFrame.pack_forget()
+            # unpack frames
+            frame.pack_forget()
             separator.pack_forget()
 
-        # create new frame
-        leftFrame = tk.Frame(self.root, bg = self.gray)
+        # get widgets
+        execute, exit, var, frame, separator = self.getRemovePageWidgets(self.root,
+            'Select Profile to Remove', self.systemParameters["Colour_Options"])
+        execute.config(command=lambda: close(True))
+        exit.config(command=lambda: close(False))
 
-        # Labels
-        nameLabel = tk.Label(leftFrame, text = "Name", bg = self.gray, fg = self.white, font = ("Calibri Light", 20))
 
-        # drop down menu used to select profile to remove
-        removecolourMenuVar = tk.StringVar(self.root)
-        removecolourMenuVar.set('Select Profile to Remove')
-        removeMenu = tk.OptionMenu(leftFrame, removecolourMenuVar, 'Select Profile to Remove', *self.systemParameters["Colour_Options"])
-        removeMenu.config(bg = self.gray, fg = self.white, activebackground = self.gray, activeforeground = self.white)
-        removeMenu.config(font=("Calibri Light", 14))
-        removeMenu["menu"].config(bg = self.gray, fg = self.white)
+    #===========================================================================
+    # Function to reset blob neural network
+    #===========================================================================
 
-        # buttons
-        executeButton = tk.Button(leftFrame, text = "Save", bg = self.gray, fg = self.white, command = lambda: closing(True),
-            width = 20, font = ("Calibri Light", 14))
-        exitButton = tk.Button(leftFrame, text = "x", bg = self.gray, fg = self.white, command = lambda: closing(False),
-            width = 2, height = 1, font = ("Calibri Light", 14))
+    def resetBlobNet(self):
+        # function to handle closing
+        def close(status):
+            if(var.get() != 'Select Model to Remove' and status):
+                # determine if model exists
+                from pathlib import Path
+                tempPath = (self.systemParameters["Template_Paths"][str(var.get())])
+                filename = os.path.splitext(os.path.split(tempPath)[1])[0]
+                modelPath = str(Path(tempPath).parents[1]) + "\\models\\" + filename + ".model"
 
-        # separator
-        separator_height = self.root.winfo_reqheight() * 0.85
-        separator = tk.Frame(self.root, relief = tk.SUNKEN, width = 1, height = int(separator_height), bg = self.white)
+                # model exists
+                if(os.path.isfile(modelPath)):
+                    # delete model
+                    os.remove(modelPath)
 
-        # packing
-        leftFrame.pack(side = tk.LEFT, padx = 25)
-        separator.pack(side = tk.LEFT, fill = tk.X)
-        exitButton.pack(padx = (200,0), pady = (0,150))
-        nameLabel.pack(pady = (20,5))
-        removeMenu.pack(pady = 10)
-        executeButton.pack(pady = (5,300))
+                    # re-add training directories
+                    training_path = str(Path(tempPath).parents[1]) + "\\training\\" + filename + "/"
+                    if(not os.path.isdir(training_path)):
+                        os.mkdir(training_path)
+                    if(not os.path.isdir(training_path + "\\blob")):
+                        os.mkdir(training_path + "\\blob")
+                    if(not os.path.isdir(training_path + "\\non-blob")):
+                        os.mkdir(training_path + "\\non-blob")
 
-    # ---------------------------------------------------------------------------------
-    # Function to create a preferences profile
-    # ---------------------------------------------------------------------------------
+            # unpack frames
+            frame.pack_forget()
+            separator.pack_forget()
 
-    def createProfile(self):
-        # embedded function to allow for removal of template
-        def removeTemplate():
-            # function to close window
-            def closing(status):
-                # remove selected option from menu
-                if(removetemplateMenuVar.get() != 'Select Template to Remove' and status == True):
-                    # delete saved template image
-                    path = self.systemParameters["Template_Paths"][removetemplateMenuVar.get()]
-                    filename, ext = os.path.splitext(os.path.split(path)[1])
-                    path_marked = os.path.split(path)[0] + "\\" + filename + "-marked" + ext
-                    os.remove(path)
-                    os.remove(path_marked)
+        # get widgets
+        execute, exit, var, frame, separator = self.getRemovePageWidgets(self.root,
+            'Select Model to Remove', self.systemParameters["Templates_Options"])
+        execute.config(command=lambda: close(True))
+        exit.config(command=lambda: close(False))
 
-                    # delete training data for template
-                    training_path = "./AppData/training/" + filename + "/"
-                    import shutil
-                    shutil.rmtree(training_path)
+    #===========================================================================
+    # Function to add a template
+    #===========================================================================
 
-                    # delete model if exists
-                    model_path = "./AppData/models/" + filename + ".model"
-                    if(os.path.isfile(model_path)):
-                        os.remove(model_path)
+    def addTemplate(self):
+        def format(array): # format array for preferences file
+            return str(array).replace("array(", "").replace(")", "")
 
-                    self.config.remove_option("Template Coordinates", removetemplateMenuVar.get())
-                    self.config.remove_option("Template Images", removetemplateMenuVar.get())
-                    self.config.remove_option("Template Intersections", removetemplateMenuVar.get())
-                    self.config.remove_option("Template Tensor", removetemplateMenuVar.get())
-                    self.config.remove_option("Template Blob Sizes", removetemplateMenuVar.get())
-                    self.config.remove_option("Template Registration Dataset", removetemplateMenuVar.get())
-                    self.config.remove_option('Tensor Dataset', removetemplateMenuVar.get())
-                    self.config.remove_option('Template Blob Distances', removetemplateMenuVar.get())
-                    self.config.remove_option('Template Settings', removetemplateMenuVar.get())
-                    self.systemParameters["Templates"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Templates_Options"].remove(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Paths"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Intersections"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Tensors"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Blob_Sizes"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Datasets"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Tensor_Datasets"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Blob_Distances"].pop(removetemplateMenuVar.get())
-                    self.systemParameters["Template_Settings"].pop(removetemplateMenuVar.get())
+        # hide main window
+        self.root.withdraw()
 
-                    # update menu
-                    templateMenuVar.set('Select Template')
-                    templateMenu['menu'].delete(0, 'end')
+        # create top level window
+        templateWindow = tk.Toplevel(self.root)
+
+        # open template GUI
+        tmpl = template.createTemplate(templateWindow)
+        self.root.wait_window(templateWindow)
+        params = tmpl.getTemplate()
+
+        # if template wasn't created exit
+        if(params == False):
+            self.root.deiconify()
+            return
+
+        # unpack parameters
+        templateCoords, templateIntersections, templateDistances, templateTensors, \
+            templateBlobSizes, templateSystemParams, templateImage, templateMarked, \
+            templatePath = params
+        templateName = templateSystemParams["Name"]
+
+        # search for template directory
+        if(not os.path.isdir("./AppData/templates")):
+            os.mkdir("./AppData/templates")
+        if(not os.path.isdir("./AppData/models")):
+            os.mkdir("./AppData/models")
+        if(not os.path.isdir("./AppData/training")):
+            os.mkdir("./AppData/training")
+
+        # write images to directory
+        current_dir = os.getcwd()
+        filename, ext = os.path.splitext(os.path.split(templatePath)[1])
+        template_path = current_dir + "\\AppData\\templates\\" + filename + "-" + \
+            str(templateName) + ext
+        marked_template_path = current_dir + "\\AppData\\templates\\" + filename + "-" + \
+            str(templateName) + "-marked" + ext
+        cv2.imwrite(template_path, templateImage)
+        cv2.imwrite(marked_template_path, templateMarked)
+
+        # create folder for training images
+        training_path = "./AppData/training/" + filename + "-" +  str(templateName) + "/"
+        os.mkdir(training_path)
+        os.mkdir(training_path + "/blob")
+        os.mkdir(training_path + "/non-blob")
+
+        # create output strings
+        outputString = format(templateCoords)
+        intersectionString = format(templateIntersections)
+        tensorString = format(templateTensors)
+        blobSizeString = format(templateBlobSizes)
+        templateDataString = format([[0,0,0],[]])
+        tensorDataArray = [[[0,0,0], []]] * len(templateTensors)
+        tensorDataString = format(tensorDataArray)
+        intersectionDistanceString = format(templateDistances)
+        settingsList = [templateSystemParams["Register_STD_DEV"], templateSystemParams["Tensor_STD_DEV"],
+            templateSystemParams["Rotation"], templateSystemParams["Translation"], templateSystemParams["Scale"]]
+        settingsString = format(settingsList)
+
+        # save to config file
+        self.config.set('Template Coordinates',templateName, outputString)
+        self.config.set('Template Images', templateName, template_path)
+        self.config.set('Template Intersections', templateName, intersectionString)
+        self.config.set('Template Tensor', templateName, tensorString)
+        self.config.set('Template Blob Sizes', templateName, blobSizeString)
+        self.config.set('Template Registration Dataset', templateName, templateDataString)
+        self.config.set('Tensor Dataset', templateName, tensorDataString)
+        self.config.set('Template Blob Distances', templateName, intersectionDistanceString)
+        self.config.set('Template Settings', templateName, settingsString)
+
+        # update menu if possible
+        if(self.profileOpen):
+            self.templateMenu['menu'].add_command(label=templateName,
+                command=tk._setit(self.templateMenuVar, templateName))
+            self.templateMenuVar.set(templateName)
+
+        # update system parameters
+        self.systemParameters["Templates"][templateName] = outputString
+        self.systemParameters["Templates_Options"].append(templateName)
+        self.systemParameters["Template_Paths"][templateName] = template_path
+        self.systemParameters["Current_Template_Name"] = templateName
+        self.systemParameters["Current_Template_Coords"] = templateCoords
+        self.systemParameters["Current_Template_Path"] = template_path
+        self.systemParameters["Template_Intersections"][templateName] = intersectionString
+        self.systemParameters["Template_Tensors"][templateName] = tensorString
+        self.systemParameters["Template_Blob_Sizes"][templateName] = blobSizeString
+        self.systemParameters["Template_Datasets"][templateName] = templateDataString
+        self.systemParameters["Tensor_Datasets"][templateName] = tensorDataString
+        self.systemParameters["Blob_Distances"][templateName] = intersectionDistanceString
+        self.systemParameters["Template_Settings"][templateName] = settingsString
+        self.systemParameters["Current_Template_Intersections"] = templateIntersections
+        self.systemParameters["Current_Template_Tensor"] = templateTensors
+        self.systemParameters["Current_Template_Blob_Sizes"] = templateBlobSizes
+        self.systemParameters["Current_Template_Dataset"] = [[0,0,0],[]]
+        self.systemParameters["Current_Tensor_Dataset"] = tensorDataArray
+        self.systemParameters["Current_Blob_Distances"] = templateDistances
+        self.systemParameters["Current_Template_Settings"] = settingsList
+        print("Template Saved Successfully: %s \n" % templateName)
+
+        # reopen other windows
+        self.root.deiconify()
+
+    #===========================================================================
+    # Function to remove a template
+    #===========================================================================
+
+    def removeTemplate(self):
+        # function to handle closing
+        def close(status):
+            if(var.get() != 'Select Template to Remove' and status):
+                # delete saved template image
+                path = self.systemParameters["Template_Paths"][var.get()]
+                filename, ext = os.path.splitext(os.path.split(path)[1])
+                path_marked = os.path.split(path)[0] + "\\" + filename + "-marked" + ext
+                os.remove(path)
+                os.remove(path_marked)
+
+                # delete training data for template
+                import shutil
+                training_path = "./AppData/training/" + filename + "/"
+                shutil.rmtree(training_path)
+
+                # delete model if exists
+                model_path = "./AppData/models/" + filename + ".model"
+                if(os.path.isfile(model_path)): os.remove(model_path)
+
+                # remove template from preferences
+                for i in ["Template Coordinates", "Template Images", "Template Intersections",
+                    "Template Tensor", "Template Blob Sizes", "Template Registration Dataset",
+                    "Tensor Dataset", "Template Blob Distances", "Template Settings"]:
+                    self.config.remove_option(i, var.get())
+
+                for i in ["Templates", "Template_Paths", "Template_Intersections", "Template_Tensors",
+                    "Template_Blob_Sizes", "Template_Datasets", "Tensor_Datasets", "Blob_Distances",
+                    "Template_Settings"]:
+                    self.systemParameters[str(i)].pop(var.get())
+                self.systemParameters["Templates_Options"].remove(var.get())
+
+                # update menu if required
+                if(self.profileOpen):
+                    self.templateMenuVar.set('Select Template')
+                    self.templateMenu['menu'].delete(0, 'end')
 
                     for option in self.systemParameters["Templates_Options"]:
-                        templateMenu['menu'].add_command(label = option, command = tk._setit(templateMenuVar, option))
+                        self.templateMenu['menu'].add_command(label=option,
+                            command=tk._setit(self.templateMenuVar, option))
 
-                # unpack frame
-                leftFrame.pack_forget()
-                separator.pack_forget()
+            # unpack frames
+            frame.pack_forget()
+            separator.pack_forget()
 
-            # create new frame
-            leftFrame = tk.Frame(newWindow, bg = self.gray)
+        # get widgets
+        execute, exit, var, frame, separator = self.getRemovePageWidgets(self.root,
+            'Select Template to Remove', self.systemParameters["Templates_Options"])
+        execute.config(command=lambda: close(True))
+        exit.config(command=lambda: close(False))
 
-            # Labels
-            nameLabel = tk.Label(leftFrame, text = "Name", bg = self.gray, fg = self.white, font = ("Calibri Light", 20))
+    #===========================================================================
+    # Function to create a preferences profile
+    #===========================================================================
 
-            # drop down menu used to select profile to remove
-            removetemplateMenuVar = tk.StringVar(self.root)
-            removetemplateMenuVar.set('Select Profile to Remove')
-            removeTemplateMenu = tk.OptionMenu(leftFrame, removetemplateMenuVar, 'Select Profile to Remove', *self.systemParameters["Templates_Options"])
-            removeTemplateMenu.config(bg = self.gray, fg = self.white, activebackground = self.gray, activeforeground = self.white)
-            removeTemplateMenu.config(font=("Calibri Light", 14))
-            removeTemplateMenu["menu"].config(bg = self.gray, fg = self.white)
-
-            # buttons
-            executeButton = tk.Button(leftFrame, text = "Save", bg = self.gray, fg = self.white, command = lambda: closing(True),
-                width = 20, font = ("Calibri Light", 14))
-            exitButton = tk.Button(leftFrame, text = "x", bg = self.gray, fg = self.white, command = lambda: closing(False),
-                width = 2, height = 1, font = ("Calibri Light", 14))
-
-            # separator
-            separator_height = newWindow.winfo_reqheight() * 0.85
-            separator = tk.Frame(newWindow, relief = tk.SUNKEN, width = 1, height = int(separator_height), bg = self.white)
-
-            # packing
-            leftFrame.pack(side = tk.LEFT, padx = 25)
-            separator.pack(side = tk.LEFT, fill = tk.X)
-            exitButton.pack(padx = (200,0), pady = (0,60))
-            nameLabel.pack(pady = (20,5))
-            removeTemplateMenu.pack(pady = 10)
-            executeButton.pack(pady = (5,185))
-
-        # embedded function to allow for creation of template
-        def createTemplate():
-            # hide other windows
-            newWindow.withdraw()
-            self.root.withdraw()
-
-            # create top level window
-            templateWindow = tk.Toplevel(self.root)
-
-            # open template gui
-            tmpl = template.createTemplate(templateWindow)
-
-            # run window
-            self.root.wait_window(templateWindow)
-
-            # get template parameters
-            params = tmpl.getTemplate()
-
-            # if template wasn't created exit
-            if(params == False):
-                # reopen other windows
-                self.root.deiconify()
-                newWindow.deiconify()
-                return
-
-            # open params
-            templateCoords = params[0]
-            templateIntersections = params[1]
-            templateDistances = params[2]
-            templateTensors = params[3]
-            templateBlobSizes = params[4]
-            templateSystemParams = params[5]
-            templateImage = params[6]
-            templateMarked = params[7]
-            templatePath = params[8]
-            templateName = templateSystemParams["Name"]
-
-            # search for template directory
-            if(not os.path.isdir("./AppData/templates")):
-                os.mkdir("./AppData/templates")
-            if(not os.path.isdir("./AppData/models")):
-                os.mkdir("./AppData/models")
-            if(not os.path.isdir("./AppData/training")):
-                os.mkdir("./AppData/training")
-
-            # write images to directory
-            current_dir = os.getcwd()
-            filename, ext = os.path.splitext(os.path.split(templatePath)[1])
-            template_path = current_dir + "\\AppData\\templates\\" + filename + "-" +  str(templateName) + ext
-            marked_template_path = current_dir + "\\AppData\\templates\\" + filename + "-" +  str(templateName) + "-marked" + ext
-            cv2.imwrite(template_path, templateImage)
-            cv2.imwrite(marked_template_path, templateMarked)
-
-            # create folder for training images
-            training_path = "./AppData/training/" + filename + "-" +  str(templateName) + "/"
-            os.mkdir(training_path)
-            os.mkdir(training_path + "/blob")
-            os.mkdir(training_path + "/non-blob")
-
-            # create output strings
-            outputString = str(templateCoords).replace("array(", "").replace(")", "")
-            intersectionString = str(templateIntersections).replace("array(", "").replace(")", "")
-            tensorString = str(templateTensors).replace("array(", "").replace(")", "")
-            blobSizeString = str(templateBlobSizes).replace("array(", "").replace(")", "")
-            templateDataString = str([[0,0,0],[]]).replace("array(", "").replace(")", "")
-            tensorDataArray = [[[0,0,0], []]] * len(templateTensors)
-            tensorDataString = str(tensorDataArray).replace("array(", "").replace(")", "")
-            intersectionDistanceString = str(templateDistances).replace("array(", "").replace(")", "")
-            settingsList = [templateSystemParams["Register_STD_DEV"], templateSystemParams["Tensor_STD_DEV"],
-                templateSystemParams["Rotation"], templateSystemParams["Translation"], templateSystemParams["Scale"]]
-            settingsString = str(settingsList).replace("array(", "").replace(")", "")
-
-            # save to config file
-            self.config.set('Template Coordinates',templateName, outputString)
-            self.config.set('Template Images', templateName, template_path)
-            self.config.set('Template Intersections', templateName, intersectionString)
-            self.config.set('Template Tensor', templateName, tensorString)
-            self.config.set('Template Blob Sizes', templateName, blobSizeString)
-            self.config.set('Template Registration Dataset', templateName, templateDataString)
-            self.config.set('Tensor Dataset', templateName, tensorDataString)
-            self.config.set('Template Blob Distances', templateName, intersectionDistanceString)
-            self.config.set('Template Settings', templateName, settingsString)
-
-            # update menu
-            templateMenu['menu'].add_command(label = templateName, command = tk._setit(templateMenuVar, templateName))
-            self.systemParameters["Templates"][templateName] = outputString
-            self.systemParameters["Templates_Options"].append(templateName)
-            self.systemParameters["Template_Paths"][templateName] = template_path
-            self.systemParameters["Current_Template_Name"] = templateName
-            self.systemParameters["Current_Template_Coords"] = templateCoords
-            self.systemParameters["Current_Template_Path"] = template_path
-            self.systemParameters["Template_Intersections"][templateName] = intersectionString
-            self.systemParameters["Template_Tensors"][templateName] = tensorString
-            self.systemParameters["Template_Blob_Sizes"][templateName] = blobSizeString
-            self.systemParameters["Template_Datasets"][templateName] = templateDataString
-            self.systemParameters["Tensor_Datasets"][templateName] = tensorDataString
-            self.systemParameters["Blob_Distances"][templateName] = intersectionDistanceString
-            self.systemParameters["Template_Settings"][templateName] = settingsString
-            self.systemParameters["Current_Template_Intersections"] = templateIntersections
-            self.systemParameters["Current_Template_Tensor"] = templateTensors
-            self.systemParameters["Current_Template_Blob_Sizes"] = templateBlobSizes
-            self.systemParameters["Current_Template_Dataset"] = [[0,0,0],[]]
-            self.systemParameters["Current_Tensor_Dataset"] = tensorDataArray
-            self.systemParameters["Current_Blob_Distances"] = templateDistances
-            self.systemParameters["Current_Template_Settings"] = settingsList
-            templateMenuVar.set(templateName)
-
-            print("Template Saved Successfully: %s \n" % templateName)
-
-            # reopen other windows
-            newWindow.deiconify()
-            self.root.deiconify()
-
-        # embedded function to get name for saved profile
+    def createProfile(self):
+        # embedded function to get name for profile
         def getName():
-            # function to close window
-            def closing(status):
+            def close(status):
                 # if name was inputted
-                if(name.get() != "" and status == True):
+                if(var.get() != "" and status):
                     # create output string
-                    outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + str(self.systemParameters["Lower_Border"]) + "," + \
-                        '"' + str(templateMenuVar.get()) + '"' + "," + str(self.systemParameters["Clip_Limit"]) + "," + str(self.systemParameters["Tile_Size"][0]) + \
-                        "," + str(self.systemParameters["Tile_Size"][1]) + "]"
+                    outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + \
+                        str(self.systemParameters["Lower_Border"]) + "," + '"' + \
+                        str(self.templateMenuVar.get()) + '"' + "," + str(self.systemParameters["Clip_Limit"]) + \
+                        "," + str(self.systemParameters["Tile_Size"][0]) + "," + str(self.systemParameters["Tile_Size"][1]) + "]"
 
                     # add to config file
-                    self.config.set('Profiles', name.get(), outputString)
+                    self.config.set('Profiles', var.get(), outputString)
 
                     # update menu
-                    self.profileMenu['menu'].add_command(label = name.get(), command = tk._setit(self.profileMenuVar, name.get()))
-                    self.systemParameters["Saved_Profiles"][name.get()] = outputString
-                    self.systemParameters["Profile_Options"].append(name.get())
-                    self.profileMenuVar.set(name.get())
+                    self.profileMenu['menu'].add_command(label = var.get(), command = tk._setit(self.profileMenuVar, var.get()))
+                    self.systemParameters["Saved_Profiles"][var.get()] = outputString
+                    self.systemParameters["Profile_Options"].append(var.get())
+                    self.profileMenuVar.set(var.get())
 
-                # unpack frame
-                leftFrame.pack_forget()
+                # unpack frames
+                frame.pack_forget()
                 separator.pack_forget()
 
                 # close window
                 newWindow.destroy()
+                self.profileOpen = False # update flag for window
 
             # get fields are filled in
-            if not all(v.get() != "" for v in entries) and templateMenuVar.get() != "Select Template":
+            if not all(v.get() != "" for v in entries) and self.templateMenuVar.get() != "Select Template":
                 messagebox.showinfo("Error", "Not All Fields Populated")
                 return
 
-            # create new frame
-            leftFrame = tk.Frame(newWindow, bg = self.gray)
+            # get widgets
+            execute, exit, var, frame, separator = self.getSavePageWidgets(newWindow, pack=1)
+            execute.config(command=lambda: close(True))
+            exit.config(command=lambda: close(False))
 
-            # Labels
-            nameLabel = tk.Label(leftFrame, text = "Name", bg = self.gray, fg = self.white, font = ("Calibri Light", 20))
-
-            # Entry
-            name = tk.StringVar()
-            nameEntry = tk.Entry(leftFrame, font=("Calibri Light", 14),textvariable = name, width = 20)
-
-            # buttons
-            executeButton = tk.Button(leftFrame, text = "Save", bg = self.gray, fg = self.white, command = lambda: closing(True),
-                width = 20, font = ("Calibri Light", 14))
-            exitButton = tk.Button(leftFrame, text = "x", bg = self.gray, fg = self.white, command = lambda: closing(False),
-                width = 2, height = 1, font = ("Calibri Light", 14))
-
-            # separator
-            separator_height = newWindow.winfo_reqheight() * 0.85
-            separator = tk.Frame(newWindow, relief = tk.SUNKEN, width = 1, height = int(separator_height), bg = self.white)
-
-            # packing
-            leftFrame.pack(side = tk.LEFT, padx = 25)
-            separator.pack(side = tk.LEFT, fill = tk.X)
-            exitButton.pack(padx = (200,0), pady = (0,60))
-            nameLabel.pack(pady = (20,5))
-            nameEntry.pack(pady = 10)
-            executeButton.pack(pady = (5,185))
+        # function handle closing of profile window
+        def closeProfile():
+            self.profileOpen = False
+            newWindow.destroy()
 
         # create window
+        self.profileOpen = True
         newWindow = tk.Toplevel(self.root)
         newWindow.configure(bg=self.gray)
+        newWindow.protocol("WM_DELETE_WINDOW", closeProfile)
 
         validateCommand = self.root.register(self.validate)
 
@@ -1205,7 +1267,8 @@ class GUI:
         tileSizeLabel3 = tk.Label(tileSizeFrame, text = ",")
         tileSizeLabel4 = tk.Label(tileSizeFrame, text = ")")
 
-        labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel1, tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
+        labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel1,
+            tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
 
         for label in labels:
             label.config(bg = self.gray, fg = self.white, font=("Calibri Light", 16))
@@ -1230,22 +1293,12 @@ class GUI:
             entry.config(validate = "key", font=("Calibri Light", 14), width = 6)
 
         # drop down
-        templateMenuVar = tk.StringVar(preferencesFrame)
-        templateMenuVar.set('Select Template')
-        templateMenu = tk.OptionMenu(templateFrame, templateMenuVar, 'Select Template', *self.systemParameters["Templates_Options"])
-        templateMenu.config(font=("Calibri Light", 14), bg = self.gray, fg = self.white, activebackground = self.gray,
+        self.templateMenuVar = tk.StringVar(preferencesFrame)
+        self.templateMenuVar.set('Select Template')
+        self.templateMenu = tk.OptionMenu(templateFrame, self.templateMenuVar, 'Select Template', *self.systemParameters["Templates_Options"])
+        self.templateMenu.config(font=("Calibri Light", 14), bg = self.gray, fg = self.white, activebackground = self.gray,
             activeforeground = self.white, width = 15)
-        templateMenu["menu"].config(bg = self.gray, fg = self.white)
-
-        # menu bar
-        profileMenuBar = tk.Menu(newWindow, bg = self.gray, fg = self.white, activebackground = self.gray,
-            activeforeground = self.white)
-        profileFileMenu = tk.Menu(profileMenuBar, tearoff=0, bg = self.gray, fg = self.white, activebackground = self.gray,
-            activeforeground = self.white)
-        profileFileMenu.add_command(label = "Generate Template", command = lambda: createTemplate())
-        profileFileMenu.add_command(label = "Remove Template", command = lambda: removeTemplate())
-        profileMenuBar.add_cascade(label = "File", menu = profileFileMenu)
-        newWindow.config(menu = profileMenuBar)
+        self.templateMenu["menu"].config(bg = self.gray, fg = self.white)
 
         # button
         createProfileButton = tk.Button(buttonFrame, text = "Create Profile", command = lambda: getName(), bg = self.gray,
@@ -1264,7 +1317,7 @@ class GUI:
 
         templateFrame.pack(pady = 15)
         templateLabel.pack(side = tk.LEFT, padx = 10)
-        templateMenu.pack(side = tk.LEFT, padx = 10)
+        self.templateMenu.pack(side = tk.LEFT, padx = 10)
 
         clipLimitFrame.pack(pady = 15)
         clipLimitLabel.pack(side = tk.LEFT, padx = 10)
@@ -1284,65 +1337,40 @@ class GUI:
         # wait until user inputs name
         self.root.wait_window(newWindow)
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to remove a preferences profile
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def removeProfile(self):
         # function to close window
-        def closing(status):
+        def close(status):
             # remove selected option from menu
-            if(removeprofileMenuVar.get() != 'Select Profile to Remove' and status == True):
-                self.config.remove_option("Profiles", removeprofileMenuVar.get())
-                self.systemParameters["Profile_Options"].remove(removeprofileMenuVar.get())
-                self.systemParameters["Saved_Profiles"].pop(removeprofileMenuVar.get())
+            if(var.get() != 'Select Profile to Remove' and status):
+                self.config.remove_option("Profiles", var.get())
+                self.systemParameters["Profile_Options"].remove(var.get())
+                self.systemParameters["Saved_Profiles"].pop(var.get())
 
                 # update menu
                 self.profileMenuVar.set('Select Profile')
                 self.profileMenu['menu'].delete(0, 'end')
 
                 for option in self.systemParameters["Profile_Options"]:
-                    self.profileMenu['menu'].add_command(label = option, command = tk._setit(self.profileMenuVar, option))
+                    self.profileMenu['menu'].add_command(label=option,
+                        command=tk._setit(self.profileMenuVar, option))
 
-            # unpack frame
-            leftFrame.pack_forget()
+            # unpack frames
+            frame.pack_forget()
             separator.pack_forget()
 
-        # create new frame
-        leftFrame = tk.Frame(self.root, bg = self.gray)
+        # get widgets
+        execute, exit, var, frame, separator = self.getRemovePageWidgets(self.root,
+            'Select Profile to Remove', self.systemParameters["Profile_Options"])
+        execute.config(command=lambda: close(True))
+        exit.config(command=lambda: close(False))
 
-        # Labels
-        nameLabel = tk.Label(leftFrame, text = "Name", bg = self.gray, fg = self.white, font = ("Calibri Light", 20))
-
-        # drop down menu used to select profile to remove
-        removeprofileMenuVar = tk.StringVar(self.root)
-        removeprofileMenuVar.set('Select Profile to Remove')
-        removeMenu = tk.OptionMenu(leftFrame, removeprofileMenuVar, 'Select Profile to Remove', *self.systemParameters["Profile_Options"])
-        removeMenu.config(bg = self.gray, fg = self.white, activebackground = self.gray, activeforeground = self.white)
-        removeMenu.config(font=("Calibri Light", 14))
-        removeMenu["menu"].config(bg = self.gray, fg = self.white)
-
-        # buttons
-        executeButton = tk.Button(leftFrame, text = "Save", bg = self.gray, fg = self.white, command = lambda: closing(True),
-            width = 20, font = ("Calibri Light", 14))
-        exitButton = tk.Button(leftFrame, text = "x", bg = self.gray, fg = self.white, command = lambda: closing(False),
-            width = 2, height = 1, font = ("Calibri Light", 14))
-
-        # separator
-        separator_height = self.root.winfo_reqheight() * 0.85
-        separator = tk.Frame(self.root, relief = tk.SUNKEN, width = 1, height = int(separator_height), bg = self.white)
-
-        # packing
-        leftFrame.pack(side = tk.LEFT, padx = 25)
-        separator.pack(side = tk.LEFT, fill = tk.X)
-        exitButton.pack(padx = (200,0), pady = (0,150))
-        nameLabel.pack(pady = (20,5))
-        removeMenu.pack(pady = 10)
-        executeButton.pack(pady = (5,300))
-
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to preview preferences profile
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def previewProfile(self):
         if(self.profileMenuVar.get() != 'Select Profile'):
@@ -1416,9 +1444,9 @@ class GUI:
             messagebox.showinfo("Error", "Please Select a Profile under Settings to Preview")
 
 
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
     # Function to run HSV range preview
-    # ---------------------------------------------------------------------------------
+    #===========================================================================
 
     def runPreview(self):
         # embedded function to handle window closing
