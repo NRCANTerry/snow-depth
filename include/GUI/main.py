@@ -1696,17 +1696,23 @@ class GUI:
 # class to enable hovering over widgets for additional info
 class createHoverLabel(object):
     def __init__(self, widget, text):
+        self.time = 2000 # wait half a second before showing
+        self.wraplength = 200 # pixels
         self.widget = widget
         self.text = text
-        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Enter>", self.schedule)
         self.widget.bind("<Leave>", self.close)
+        self.widget.bind("<ButtonPress>", self.close)
         self.gray = "#282c34"
+        self.tw = None
+        self.id = None
+
+    # function to schedule label appearance (uses wait time)
+    def schedule(self, event=None):
+        self.id = self.widget.after(self.time , self.enter)
 
     # function which is run when the user hovers over a widget
     def enter(self, event=None):
-        # delay
-        time.sleep(1)
-
         # get window geometry
         x, y, cx, cy = self.widget.bbox("insert")
         x += self.widget.winfo_rootx() + 25
@@ -1730,3 +1736,5 @@ class createHoverLabel(object):
     def close(self, event=None):
         if self.tw:
             self.tw.destroy() # destroy top level window if it exists
+        if self.id:
+            self.widget.after_cancel(self.id)
