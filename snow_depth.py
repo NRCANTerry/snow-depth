@@ -10,7 +10,6 @@ import cv2
 import os
 import numpy as np
 import tkinter as tk
-from check_stakes import getValidStakes
 from main import GUI
 from calculate_depth import getDepths
 from overlay_roi import overlay
@@ -77,6 +76,8 @@ if __name__ == '__main__':
     blob_distances_template = params[18]
     STD_DEV_REG, STD_DEV_TENSOR, ROTATION, TRANSLATION, SCALE = params[19]
     date_range = params[20]
+    reg_params = params[21]
+    int_params = params[22]
 
     # update summary
     summary.start = datetime.now()
@@ -189,7 +190,7 @@ if __name__ == '__main__':
         print("\nCreating Parallel Pool...")
 
         # create pool with 75% as many processes as there are cores
-        num_cores = float(cpu_count()) * 0.25#75
+        num_cores = float(cpu_count()) * 0.75
         pool = Pool(int(num_cores))
         print("Parallel Pool Created (%d Workers)" % int(num_cores))
 
@@ -206,6 +207,7 @@ if __name__ == '__main__':
 
     print("\nFiltering Night Images")
     intervalTime = time()
+    numInitial = len([file_name for file_name in os.listdir(directory)]) # get intial image numbers
 
     # get filtered images and image names
     if(num_imgs > 50 and not date_range[3]):
@@ -224,8 +226,8 @@ if __name__ == '__main__':
     filteringTime = time() - intervalTime
     summary["Filtering Time"] = "%0.2fs" % filteringTime
     summary["Per Image Filtering Time"] = "%0.2f" % (filteringTime / float(num_imgs))
-    #summary["Number of Input Images"] =
-    #summary["Number of Night Images"] = len(images_filtered) -
+    summary["Number of Input Images"] = numInitial
+    summary["Number of Night Images"] = numInitial - len(images_filtered)
 
     # update number of images
     num_imgs = len(images_filtered)
@@ -269,12 +271,12 @@ if __name__ == '__main__':
         from register import alignImagesParallel
         images_registered, template_data_set, filtered_names_reg, stats = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
-            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params)
     else:
         from register import alignImages
         images_registered, template_data_set, filtered_names_reg, stats = alignImages(images_equalized, template_eq, template,
             filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
-            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG)
+            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params)
 
     # update summary
     registrationTime = time() - intervalTime
@@ -323,6 +325,8 @@ if __name__ == '__main__':
 
     print("\n\nValidating Stakes")
     intervalTime = time()
+    #from check_stakes import getValidStakes
+    from validate_stakes import getValidStakes
 
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
@@ -348,11 +352,11 @@ if __name__ == '__main__':
     if(num_imgs > 5):
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
-            roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"])
+            roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params)
     else:
         from intersect import getIntersections
         intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
-            filtered_names_reg, debug, paths_dict["intersection"])
+            filtered_names_reg, debug, paths_dict["intersection"], int_params)
 
     # update summary
     intersectionTime = time() - intervalTime
