@@ -1690,6 +1690,9 @@ class GUI:
             # resize image to 1/4 of original size
             img = cv2.resize(img, (0,0), None, 0.25, 0.25)
 
+            # present image and blank mask
+            cv2.imshow("Comparison", np.hstack((img, np.zeros(img.shape, np.uint8))))
+
             # wait until user closes window
             self.root.wait_window(newWindow)
 
