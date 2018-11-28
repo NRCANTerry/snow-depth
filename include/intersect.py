@@ -79,7 +79,7 @@ def adjustCoords(x0, x1, degree, type):
         return x0, x1
 
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
-    debug_directory, signal_dir):
+    debug_directory, signal_dir, params):
     '''
     Function to get intersection coordinates and distances for an image
     '''
@@ -108,16 +108,16 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             bottomBlob = validCoordinates[0]
             topBlob = validCoordinates[len(validCoordinates)-1]
 
-            # determine centre of upper and lower reference blobs
+            # determine upper centre of upper and lower reference blobs
             middleTop = (float(topBlob[0][0] + topBlob[2][0]) / 2.0, \
-                float(topBlob[0][1] + topBlob[2][1]) / 2.0)
+                float(topBlob[0][1] + topBlob[1][1]) / 2.0)
             middleBottom = (float(bottomBlob[0][0] + bottomBlob[2][0]) / 2.0, \
-                float(bottomBlob[0][1] + bottomBlob[2][1]) / 2.0)
+                float(bottomBlob[0][1] + bottomBlob[1][1]) / 2.0)
 
             # add combinations to list
             coordinateCombinations.append((middleTop, middleBottom)) # middle
-            coordinateCombinations.append((topBlob[0], bottomBlob[3])) # left
-            coordinateCombinations.append((topBlob[1], bottomBlob[2])) # right
+            coordinateCombinations.append((topBlob[0], bottomBlob[0])) # left
+            coordinateCombinations.append((topBlob[1], bottomBlob[1])) # right
 
             # combination names list
             combination_names = ["middle", "left", "right"]
@@ -154,7 +154,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 lineVals_smooth = np.append(lineVals_smooth, 0)
 
                 # determine peaks and properties
-                peaks, properties = find_peaks(lineVals_smooth, height=90, width=10)
+                peaks, properties = find_peaks(lineVals_smooth, height=params[0], width=10)
                 peakWidthsOutput = signal.peak_widths(lineVals_smooth, peaks, rel_height = 0.75)
                 peakWidths = peakWidthsOutput[0]
                 minLineVal = min(lineVals)
@@ -175,7 +175,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     left_edge = properties["left_ips"][index]
                     peak_range = lineVals[:int(left_edge)]
                     peak_intensity = lineVals[peak_index]
-                    snow_threshold = peak_intensity * 0.65 if peak_intensity < 200 else 125
+                    snow_threshold = peak_intensity * params[1] if peak_intensity < 200 else params[2]
                     stake_cover = float(len(np.where(peak_range < snow_threshold)[0])) / float(len(peak_range))
 
                     # determine snow cover after peak
@@ -194,16 +194,24 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     # get size of next peak
                     if(index != last_index): next_peak_height = lineVals[peaks[index+1]]
 
+                    # determine if stake is visible beyond peak
+                    if index != last_index:
+                        minimum_between_peaks = np.amin(lineVals[peak_index:peaks[index+1]])
+                        num_between_peaks = sum(t < 75 for t in lineVals[peak_index:peaks[index+1]])
+                        distance_between_peaks = peaks[index+1] - peak_index
+
                     # if peak meets conditions select it
                     if (
                         index != last_index # peak isn't last
-                        and stake_cover > 0.5 # majority stake before peak
-                        and (snow_cover > 0.5 or peak_width > 150 or (snow_cover > 0.35 and peak_width > 100)) # snow after peak
+                        and stake_cover > params[3] # majority stake before peak
+                        and (snow_cover > params[4] or peak_width > 150 or (snow_cover > params[4] * 0.666 and peak_width > 100)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                             and float(peak_intensity) / float(next_peak_height) > 0.5)) # peak is sufficiently large
                         and (peak_width > 100 or ((peak_width + peak_width_next > 100) and proximity_peak < 125
                             and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
-                        and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75) # no stake after peak
+                        #and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75) # no stake after peak
+                        and (minimum_between_peaks > 75 or float(num_between_peaks) / float(distance_between_peaks) > 0.65 or
+                            distance_between_peaks > 200)
                     ):
                         # select peak
                         selected_peak = index
@@ -218,9 +226,9 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     # last peak intersection conditions
                     elif (
                         index == last_index # last peak
-                        and stake_cover > 0.4 # stake before peak
+                        and stake_cover > params[3] # stake before peak
                         and peak_intensity > float(maxLineVal) * 0.75 # large enough
-                        and (snow_cover > 0.33 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
+                        and (snow_cover > params[4] * 0.666 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
                     ):
                         selected_peak = index
                         major_peak = index
@@ -382,7 +390,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     return stake_intersections, stake_distances, stake_dict, stake_dict_dist, name
 
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
-    debug, debug_directory):
+    debug, debug_directory, params):
     '''
     Function to get intersection coordinates and distances for an image set
     '''
@@ -412,7 +420,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         # get intersection points, distances and JSON output
         stake_intersections, stake_distances, stake_dict, stake_dict_dist, _ = intersect(img_,
             boxCoords[imgName], stakeValidity[imgName], roiCoordinates, imgName,
-            debug, debug_directory, signal_dir)
+            debug, debug_directory, signal_dir, params)
 
         if(debug):
             # add data to output
@@ -448,7 +456,7 @@ def unpackArgs(args):
     return intersect(*args)
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
-    img_names, debug, debug_directory):
+    img_names, debug, debug_directory, params):
     '''
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
@@ -473,7 +481,7 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
     for i, img in enumerate(imgs):
         imgName = img_names[i]
         tasks.append((img, boxCoords[imgName], stakeValidity[imgName], roiCoordinates,
-        imgName, debug, debug_directory, signal_dir))
+        imgName, debug, debug_directory, signal_dir, params))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
