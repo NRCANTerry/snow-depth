@@ -36,7 +36,7 @@ def brighten(img, val):
     # convert image to BGR and return
     return cv2.cvtColor(hsv_merge, cv2.COLOR_HSV2BGR)
 
-def equalizeHistColour(img, clip_limit, tile_size):
+def equalizeHistogramColour(img, clip_limit, tile_size):
     '''
     Equalize histogram of colour images
     @param img the image to be equalized
@@ -68,7 +68,7 @@ def equalizeHistColour(img, clip_limit, tile_size):
     # return brightened image
     return brighten(bgr, 50)
 
-def equalizeHist(img, clip_limit, tile_size):
+def equalizeHistogram(img, clip_limit, tile_size):
     '''
     Equalize histogram of grayscale images
     @param img the image to be equalized
@@ -118,8 +118,8 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     img = balanceColour(img, 5)
 
     # equqlize image according to specified parameters
-    img_eq_gray = equalizeHist(img_filter, clipLimit, tileSize)
-    img_eq = equalizeHistColour(img, clipLimit, tileSize)
+    img_eq_gray = equalizeHistogram(img_filter, clipLimit, tileSize)
+    img_eq = equalizeHistogramColour(img, clipLimit, tileSize)
 
     # if debugging write to directory
     if(debug):
@@ -159,7 +159,7 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     template_noise = cv2.bilateralFilter(template.copy(), 9, 75, 75)
 
     # return equalized template
-    return equalizeHist(template, clipLimit, tileSize), equalizeHist(template_noise, clipLimit, tileSize)
+    return equalizeHistogram(template, clipLimit, tileSize), equalizeHistogram(template_noise, clipLimit, tileSize)
 
 def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
