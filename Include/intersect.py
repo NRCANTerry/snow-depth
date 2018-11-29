@@ -79,7 +79,7 @@ def adjustCoords(x0, x1, degree, type):
         return x0, x1
 
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
-    debug_directory, signal_dir, params):
+    debug_directory, signal_dir, params, tensors, upper_border):
     '''
     Function to get intersection coordinates and distances for an image
     '''
@@ -133,6 +133,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                 # calculate line length
                 num = 1000 + ((roiCoordinates[i][1][1][1]-y1) * 4)
+                num_adjusted = roiCoordinates[i][0][1][1]- upper_border - y1
+                num_adjusted *= tensors[i] # 1pt/mm adjusted
 
                 # get endpoint for line
                 # intersection of line between points on blob with line defining bottom of stake
@@ -390,7 +392,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     return stake_intersections, stake_distances, stake_dict, stake_dict_dist, name
 
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
-    debug, debug_directory, params):
+    debug, debug_directory, params, tensors, upper_border):
     '''
     Function to get intersection coordinates and distances for an image set
     '''
@@ -420,7 +422,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         # get intersection points, distances and JSON output
         stake_intersections, stake_distances, stake_dict, stake_dict_dist, _ = intersect(img_,
             boxCoords[imgName], stakeValidity[imgName], roiCoordinates, imgName,
-            debug, debug_directory, signal_dir, params)
+            debug, debug_directory, signal_dir, params, tensors[imgName], upper_border)
 
         if(debug):
             # add data to output
@@ -456,7 +458,7 @@ def unpackArgs(args):
     return intersect(*args)
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
-    img_names, debug, debug_directory, params):
+    img_names, debug, debug_directory, params, tensors, upper_border):
     '''
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
@@ -481,7 +483,7 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
     for i, img in enumerate(imgs):
         imgName = img_names[i]
         tasks.append((img, boxCoords[imgName], stakeValidity[imgName], roiCoordinates,
-        imgName, debug, debug_directory, signal_dir, params))
+        imgName, debug, debug_directory, signal_dir, params, tensors[imgName]), upper_border)
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
