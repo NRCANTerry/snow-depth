@@ -352,11 +352,12 @@ if __name__ == '__main__':
     if(num_imgs > 5):
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
-            roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params)
+            roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors,
+            img_border_upper)
     else:
         from intersect import getIntersections
         intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
-            filtered_names_reg, debug, paths_dict["intersection"], int_params)
+            filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper)
 
     # update summary
     intersectionTime = time() - intervalTime
