@@ -225,7 +225,6 @@ def getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING):
 
 # update dataset given the mean squared error values for a set of images
 def updateDataset(dataset, MSE_vals, dataset_enabled):
-
     # if dataset is enabled
     if dataset_enabled:
         # get mean and standard deviation from dataset
