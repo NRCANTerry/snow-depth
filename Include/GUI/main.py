@@ -1603,14 +1603,33 @@ class GUI:
             rightFrame = tk.Frame(newWindow, bg=self.gray)
 
             # labels
+            from tkinter import font
             titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg=self.gray, fg = self.white, font=("Calibri Light", 24))
+            underlineFont = font.Font(family="Calibri Light", size=18, underline=True)
+            generalLabel = tk.Label(leftFrame, text="General", font=underlineFont, bg=self.gray, fg=self.white)
             upperBorderLabel = tk.Label(leftFrame, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
             lowerBorderLabel = tk.Label(leftFrame, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
             templateLabel = tk.Label(leftFrame, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
             clipLimitLabel = tk.Label(leftFrame, text = "Clip Limit: " + str(self.systemParameters["Clip_Limit"]))
             tileSizeLabel = tk.Label(leftFrame, text = "Tile Size: " + str(self.systemParameters["Tile_Size"]))
 
-            labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel]
+            regLabel = tk.Label(leftFrame, text="Registration", font=underlineFont, bg=self.gray, fg=self.white)
+            featuresLabel = tk.Label(leftFrame, text="ORB Features: " + str(self.systemParameters["Reg_Params"][0]))
+            ECCLabel1 = tk.Label(leftFrame, text="ECC Threshold (ORB): 1e-" + str(self.systemParameters["Reg_Params"][1]))
+            ECCLabel2 = tk.Label(leftFrame, text="ECC Iterations (ORB): " + str(self.systemParameters["Reg_Params"][2]))
+            ECCLabel3 = tk.Label(leftFrame, text="ECC Threshold: 1e-" + str(self.systemParameters["Reg_Params"][3]))
+            ECCLabel4 = tk.Label(leftFrame, text="ECC Iterations: " + str(self.systemParameters["Reg_Params"][4]))
+
+            intLabel = tk.Label(leftFrame, text="Intersection", font=underlineFont, bg=self.gray, fg=self.white)
+            peakLabel = tk.Label(leftFrame, text="Peak Height: " + str(self.systemParameters["Int_Params"][0]))
+            threshLabel = tk.Label(leftFrame, text="Peak Threshold (%): " + str(self.systemParameters["Int_Params"][1]*100.0))
+            minThreshLabel = tk.Label(leftFrame, text= "Min Threshold: " + str(self.systemParameters["Int_Params"][2]))
+            stakeCoverLabel = tk.Label(leftFrame, text="Stake Coverage (%): " + str(self.systemParameters["Int_Params"][3]*100.0))
+            snowCoverLabel = tk.Label(leftFrame, text="Snow Coverage (%): " + str(self.systemParameters["Int_Params"][4]*100.0))
+
+            labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel,
+                featuresLabel, ECCLabel1, ECCLabel2, ECCLabel3, ECCLabel4, peakLabel, threshLabel,
+                minThreshLabel, stakeCoverLabel, snowCoverLabel]
 
             for label in labels:
                 label.config(bg=self.gray, fg = self.white, font=("Calibri Light", 16))
@@ -1638,12 +1657,25 @@ class GUI:
 
             # packing
             leftFrame.pack(side = tk.LEFT, padx = 40)
-            titleLabel.pack(pady = 20)
-            upperBorderLabel.pack(pady = 10)
-            lowerBorderLabel.pack(pady = 10)
-            templateLabel.pack(pady = 10)
-            clipLimitLabel.pack(pady = 10)
-            tileSizeLabel.pack(pady = 10)
+            titleLabel.pack(pady = 10)
+            generalLabel.pack(pady=(20,0))
+            upperBorderLabel.pack(pady = 5)
+            lowerBorderLabel.pack(pady = 5)
+            templateLabel.pack(pady = 5)
+            clipLimitLabel.pack(pady = 5)
+            tileSizeLabel.pack(pady = 5)
+            regLabel.pack(pady=(20,0))
+            featuresLabel.pack(pady = 5)
+            ECCLabel1.pack(pady = 5)
+            ECCLabel2.pack(pady = 5)
+            ECCLabel3.pack(pady = 5)
+            ECCLabel4.pack(pady = 5)
+            intLabel.pack(pady=(20,0))
+            peakLabel.pack(pady = 5)
+            threshLabel.pack(pady = 5)
+            minThreshLabel.pack(pady = 5)
+            stakeCoverLabel.pack(pady = 5)
+            snowCoverLabel.pack(pady = 5)
 
             # canvas packing
             rightFrame.pack(side = tk.RIGHT)
