@@ -1239,7 +1239,7 @@ class GUI:
             # get fields are filled in
             if not all(v.get() != "" for v in entries) or self.templateMenuVar.get() == "Select Template" \
                 or not all(v.get() != "" for v in regEntries) or not all(v.get() != "" for v in intEntries):
-                messagebox.showinfo("Error", "Not All Fields Populated")
+                messagebox.showinfo("Error", "Not All Fields Populated", parent=newWindow)
                 return
 
             # get widgets
@@ -1529,24 +1529,24 @@ class GUI:
         # packing
         titleLabel.pack(pady = 20)
         peakFrame.pack(pady=15, padx=50)
-        peakLabel.pack(side=tk.LEFT, padx=10)
-        peakEntry.pack(side=tk.LEFT, padx=10)
+        peakLabel.pack(side=tk.LEFT, padx=(40,10))
+        peakEntry.pack(side=tk.LEFT, padx=(10,0))
 
         snowThresholdFrame.pack(pady=15)
-        snowThresholdLabel.pack(side=tk.LEFT, padx=10)
-        snowThresholdEntry.pack(side=tk.LEFT, padx=10)
+        snowThresholdLabel.pack(side=tk.LEFT, padx=(0,10))
+        snowThresholdEntry.pack(side=tk.LEFT, padx=(10,20))
 
         minSnowThresholdFrame.pack(pady=15)
-        minSnowThresholdLabel.pack(side=tk.LEFT, padx=10)
-        minSnowThresholdEntry.pack(side=tk.LEFT, padx=10)
+        minSnowThresholdLabel.pack(side=tk.LEFT, padx=(20,10))
+        minSnowThresholdEntry.pack(side=tk.LEFT, padx=(10,3))
 
         stakeCoverFrame.pack(pady=15)
-        stakeCoverLabel.pack(side=tk.LEFT, padx=10)
-        stakeCoverEntry.pack(side=tk.LEFT, padx=10)
+        stakeCoverLabel.pack(side=tk.LEFT, padx=(0,10))
+        stakeCoverEntry.pack(side=tk.LEFT, padx=(10,20))
 
         snowCoverFrame.pack(pady=15)
-        snowCoverLabel.pack(side=tk.LEFT, padx=10)
-        snowCoverEntry.pack(side=tk.LEFT, padx=10)
+        snowCoverLabel.pack(side=tk.LEFT, padx=(0,10))
+        snowCoverEntry.pack(side=tk.LEFT, padx=(10,20))
 
         buttonFrameInt.pack(pady = 20)
         createProfileButtonInt.pack(side = tk.LEFT, padx = (5, 20))
