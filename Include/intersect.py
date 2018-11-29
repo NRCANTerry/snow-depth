@@ -483,7 +483,7 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
     for i, img in enumerate(imgs):
         imgName = img_names[i]
         tasks.append((img, boxCoords[imgName], stakeValidity[imgName], roiCoordinates,
-        imgName, debug, debug_directory, signal_dir, params, tensors[imgName]), upper_border)
+        imgName, debug, debug_directory, signal_dir, params, tensors[imgName], upper_border))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
