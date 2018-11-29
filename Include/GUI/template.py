@@ -19,7 +19,7 @@ from intersect import lineIntersections
 from scipy import ndimage
 import statistics
 from get_tensor import getTensor
-from equalize import equalizeHistColour
+from equalize import equalizeHistogramColour
 import matplotlib
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
@@ -351,7 +351,7 @@ class createTemplate:
             self.cv2_img = cv2.resize(self.cv2_img, None, fx=factor, fy=factor)
 
         self.outputImage = self.cv2_img.copy()
-        self.equalized_img = equalizeHistColour(self.cv2_img.copy(), 5.0, (8,8))
+        self.equalized_img = equalizeHistogramColour(self.cv2_img.copy(), 5.0, (8,8))
         self.equalized_img = cv2.cvtColor(self.equalized_img, cv2.COLOR_BGR2RGB)
         self.img_orig = Image.fromarray(self.equalized_img)
         width, height = self.img_orig.size
@@ -832,7 +832,7 @@ class createTemplate:
 
     def calculateIntersections(self):
         # convert image to grayscale
-        imgGray = cv2.cvtColor(equalizeHistColour(self.cv2_img.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
+        imgGray = cv2.cvtColor(equalizeHistogramColour(self.cv2_img.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
 
         # iterate through stakes
         for i, stake in enumerate(self.rawTemplateCoordinates):
