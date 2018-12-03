@@ -342,7 +342,9 @@ class createTemplate:
 
         validateCommand = self.root.register(self.validateHeight)
         self.manualDepthVar = 0.0 # default height of 0 (user selects intersection point)
-        self.manualDepthEntry = tk.Entry(self.manualEntryFrame, validatecommand=((validateCommand, '%P')),
+        self.manualDepthEntry = tk.Entry(self.manualEntryFrame)
+        self.manualDepthEntry.insert(0, 0.0)
+        self.manualDepthEntry.config(validatecommand=((validateCommand, '%P')),
             validate="key", font=self.mediumFont, width=10)
 
         #-----------------------------------------------------------------------
