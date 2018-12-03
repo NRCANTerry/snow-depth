@@ -430,7 +430,7 @@ class createTemplate:
         #-----------------------------------------------------------------------
 
         self.stakesLabel.config(text = "No Blobs Selected")
-        self.instructionsLabelTemplate.config(text = "Select All Blobs on Stake 0")
+        self.instructionsLabelTemplate.config(text = "Select All Blobs on Stake 1")
         self.coordinateLabel.config(text = "None")
         self.nextButton.config(command = lambda: self.next(self.blobIndex))
 
@@ -649,7 +649,7 @@ class createTemplate:
                 # update widgets
                 self.intersectSelect = True
                 self.instructionsLabelTemplate.config(text = "Select Intersection Point on Stake %d" \
-                    % self.blobIndex)
+                    % int(self.blobIndex + 1))
                 self.stakesLabel.config(text = "No Point Selected")
                 self.coordinateLabel.config(text = "None")
                 self.numPoint = 0
@@ -726,7 +726,7 @@ class createTemplate:
             # reset labels
             self.stakesLabel.config(text = "No Blobs Selected")
             self.coordinateLabel.config(text = "None")
-            self.instructionsLabelTemplate.config(text = ("Select All Blobs on Stake %d" % self.blobIndex))
+            self.instructionsLabelTemplate.config(text = ("Select All Blobs on Stake %d" % int(self.blobIndex + 1)))
 
             self.lastCoord = [0,0]
             self.firstCoord = True
