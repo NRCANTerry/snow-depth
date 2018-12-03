@@ -208,7 +208,7 @@ if __name__ == '__main__':
     # Filter Out Night Images
     # ---------------------------------------------------------------------------------
 
-    print("\nFiltering Night Images")
+    print("\nSelecting Valid Images")
     intervalTime = time()
     numInitial = len([file_name for file_name in os.listdir(directory)]) # get intial image numbers
 
