@@ -174,6 +174,15 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # doesn't meet criteria
     else: imgECCAligned = imgReg
 
+    # increase saturation of registered image to resemble input image
+    h, s, v = cv2.split(cv2.cvtColor(imgECCAligned, cv2.COLOR_BGR2HSV).astype(np.float32))
+    s *= 2.0 # double saturation
+    s = np.clip(s, 0, 255)
+
+    # merge channels
+    hsv_merge = cv2.merge((h, s, v))
+    imgECCAligned = cv2.cvtColor(hsv_merge.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
     # only if image was aligned (is not the same as input image)
     if(ORB_aligned_flag or ECC_aligned_flag):
         # write registered image to debug directory
