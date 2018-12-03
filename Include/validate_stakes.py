@@ -46,7 +46,7 @@ def roiValid(coordinates, blobs):
 
 def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, name,
     debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath, invalidPath,
-    model, modelInitialized, validIndex, invalidIndex, flattened_list):
+    model, modelInitialized, validIndex, invalidIndex, flattened_list, DLActive):
     '''
     Function to determine which stakes in an image are valid
     '''
@@ -150,7 +150,7 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
                         (int(rectangle[1][0]), int(rectangle[1][1])-upper_border), (0, 255, 0), 3)
 
                 # Generate Training Images for Deep Learning Model
-                if(not modelInitialized):
+                if(not modelInitialized and DLActive):
                     # write to training folder
                     train_img = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
                         int(rectangle[0][0]):int(rectangle[1][0])]
@@ -188,7 +188,7 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
             else:
                 # verify using deep learning network
                 DLValid = False
-                if(modelInitialized):
+                if(modelInitialized and DLActive):
                     subset = img_[int(rectangle[0][1])-upper_border:int(rectangle[1][1])-upper_border,
                         int(rectangle[0][0]):int(rectangle[1][0])]
                     output = classify(subset, model)
@@ -423,7 +423,7 @@ def updateDatset(dataset, tensor_vals, dataset_enabled):
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
-    training_path, model_path):
+    training_path, model_path, DLActive):
 
     # determine paths for training images
     validPath = training_path + "blob\\"
@@ -469,7 +469,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
             coordinates, hsvRanges, blobSizes, upper_border, debug, img_names[iterator],
             debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath,
             invalidPath, model, modelInitialized, validIndex, invalidIndex,
-            flattened_list)
+            flattened_list, DLActive)
 
         # add to output dict if debugging
         if debug:
@@ -497,7 +497,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
         json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # determine whether model should be initialized
-    if not modelInitialized and validIndex > 1000 and invalidIndex > 1000:
+    if not modelInitialized and validIndex > 1000 and invalidIndex > 1000 and DLActive:
         # create neural network
         print("\nInitializing Deep Learning Model")
         LeNet(model_path, validPath, invalidPath)
