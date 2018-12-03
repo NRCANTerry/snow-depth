@@ -81,7 +81,8 @@ class GUI:
             "Current_Template_Settings": list(),
             "Window_Closed": False,
             "Reg_Params": [0, 0, 0, 0, 0],
-            "Int_Params": [0, 0, 0, 0 , 0]
+            "Int_Params": [0, 0, 0, 0 , 0],
+            "Misc_Params": [0, 0]
         }
 
         # dictionary with options for program
@@ -644,7 +645,7 @@ class GUI:
                     self.systemParameters["Current_Template_Name"], self.systemParameters["Current_Tensor_Dataset"], \
                     self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"], \
                     [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen], \
-                    self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"]
+                    self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"], self.systemParameters["Misc_Params"]
 
         # return False if run button wasn't pressed
         else:
@@ -816,6 +817,7 @@ class GUI:
                 float(optionsList[10]), int(optionsList[11])]
             self.systemParameters["Int_Params"] = [int(optionsList[12]), float(optionsList[13]), float(optionsList[14]), float(optionsList[15]),
                 float(optionsList[16])]
+            self.systemParameters["Misc_Params"] = [int(optionsList[17]), int(optionsList[18])]
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1213,6 +1215,8 @@ class GUI:
                 if(var.get() != "" and status):
                     # add registration style to system parameters
                     self.systemParameters["Reg_Params"].append(regStyle.get())
+                    self.systemParameters["Misc_Params"] = [deepLearningProfileFlag.get(),
+                        ssimProfileFlag.get()]
 
                     # create output string
                     outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + \
@@ -1220,7 +1224,8 @@ class GUI:
                         str(self.templateMenuVar.get()) + '"' + "," + str(self.systemParameters["Clip_Limit"]) + \
                         "," + str(self.systemParameters["Tile_Size"][0]) + "," + str(self.systemParameters["Tile_Size"][1]) + \
                         "," + str(self.systemParameters["Reg_Params"]).replace("[","").replace("]", "") + \
-                        "," + str(self.systemParameters["Int_Params"]).replace("[","").replace("]", "") + "]"
+                        "," + str(self.systemParameters["Int_Params"]).replace("[","").replace("]", "") + \
+                        "," + str(deepLearningProfileFlag.get()) + "," + str(ssimProfileFlag.get()) + "]"
 
                     # add to config file
                     self.config.set('Profiles', var.get(), outputString)
@@ -1271,6 +1276,7 @@ class GUI:
         newWindow = tk.Toplevel(self.root)
         newWindow.configure(bg=self.gray)
         newWindow.protocol("WM_DELETE_WINDOW", closeProfile)
+        newWindow.resizable(False, False)
 
         # establish frames/pages
         defaultFrame = tk.Frame(newWindow, bg=self.gray)
@@ -1338,6 +1344,15 @@ class GUI:
         for label in labels:
             label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
 
+        # checkbox
+        deepLearningProfileFlag = tk.IntVar()
+        deepLearningProfileFlag.set(1) # default is to use deep learning
+        deepLearningProfileCheckBox = tk.Checkbutton(defaultFrame,
+            variable=deepLearningProfileFlag, bg=self.gray, fg=self.white,
+            text="Use Deep Learning", selectcolor=self.gray,
+            activebackground=self.gray, activeforeground=self.white,
+            font=("Calibri Light", 16))
+
         # entries
         upperBorderEntry = tk.Entry(upperBorderFrame, validatecommand =((validateCommand, '%P', "Upper_Border", -1)))
         lowerBorderEntry = tk.Entry(lowerBorderFrame, validatecommand =((validateCommand, '%P', "Lower_Border", -1)))
@@ -1393,6 +1408,7 @@ class GUI:
         tileSizeLabel3.pack(side = tk.LEFT, padx = 0)
         tileSizeEntry2.pack(side = tk.LEFT)
         tileSizeLabel4.pack(side = tk.LEFT, padx = (0,5))
+        deepLearningProfileCheckBox.pack(pady=10)
 
         buttonFrame.pack(pady = 20)
         createProfileButton.pack(side = tk.LEFT, padx = (5, 20))
@@ -1400,6 +1416,15 @@ class GUI:
         #==================================================================
         # Registration Page
         #==================================================================
+
+        # function to enable/disable checkbox based on radio buttons selection
+        def updateSSIMCheckBox():
+            if regStyle.get() != 0:
+                ssimProfileCheckbox.config(fg="#787d84")
+                ssimProfileCheckbox.config(state="disabled")
+            else:
+                ssimProfileCheckbox.config(fg=self.white)
+                ssimProfileCheckbox.config(state="normal")
 
         # frames
         featureFrame = tk.Frame(regFrame, bg=self.gray)
@@ -1465,7 +1490,16 @@ class GUI:
             regRadioButtons.append(tk.Radiobutton(regFrame, text=option,
                 variable=regStyle, value=val, bg=self.gray, fg=self.white,
                 font=("Calibri Light", 16), activebackground=self.gray,
-                activeforeground=self.white, selectcolor=self.gray))
+                activeforeground=self.white, selectcolor=self.gray,
+                command=lambda: updateSSIMCheckBox()))
+
+        # checkbox
+        ssimProfileFlag = tk.IntVar() # default is not to use SSIM
+        ssimProfileCheckbox = tk.Checkbutton(regFrame,
+            variable=ssimProfileFlag, bg=self.gray, fg=self.white,
+            text="Use SSIM Selection", selectcolor=self.gray,
+            activebackground=self.gray, activeforeground=self.white,
+            font=("Calibri Light", 16))
 
         # packing
         titleLabel.pack(pady = 20)
@@ -1488,7 +1522,9 @@ class GUI:
         ECCParamFrame4.pack(pady=5)
         ECCLabel6.pack(side=tk.LEFT, padx=(32,10))
         iterationsEntry2.pack(side=tk.LEFT, padx=(10,0))
-        regStyleLabel.pack(pady=(15, 10))
+        ssimProfileCheckbox.pack(anchor=tk.W, pady=10, padx=(60,0))
+
+        regStyleLabel.pack(pady=(0, 10))
         for x in regRadioButtons:
             x.pack(anchor=tk.W, padx=(60,0))
 
