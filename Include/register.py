@@ -64,8 +64,13 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
         points2[i, :] = kp2[match.trainIdx].pt
 
     # determine affine 2D transformation using RANSAC robust method
-    affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
-        refineIters=20)[0]
+    # if feature based registration selected
+    if(params[5] == 0 or params[5] == 1):
+        affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
+            refineIters=20)[0]
+    else:
+        # use matrix no transformation matrix
+        affine_matrix = np.eye(2, 3, dtype=np.float32)
 
     # set registered images to original images
     # will be warped if affine matrix is within spec
@@ -79,14 +84,15 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # update dataset
     # if dataset isn't enabled, append mean_squared_error to dataset
     if(not dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
-        MAX_SCALING, affine_matrix)):
+        MAX_SCALING, affine_matrix) and params[5] != 2):
         # apply registration
         imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
         imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
         ORB_aligned_flag = True
 
     # if dataset is enabled, compare matrix to mean
-    elif validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, affine_matrix):
+    elif validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, affine_matrix) \
+         and params[5] != 2:
         # get mean and standard deviation from dataset
         mean = dataset[0][0]
         std_dev = dataset[0][1]
@@ -143,20 +149,22 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
     # run ECC algorithm (results are stored in warp matrix)
-    #warp_matrix = cv2.findTransformECC(template, imgRegGray, warp_matrix, warp_mode, criteria)[1]
-    warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
+    # if ECC image registration selected
+    if(params[5] == 0 or params[5] == 2):
+        warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
 
     # compare warp matrix to data set
     mean_squared_error_ecc = np.sum(np.square(abs(warp_matrix) - zero_matrix))
 
     # only check if dataset enabled
-    if(dataset_enabled):
+    if(dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
+        MAX_SCALING, warp_matrix)):
         # get mean and standard deviation from dataset
         mean = dataset[0][0]
         std_dev = dataset[0][1]
 
         # align image if warp is within spec
-        if (mean_squared_error_ecc <= (mean+(std_dev*NUM_STD_DEV))):
+        if (mean_squared_error_ecc <= (mean+(std_dev*NUM_STD_DEV)) and params[5] != 1):
             # align image
             imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
             ECC_aligned_flag = True
@@ -166,7 +174,9 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
             imgECCAligned = imgReg
 
     # align image if dataset not enabled
-    elif mean_squared_error_ecc <= max_mean_squared_error:
+    elif mean_squared_error_ecc <= max_mean_squared_error and params[5] != 1 and \
+        not dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
+        MAX_SCALING, warp_matrix):
         # align image
         imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
         ECC_aligned_flag = True
