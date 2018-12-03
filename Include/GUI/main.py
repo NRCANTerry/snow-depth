@@ -35,6 +35,8 @@ class GUI:
         self.root.configure(background='#282c34')
         self.root.title("Measure Snow Depth")
         self.root.iconbitmap(default="include/GUI/transparent.ico")
+        self.root.resizable(False, False)
+
 
         # create AppData directory if it doesn't exist
         if(not os.path.isdir("AppData")):
@@ -1051,6 +1053,7 @@ class GUI:
 
         # create top level window
         templateWindow = tk.Toplevel(self.root)
+        templateWindow.resizable(False, False)
 
         # open template GUI
         tmpl = template.createTemplate(templateWindow)
@@ -1331,7 +1334,9 @@ class GUI:
         titleLabel = tk.Label(defaultFrame, text="Preferences", bg=self.gray,
             fg=self.white, font=("Calibri Light", 24))
         upperBorderLabel = tk.Label(upperBorderFrame, text="Upper Border")
+        upperBorderUnitLabel = tk.Label(upperBorderFrame, text="px")
         lowerBorderLabel = tk.Label(lowerBorderFrame, text="Lower Border")
+        lowerBorderUnitLabel = tk.Label(lowerBorderFrame, text="px")
         templateLabel = tk.Label(templateFrame, text="Template")
         clipLimitLabel = tk.Label(clipLimitFrame, text="Clip Limit")
         tileSizeLabel1 = tk.Label(tileSizeFrame, text="Tile Size")
@@ -1339,8 +1344,8 @@ class GUI:
         tileSizeLabel3 = tk.Label(tileSizeFrame, text=",")
         tileSizeLabel4 = tk.Label(tileSizeFrame, text=")")
 
-        labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel1,
-            tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
+        labels = [upperBorderLabel, upperBorderUnitLabel, lowerBorderLabel, lowerBorderUnitLabel,
+            templateLabel, clipLimitLabel, tileSizeLabel1, tileSizeLabel2, tileSizeLabel3, tileSizeLabel4]
         for label in labels:
             label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
 
@@ -1388,10 +1393,12 @@ class GUI:
         upperBorderFrame.pack(pady = 10)
         upperBorderLabel.pack(side = tk.LEFT, padx = 10)
         upperBorderEntry.pack(side = tk.LEFT, padx = 10)
+        upperBorderUnitLabel.pack(side=tk.LEFT, padx=5)
 
         lowerBorderFrame.pack(pady = 15)
         lowerBorderLabel.pack(side = tk.LEFT, padx = 10)
         lowerBorderEntry.pack(side = tk.LEFT, padx = 10)
+        lowerBorderUnitLabel.pack(side=tk.LEFT, padx=5)
 
         templateFrame.pack(pady = 15)
         templateLabel.pack(side = tk.LEFT, padx = 10)
@@ -1653,6 +1660,7 @@ class GUI:
             # create window
             newWindow = tk.Toplevel(self.root)
             newWindow.configure(bg=self.gray)
+            newWindow.resizable(False, False)
 
             # frames
             leftFrame = tk.Frame(newWindow, bg=self.gray)
@@ -1869,6 +1877,7 @@ class GUI:
         newWindow = tk.Toplevel(self.root)
         newWindow.geometry("500x650")
         newWindow.configure(background=self.gray)
+        newWindow.resizable(False, False)
         newWindow.withdraw()
 
         # configure window closing protocol
