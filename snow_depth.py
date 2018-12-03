@@ -256,7 +256,8 @@ if __name__ == '__main__':
     # update summary
     equalizationTime = time() - intervalTime
     summary["Equalization Time"] = "%0.2fs" % equalizationTime
-    summary["Per Image Equalization Time"] = "%0.2fs" % (equalizationTime / float(num_imgs))
+    eqIntervalTime = equalizationTime / float(num_imgs) if num_imgs > 0 else 0
+    summary["Per Image Equalization Time"] = "%0.2fs" % (eqIntervalTime)
     summary["Clip Limit"] = clip_limit
     summary["Tile Size"] = tile_size
 
@@ -284,7 +285,8 @@ if __name__ == '__main__':
     # update summary
     registrationTime = time() - intervalTime
     summary["Registration Time"] = "%0.2fs" % registrationTime
-    summary["Per Image Registration Time"] = "%0.2fs" % (registrationTime / float(num_imgs))
+    regIntervalTime = registrationTime / float(num_imgs) if num_imgs > 0 else 0
+    summary["Per Image Registration Time"] = "%0.2fs" % (regIntervalTime)
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
     summary["ORB Registration"] = "%d/%d" % (stats[0], num_imgs)
     summary["ECC Registration"] = "%d/%d" % (stats[1], num_imgs)
@@ -342,7 +344,8 @@ if __name__ == '__main__':
     # update summary
     checkTime = time() - intervalTime
     summary["Check Time"] = "%0.2fs" % checkTime
-    summary["Per Image Check Time"] = "%0.2fs" % (checkTime / float(num_imgs))
+    checkIntervalTime = checkTime / float(num_imgs) if num_imgs > 0 else 0
+    summary["Per Image Check Time"] = "%0.2fs" % (checkIntervalTime)
 
     # ---------------------------------------------------------------------------------
     # Determine Snow Intersection Point
@@ -365,7 +368,8 @@ if __name__ == '__main__':
     # update summary
     intersectionTime = time() - intervalTime
     summary["Intersection Time"] = "%0.2fs" % intersectionTime
-    summary["Per Image Intersection Time"] = "%0.2fs" % (intersectionTime / float(num_imgs))
+    intIntervalTime = intersectionTime / float(num_imgs) if num_imgs > 0 else 0
+    summary["Per Image Intersection Time"] = "%0.2fs" % (intIntervalTime)
 
     # ---------------------------------------------------------------------------------
     # Calculate Change in Snow Depth
@@ -382,11 +386,13 @@ if __name__ == '__main__':
     # update summary
     calcTime = time() - intervalTime
     summary["Calculation Time"] = "%0.2fs" % calcTime
-    summary["Per Image Calculation Time"] = "%0.2fs" % (calcTime / float(num_imgs))
+    calcIntervalTime = calcTime / float(num_imgs) if num_imgs > 0 else 0
+    summary["Per Image Calculation Time"] = "%0.2fs" % (calcIntervalTime)
 
     # display run time
     runtime = time() - start
-    print("\n\nRun Time: %.2f s (%.2f s/img)" % (runtime, runtime / float(num_imgs)))
+    perImgTime = runtime / float(num_imgs) if num_imgs > 0 else runtime
+    print("\n\nRun Time: %.2f s (%.2f s/img)" % (runtime, perImgTime))
 
     # ---------------------------------------------------------------------------------
     # Generate Report
