@@ -287,8 +287,8 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
             std_dev = dataset[j][0][1]
 
             # if tensor measurement is within defined range or within 5%
-            if(mean_tensor != 0 and ((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
-                mean_tensor <= (mean+(std_dev*NUM_STD_DEV))) or abs(mean-mean_tensor)/mean_tensor < 0.05):
+            if(mean_tensor != 0 and (((mean-(std_dev*NUM_STD_DEV)) <= mean_tensor and
+                mean_tensor <= (mean+(std_dev*NUM_STD_DEV))) or abs(mean-mean_tensor)/mean_tensor < 0.05)):
                 # add tensor to list
                 if(validBlobsOnStake > 4):
                     actualTensorsStake.append(mean_tensor)
