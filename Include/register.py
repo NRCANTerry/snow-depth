@@ -210,7 +210,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 def validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, matrix):
 
     # calculate range for alpha
-    scale = abs(100-MAX_SCALING) / 100.0
+    scale = abs(MAX_SCALING) / 100.0
     alpha_low = (1-scale) * np.cos(np.deg2rad(MAX_ROTATION))
     alpha_high = (1+scale) * np.cos(np.deg2rad(0))
 
@@ -226,7 +226,7 @@ def validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, matrix):
 def getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING):
 
     # adjust scaling from % to absolute
-    MAX_SCALING /= 100.0
+    MAX_SCALING = abs(MAX_SCALING) / 100.0
 
     # create zero matrix
     zero_matrix = np.zeros((2, 3), dtype=np.float32)

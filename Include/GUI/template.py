@@ -118,7 +118,9 @@ class createTemplate:
         self.pathLabel = tk.Label(self.leftFrame, text = "No Template Selected", bg = self.gray, fg = self.white, font = self.smallFont)
         self.parametersLabel = tk.Label(self.leftFrame, text = "Parameters", bg = self.gray, fg = self.white, font = self.boldFont)
         self.tensorLabel = tk.Label(self.tensorFrame, text = "Tensor Std Dev", bg = self.gray, fg = self.white, font = self.smallFont)
+        self.tensorUnitLabel = tk.Label(self.tensorFrame, text = "mm/px", bg = self.gray, fg = self.white, font = self.smallFont)
         self.registerLabel = tk.Label(self.registerFrame, text = "Register Std Dev", bg = self.gray, fg = self.white, font = self.smallFont)
+        self.registerUnitLabel = tk.Label(self.registerFrame, text = "MSE", bg = self.gray, fg = self.white, font = self.smallFont)
 
         # right frame
         self.instructionsLabel = tk.Label(self.rightFrame, text = "Maximum Transformation", bg = self.gray, fg = self.white, font = self.boldFont)
@@ -127,7 +129,7 @@ class createTemplate:
         self.translationLabel = tk.Label(self.translationFrame, text = "Translation", bg = self.gray, fg = self.white, font = self.smallFont)
         self.translationUnitsLabel = tk.Label(self.translationFrame, text = "pixels", bg = self.gray, fg = self.white, font = self.smallFont)
         self.scaleLabel = tk.Label(self.scaleFrame, text = "Scale", bg = self.gray, fg = self.white, font = self.smallFont)
-        self.scaleUnitsLabel = tk.Label(self.scaleFrame, text = "%", bg = self.gray, fg = self.white, font = self.smallFont)
+        self.scaleUnitsLabel = tk.Label(self.scaleFrame, text = "± %", bg = self.gray, fg = self.white, font = self.smallFont)
 
         #-----------------------------------------------------------------------
         # Entries
@@ -149,6 +151,14 @@ class createTemplate:
             validate = "key", validatecommand = (validateCommand, '%P', 'Translation'), width = 10)
         self.scaleEntry = tk.Entry(self.scaleFrame, font = self.entryFont,
             validate = "key", validatecommand = (validateCommand, '%P', 'Scale'), width = 10)
+
+        # set defaults
+        self.rotationEntry.insert(0, 20)
+        self.translationEntry.insert(0, 200)
+        self.scaleEntry.insert(0, 10)
+        self.systemParameters["Rotation"] = 20.0
+        self.systemParameters["Translation"] = 200.0
+        self.systemParameters["Scale"] = 10.0
 
         # list of entries
         self.entriesCheck = [self.rotationEntry, self.translationEntry, self.scaleEntry, self.tensorEntry,
@@ -188,11 +198,13 @@ class createTemplate:
         self.parametersLabel.pack(pady = (20,10))
         self.tensorFrame.pack(pady = 13)
         self.tensorLabel.pack(side = tk.LEFT, padx = (20,5))
-        self.tensorEntry.pack(side = tk.LEFT, padx = (10,20))
+        self.tensorEntry.pack(side = tk.LEFT, padx = (10,5))
+        self.tensorUnitLabel.pack(side=tk.LEFT, padx=5)
 
         self.registerFrame.pack(pady = (13, 46))
         self.registerLabel.pack(side = tk.LEFT, padx = (17,5))
-        self.registerEntry.pack(side = tk.LEFT, padx = (5,20))
+        self.registerEntry.pack(side = tk.LEFT, padx = 5)
+        self.registerUnitLabel.pack(side=tk.LEFT, padx=(5, 30))
 
         self.rightFrame.pack(side = tk.RIGHT, padx = 50, pady = (0,20))
         self.instructionsLabel.pack(pady = 10)
@@ -209,7 +221,7 @@ class createTemplate:
         self.scaleFrame.pack(pady = 20)
         self.scaleLabel.pack(side = tk.LEFT, padx = (20,5))
         self.scaleEntry.pack(side = tk.LEFT, padx = 5)
-        self.scaleUnitsLabel.pack(side = tk.LEFT, padx = (5,20))
+        self.scaleUnitsLabel.pack(side = tk.LEFT, padx = (5,10))
 
         self.continueButton.pack(pady = (25,35))
 
