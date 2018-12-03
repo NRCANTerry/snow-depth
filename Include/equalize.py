@@ -22,7 +22,7 @@ def brighten(img, val):
     '''
 
     # convert image to HSV colour space
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float32)
     h, s, v = cv2.split(hsv)
 
     # increase brightness of pixels
@@ -31,14 +31,14 @@ def brighten(img, val):
     v[v <= lim] += val
 
     # decrease saturation of image
-    s *= 0.5
+    s = s*0.5
     s = np.clip(s, 0, 255)
 
     # merge channels
     hsv_merge = cv2.merge((h, s, v))
 
     # convert image to BGR and return
-    return cv2.cvtColor(hsv_merge, cv2.COLOR_HSV2BGR)
+    return cv2.cvtColor(hsv_merge.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 def equalizeHistogramColour(img, clip_limit, tile_size):
     '''
