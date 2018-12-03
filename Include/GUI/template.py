@@ -456,6 +456,7 @@ class createTemplate:
 
         # get intersection points if in snow mode
         if(self.snowFlag.get()): self.calculateIntersections()
+        else: self.templateWindow.destroy()
 
         # create overaly
         self.createOverlay()
