@@ -813,9 +813,9 @@ class GUI:
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
             self.systemParameters["Reg_Params"] = [int(optionsList[6]), float(optionsList[7]), float(optionsList[8]), float(optionsList[9]),
-                float(optionsList[10])]
-            self.systemParameters["Int_Params"] = [int(optionsList[11]), float(optionsList[12]), float(optionsList[13]), float(optionsList[14]),
-                float(optionsList[15])]
+                float(optionsList[10]), int(optionsList[11])]
+            self.systemParameters["Int_Params"] = [int(optionsList[12]), float(optionsList[13]), float(optionsList[14]), float(optionsList[15]),
+                float(optionsList[16])]
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1211,6 +1211,9 @@ class GUI:
             def close(status):
                 # if name was inputted
                 if(var.get() != "" and status):
+                    # add registration style to system parameters
+                    self.systemParameters["Reg_Params"].append(regStyle.get())
+
                     # create output string
                     outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + \
                         str(self.systemParameters["Lower_Border"]) + "," + '"' + \
@@ -1450,6 +1453,20 @@ class GUI:
             command = lambda: getName(), bg=self.gray, fg = self.white,
             font=("Calibri Light", 15), width = 17)
 
+        # radio buttons
+        regStyle = tk.IntVar()
+        regStyle.set(0) # initialize choice to ORB + ECC
+        regOptions = ["Feature and Intensity", "Feature Only", "Intensity Only"]
+
+        regStyleLabel = tk.Label(regFrame, text="Mode", font=fECC, bg=self.gray,
+            fg=self.white)
+        regRadioButtons = list()
+        for val, option in enumerate(regOptions):
+            regRadioButtons.append(tk.Radiobutton(regFrame, text=option,
+                variable=regStyle, value=val, bg=self.gray, fg=self.white,
+                font=("Calibri Light", 16), activebackground=self.gray,
+                activeforeground=self.white, selectcolor=self.gray))
+
         # packing
         titleLabel.pack(pady = 20)
         featureFrame.pack(pady=10, padx=50)
@@ -1471,6 +1488,9 @@ class GUI:
         ECCParamFrame4.pack(pady=5)
         ECCLabel6.pack(side=tk.LEFT, padx=(32,10))
         iterationsEntry2.pack(side=tk.LEFT, padx=(10,0))
+        regStyleLabel.pack(pady=(15, 10))
+        for x in regRadioButtons:
+            x.pack(anchor=tk.W, padx=(60,0))
 
         buttonFrameReg.pack(pady = 20)
         createProfileButtonReg.pack(side = tk.LEFT, padx = (5, 20))
