@@ -5,6 +5,7 @@ sys.path.append('...')
 
 # import necessary modules
 import tkinter as tk
+from tkinter import font
 from tkinter import filedialog
 from tkinter import messagebox
 import numpy as np
@@ -327,49 +328,70 @@ class GUI:
         self.advancedButton.bind("<Leave>", on_leave)
 
         # Frames
-        self.startFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
-        self.endFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
-        self.timeFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.date1DateFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.date2DateFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.date1TimeFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
+        self.date2TimeFrame = tk.Frame(self.advancedFrameWidgets, bg=self.gray)
 
         # Labels
         self.dateLabel = tk.Label(self.advancedFrameWidgets, text="Date Range", bg=self.gray, fg=self.white,
             font=("Calibri Light", 28))
-        self.timeLabel = tk.Label(self.timeFrame, text="Time", bg=self.gray, fg=self.white,
+        dateFont = font.Font(family="Calibri Light", size=20, underline=True)
+        self.date1Label = tk.Label(self.advancedFrameWidgets, text="From", bg=self.gray, fg=self.white,
+            font=dateFont)
+        self.date2Label = tk.Label(self.advancedFrameWidgets, text="To", bg=self.gray, fg=self.white,
+            font=dateFont)
+        self.date1DateLabel = tk.Label(self.date1DateFrame, text="Date", bg=self.gray, fg=self.white,
             font=("Calibri Light", 18))
-        self.startLabel = tk.Label(self.startFrame, text="Start", bg=self.gray, fg=self.white,
+        self.date2DateLabel = tk.Label(self.date2DateFrame, text="Date", bg=self.gray, fg=self.white,
             font=("Calibri Light", 18))
-        self.endLabel = tk.Label(self.endFrame, text="End", bg=self.gray, fg=self.white,
+        self.date1TimeLabel = tk.Label(self.date1TimeFrame, text="Time", bg=self.gray, fg=self.white,
             font=("Calibri Light", 18))
-        self.splitLabel = tk.Label(self.timeFrame, text=":", bg=self.gray, fg=self.white,
+        self.date2TimeLabel = tk.Label(self.date2TimeFrame, text="Time", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+        self.date1SplitLabel = tk.Label(self.date1TimeFrame, text=":", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 18))
+        self.date2SplitLabel = tk.Label(self.date2TimeFrame, text=":", bg=self.gray, fg=self.white,
             font=("Calibri Light", 18))
 
         # Time list
-        self.selectedTime = [None, None]
+        self.selectedTime = [None, None, None, None]
 
         # Entries
         from datePicker import Datepicker
         advancedValidateCommand = self.root.register(self.validateAdvanced)
-        self.startDate = Datepicker(self.startFrame, entrywidth=12)
-        self.endDate = Datepicker(self.endFrame, entrywidth=12)
-        self.hourTime = tk.Entry(self.timeFrame, font=("Calibri Light", 14), width=5, validate="key",
+        self.startDate = Datepicker(self.date1DateFrame, entrywidth=12)
+        self.endDate = Datepicker(self.date2DateFrame, entrywidth=12)
+        self.startHourTime = tk.Entry(self.date1TimeFrame, font=("Calibri Light", 14), width=5, validate="key",
             validatecommand =((advancedValidateCommand, '%P', 0)))
-        self.minuteTime = tk.Entry(self.timeFrame, font=("Calibri Light", 14), width=5, validate="key",
+        self.endHourTime = tk.Entry(self.date2TimeFrame, font=("Calibri Light", 14), width=5, validate="key",
+            validatecommand =((advancedValidateCommand, '%P', 2)))
+        self.startMinuteTime = tk.Entry(self.date1TimeFrame, font=("Calibri Light", 14), width=5, validate="key",
             validatecommand =((advancedValidateCommand, '%P', 1)))
+        self.endMinuteTime = tk.Entry(self.date2TimeFrame, font=("Calibri Light", 14), width=5, validate="key",
+            validatecommand =((advancedValidateCommand, '%P', 3)))
 
         # Advanced menu packing
         self.dateLabel.pack(pady=10)
-        self.startFrame.pack(pady=(10,5))
-        self.startLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.date1Label.pack(pady=(5,0), anchor=tk.W, padx=(18,0))
+        self.date1DateFrame.pack(pady=(10,5))
+        self.date1DateLabel.pack(side=tk.LEFT, padx=(15,5))
         self.startDate.pack(side=tk.LEFT, padx=5)
-        self.endFrame.pack(pady=(10,5))
-        self.endLabel.pack(side=tk.LEFT, padx=(20,5))
-        self.endDate.pack(side=tk.LEFT, padx=(5,0))
+        self.date1TimeFrame.pack(pady=5)
+        self.date1TimeLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.startHourTime.pack(side=tk.LEFT, padx=(5,3))
+        self.date1SplitLabel.pack(side=tk.LEFT)
+        self.startMinuteTime.pack(side=tk.LEFT, padx=(3,5))
 
-        self.timeFrame.pack(pady=5)
-        self.timeLabel.pack(side=tk.LEFT, padx=(15,5))
-        self.hourTime.pack(side=tk.LEFT, padx=(5,3))
-        self.splitLabel.pack(side=tk.LEFT)
-        self.minuteTime.pack(side=tk.LEFT, padx=(3,5))
+        self.date2Label.pack(pady=(15,0), anchor=tk.W, padx=(18,0))
+        self.date2DateFrame.pack(pady=(10,5))
+        self.date2DateLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.endDate.pack(side=tk.LEFT, padx=5)
+        self.date2TimeFrame.pack(pady=(5, 40))
+        self.date2TimeLabel.pack(side=tk.LEFT, padx=(15,5))
+        self.endHourTime.pack(side=tk.LEFT, padx=(5,3))
+        self.date2SplitLabel.pack(side=tk.LEFT)
+        self.endMinuteTime.pack(side=tk.LEFT, padx=(3,5))
 
         #===========================================================================
         # Packing
@@ -490,8 +512,8 @@ class GUI:
         try:
             if(new_text == ""):
                 self.selectedTime[int(index)] = None
-            elif (int(index) == 0 and int(new_text) in range(0, 25)) \
-                or (int(index) == 1 and int(new_text) in range(0,60)):
+            elif (int(index) % 2 == 0 and int(new_text) in range(0, 25)) \
+                or (int(index) % 2 != 0 and int(new_text) in range(0,60)):
                 self.selectedTime[int(index)] = int(new_text)
             else:
                 return False
@@ -509,8 +531,10 @@ class GUI:
         dateValid = (self.startDate.current_date is None and self.endDate.current_date is None) or \
             (self.startDate.current_date is not None and self.endDate.current_date is not None)
         dateFilled = (self.startDate.current_date is not None and self.endDate.current_date is not None)
-        timeValid = (self.selectedTime[0] is not None and self.selectedTime[1] is not None)
-        timeEmpty = (self.selectedTime[0] is None and self.selectedTime[1] is None)
+        timeValid = (self.selectedTime[0] is not None and self.selectedTime[1] is not None and
+            self.selectedTime[2] is not None and self.selectedTime[3] is not None)
+        timeEmpty = (self.selectedTime[0] is None and self.selectedTime[1] is None and
+            self.selectedTime[2] is None and self.selectedTime[3] is None)
 
         if(directory):
             return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
@@ -556,9 +580,11 @@ class GUI:
             self.advancedButton.config(text=">", command=lambda: self.toggleAdvancedOptions(0))
 
             # clear entries
-            self.selectedTime = [None, None]
-            self.hourTime.delete(0, tk.END)
-            self.minuteTime.delete(0, tk.END)
+            self.selectedTime = [None, None, None, None]
+            self.startHourTime.delete(0, tk.END)
+            self.startMinuteTime.delete(0, tk.END)
+            self.endHourTime.delete(0, tk.END)
+            self.endMinuteTime.delete(0, tk.END)
             self.startDate.erase()
             self.endDate.erase()
 
@@ -633,7 +659,7 @@ class GUI:
 
     def getValues(self):
         # increment end date by one
-        if self.endDate.current_date is not None:
+        if self.endDate.current_date is not None and all(v is None for v in self.selectedTime):
             self.endDate.current_date += datetime.timedelta(days=1)
 
         # return values in tuple format
@@ -1293,7 +1319,6 @@ class GUI:
         menuFrame = tk.Frame(newWindow, bg=self.gray)
         menuLabel = tk.Label(menuFrame, text="Menus", bg=self.gray, fg=self.white,
             font=("Calibri Bold", 16), justify=tk.LEFT, anchor="w")
-        from tkinter import font
         f = font.Font(menuLabel, menuLabel.cget("font"))
         f.configure(underline=True)
         menuLabel.configure(font=f)
@@ -1667,7 +1692,6 @@ class GUI:
             rightFrame = tk.Frame(newWindow, bg=self.gray)
 
             # labels
-            from tkinter import font
             titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg=self.gray, fg = self.white, font=("Calibri Light", 24))
             underlineFont = font.Font(family="Calibri Light", size=18, underline=True)
             generalLabel = tk.Label(leftFrame, text="General", font=underlineFont, bg=self.gray, fg=self.white)

@@ -129,16 +129,29 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange):
             # check EXIF data
             exif = pil_im._getexif()[36867]
             date = datetime.strptime(exif, '%Y:%m:%d %H:%M:%S')
+
+            # check for all filled scenario (i.e. user specifies start and
+            # end dates + times)
+            if dateRange[0] is not None and dateRange[1] is not None and \
+                all(v is not None for v in dateRange[2]):
+                # update datetime objects
+                dateRange[0] = dateRange[0].replace(hour=dateRange[2][0],
+                    minute=dateRange[2][1])
+                dateRange[1] = dateRange[1].replace(hour=dateRange[2][2],
+                    minute=dateRange[2][3])
+
+                # reset time range
+                dateRange[2] = [None, None, None, None]
+
             # check if image is valid
             if(
                 ((dateRange[0] is None and dateRange[1] is None) or
                     dateRange[0] <= date <= dateRange[1]) # date check
-                and (dateRange[2] == [None, None] or (dateRange[2][0] == date.hour
+                and (dateRange[2] == [None, None, None, None] or (dateRange[2][0] == date.hour
                     and dateRange[2][1] == date.minute)) # time check
             ):
                 # convert img to cv2
                 img = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
-
             # if image isn't in the date range skip it
             else:
                 continue
