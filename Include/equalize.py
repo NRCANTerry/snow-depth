@@ -30,6 +30,10 @@ def brighten(img, val):
     v[v > lim] = 255
     v[v <= lim] += val
 
+    # decrease saturation of image
+    s *= 0.5
+    s = np.clip(s, 0, 255)
+
     # merge channels
     hsv_merge = cv2.merge((h, s, v))
 
@@ -56,7 +60,7 @@ def equalizeHistogramColour(img, clip_limit, tile_size):
     l, a, b = cv2.split(lab)
 
     # apply adaptive histogram equalization
-    clahe = cv2.createCLAHE(clipLimit = clip_limit, tileGridSize = tile_size)
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_size)
     l = clahe.apply(l)
 
     # merge channels
@@ -66,7 +70,7 @@ def equalizeHistogramColour(img, clip_limit, tile_size):
     bgr = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
     # return brightened image
-    return brighten(bgr, 50)
+    return brighten(bgr, 60)
 
 def equalizeHistogram(img, clip_limit, tile_size):
     '''
@@ -149,11 +153,6 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     template = cv2.imread(templatePath)
     h_temp = template.shape[:2][0]
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
-
-    # resize template
-    #h, w = template.shape[:2]
-    #resizeFactor = min(maxWidth/float(w), maxHeight/float(h))
-    #template = cv2.resize(template, None, fx=resizeFactor, fy=resizeFactor)
 
     # get denoised template
     template_noise = cv2.bilateralFilter(template.copy(), 9, 75, 75)
