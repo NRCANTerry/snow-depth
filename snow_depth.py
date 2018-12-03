@@ -78,6 +78,7 @@ if __name__ == '__main__':
     date_range = params[20]
     reg_params = params[21]
     int_params = params[22]
+    misc_params = params[23]
 
     # update summary
     summary.start = datetime.now()
@@ -120,8 +121,10 @@ if __name__ == '__main__':
     model_path = str(Path(template_path).parents[1]) + "\\models\\" + filename + ".model"
 
     # output status of deep learning model
-    if(os.path.isfile(model_path)):
+    if(os.path.isfile(model_path) and misc_params[0]):
         print("Deep Learning Blob Model is ENABLED")
+    elif not misc_params[0]:
+        print("Deep Learning Blob Model is DISABLED")
     else:
         print("Deep Learning Blob Model is DISABLED")
         validTrainingDir = [int(os.path.splitext(x)[0]) for x in os.listdir(training_path + "blob\\")]
@@ -331,7 +334,7 @@ if __name__ == '__main__':
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
         upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
-        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path)
+        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0])
 
     # update tensor dataset
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
