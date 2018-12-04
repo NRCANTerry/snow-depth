@@ -270,7 +270,8 @@ def updateDataset(dataset, MSE_vals, dataset_enabled):
 # align a set of images to the provided template
 def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     debug_directory_registered, debug_directory_matches, debug, dataset,
-    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params):
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
+    imageSummary):
 
     # counter for successful ORB and ECC registrations
     validORB = 0
@@ -327,6 +328,13 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
             # add MSE to list
             MSE_vals.append(MSE)
 
+            # add to individual summary
+            imageSummary[name]["Registered"] = True
+            imageSummary[name]["ORB Registered"] = ORBFlag
+            imageSummary[name]["ORB Matrix"] = np.round(ORBMatrix, 2)
+            imageSummary[name]["ECC Registered"] = ECCFlag
+            imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
+
         # image wasn't registered
         else:
             # unpack return
@@ -340,13 +348,20 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
                 "ECC Matrix": ECCMatrix
             }
 
+            # add to individual summary
+            imageSummary[name]["Registered"] = False
+            imageSummary[name]["ORB Registered"] = ORBFlag
+            imageSummary[name]["ORB Matrix"] = np.round(ORBMatrix, 2)
+            imageSummary[name]["ECC Registered"] = ECCFlag
+            imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
+
         # increment iterator
         count += 1
 
     # update dataset
     print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
-    avg_MSE = sum(MSE_vals) / len(MSE_vals)
+    avg_MSE = sum(MSE_vals) / len(MSE_vals) if len(MSE_vals) > 0 else 0
 
     # if in debugging mode
     if(debug):
@@ -355,7 +370,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE]
+    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE], imageSummary
 
 # unpack arguments of parallel pool tasks
 def unpackArgs(args):
@@ -364,7 +379,8 @@ def unpackArgs(args):
 # align a set of images to the given template using a parallel pool
 def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
      imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
-    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params):
+    dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
+    imageSummary):
 
     # counter for successful ORB and ECC registrations
     validORB = 0
@@ -417,6 +433,13 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
             # add MSE to list
             MSE_vals.append(MSE)
 
+            # add to individual summary
+            imageSummary[name]["Registered"] = True
+            imageSummary[name]["ORB Registered"] = ORBFlag
+            imageSummary[name]["ORB Matrix"] = np.round(ORBMatrix, 2)
+            imageSummary[name]["ECC Registered"] = ECCFlag
+            imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
+
         # image wasn't registered
         else:
             # unpack return
@@ -430,6 +453,13 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
                 "ECC Matrix": ECCMatrix
             }
 
+            # add to individual summary
+            imageSummary[name]["Registered"] = False
+            imageSummary[name]["ORB Registered"] = ORBFlag
+            imageSummary[name]["ORB Matrix"] = np.round(ORBMatrix, 2)
+            imageSummary[name]["ECC Registered"] = ECCFlag
+            imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
+
     # update dataset
     print("Updating Dataset...")
     dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
@@ -442,4 +472,4 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         json.dump(registration_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return list of registered images
-    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE]
+    return registeredImages, dataset, images_names_registered, [validORB, validECC, avg_MSE], imageSummary

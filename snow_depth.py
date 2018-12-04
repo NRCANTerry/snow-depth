@@ -50,6 +50,7 @@ if __name__ == '__main__':
 
     # dictionary to hold program output data
     summary = Map()
+    imageSummary = Map()
 
     # window closed without executing
     if(params == False):
@@ -215,12 +216,12 @@ if __name__ == '__main__':
     # get filtered images and image names
     if(num_imgs > 50 and not date_range[3]):
         from filter_night import filterNightParallel
-        images_filtered, filtered_names = filterNightParallel(pool, directory,
-            img_border_upper, img_border_lower)
+        images_filtered, filtered_names, imageSummary = filterNightParallel(pool, directory,
+            img_border_upper, img_border_lower, imageSummary)
     else:
         from filter_night import filterNight
-        images_filtered, filtered_names = filterNight(directory, img_border_upper,
-            img_border_lower, date_range)
+        images_filtered, filtered_names, imageSummary = filterNight(directory, img_border_upper,
+            img_border_lower, date_range, imageSummary)
 
     # output results of filtering
     if(date_range[3]): print("Number of Valid Images: %d" % len(images_filtered))
@@ -273,14 +274,14 @@ if __name__ == '__main__':
 
     if(num_imgs > 5):
         from register import alignImagesParallel
-        images_registered, template_data_set, filtered_names_reg, stats = alignImagesParallel(pool, images_equalized,
+        images_registered, template_data_set, filtered_names_reg, stats, imageSummary = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
-            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params)
+            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary)
     else:
         from register import alignImages
-        images_registered, template_data_set, filtered_names_reg, stats = alignImages(images_equalized, template_eq, template,
+        images_registered, template_data_set, filtered_names_reg, stats, imageSummary = alignImages(images_equalized, template_eq, template,
             filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
-            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params)
+            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary)
 
     # update summary
     registrationTime = time() - intervalTime
@@ -288,6 +289,8 @@ if __name__ == '__main__':
     regIntervalTime = registrationTime / float(num_imgs) if num_imgs > 0 else 0
     summary["Per Image Registration Time"] = "%0.2fs" % (regIntervalTime)
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
+    regTypes = ["Feature and Intensity", "Feature Only", "Intensity Only"]
+    summary["Registration Mode"] = regTypes[reg_params[5]]
     summary["ORB Registration"] = "%d/%d" % (stats[0], num_imgs)
     summary["ECC Registration"] = "%d/%d" % (stats[1], num_imgs)
     summary["Failed Registration"] = "%d/%d" % (num_imgs - len(images_registered), num_imgs)
@@ -334,9 +337,10 @@ if __name__ == '__main__':
     from validate_stakes import getValidStakes
 
     # check stakes in image
-    stake_validity, blob_coords, tensor_data_set, actual_tensors = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
+    stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
         upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
-        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0])
+        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0],
+        imageSummary)
 
     # update tensor dataset
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)
@@ -357,13 +361,13 @@ if __name__ == '__main__':
     # get intersection points
     if(num_imgs > 5):
         from intersect import getIntersectionsParallel
-        intersection_coords, intersection_dist = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
+        intersection_coords, intersection_dist, imageSummary = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors,
-            img_border_upper)
+            img_border_upper, imageSummary)
     else:
         from intersect import getIntersections
-        intersection_coords, intersection_dist = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
-            filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper)
+        intersection_coords, intersection_dist, imageSummary = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
+            filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper, imageSummary)
 
     # update summary
     intersectionTime = time() - intervalTime
@@ -379,9 +383,9 @@ if __name__ == '__main__':
     intervalTime = time()
 
     # get snow depths
-    depths = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
+    depths, imageSummary = getDepths(images_registered, filtered_names_reg, intersection_coords, stake_validity,
         template_intersections, img_border_upper, template_tensor, actual_tensors, intersection_dist,
-        blob_distances_template, debug, paths_dict["snow-depth"], image_dates)
+        blob_distances_template, debug, paths_dict["snow-depth"], image_dates, imageSummary)
 
     # update summary
     calcTime = time() - intervalTime
@@ -399,4 +403,4 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------
 
     print("\n\nGenerating Report...")
-    generate(summary, paths_dict["snow-depth"])
+    generate(summary, imageSummary, paths_dict["snow-depth"])

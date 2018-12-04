@@ -73,6 +73,9 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
     # create list for stake tensors
     actualTensorsStake = list()
 
+    # create list for valid blobs
+    validBlobsImage = list()
+
     # reduce noise in image by local smoothing
     img_blur = cv2.medianBlur(img, median_kernel_size)
 
@@ -318,6 +321,7 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
 
         # if more than 2 valid blobs list stake as valid
         validStakes.append(validStake)
+        validBlobsImage.append(validBlobs)
 
         # add lowest blob to list
         if validStake:
@@ -359,7 +363,8 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
         stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
 
     return (validStakes, actualCoordsStake, actualTensorsStake, stake_dict,
-        stake_dict_coords_low, stake_dict_coords_high, validIndex, invalidIndex)
+        stake_dict_coords_low, stake_dict_coords_high, validIndex, invalidIndex,
+        name, validBlobsImage)
 
 def getModelData(validPath, invalidPath, coordinates):
     '''
@@ -423,7 +428,7 @@ def updateDatset(dataset, tensor_vals, dataset_enabled):
 # returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
-    training_path, model_path, DLActive):
+    training_path, model_path, DLActive, imageSummary):
 
     # determine paths for training images
     validPath = training_path + "blob\\"
@@ -465,7 +470,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     for img_ in tqdm.tqdm(imgs):
         # get valid stakes from image
         validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, \
-            stake_dict_coords_high, validIndex, invalidIndex = imageValid(img_,
+            stake_dict_coords_high, validIndex, invalidIndex, name, validImgBlobs = imageValid(img_,
             coordinates, hsvRanges, blobSizes, upper_border, debug, img_names[iterator],
             debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath,
             invalidPath, model, modelInitialized, validIndex, invalidIndex,
@@ -483,6 +488,14 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
         validImages[img_names[iterator]] = validStakes
         blobCoords[img_names[iterator]] = actualCoordsStake
         actualTensors[img_names[iterator]] = actualTensorsStake
+
+        # update image summary
+        imageSummary[name][""] = ""
+        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor"
+        for e, stake in enumerate(validImgBlobs):
+            num_valid = stake.count(True)
+            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                 %0.2f " \
+                % (validStakes[e], num_valid, len(stake), actualTensorsStake[e])
 
         # increment iterator
         iterator += 1
@@ -507,4 +520,4 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
         shutil.rmtree(str(Path(validPath).parents[0]))
 
     # return list of valid stakes
-    return validImages, blobCoords, dataset, actualTensors
+    return validImages, blobCoords, dataset, actualTensors, imageSummary

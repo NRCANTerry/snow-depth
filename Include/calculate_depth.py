@@ -12,7 +12,7 @@ import datetime
 # using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
     upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory,
-    image_dates):
+    image_dates, imageSummary):
 
     # list containing median depths for each image
     median_depths = list()
@@ -160,6 +160,17 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
         # increment iterator
         iterator += 1
 
+        # update image summary
+        imageSummary[img_name]["  "] = ""
+        imageSummary[img_name]["Stake (Depth Calculation)"] = "Depth (mm)    Estimate (mm)"
+        for e, depth in enumerate(depths_stake):
+            if isinstance(depth, float):
+                imageSummary[img_name]["  %d  " % (e+1)] = "%0.2f                %0.2f       " % \
+                    (depth, estimate_stake[e])
+            else:
+                imageSummary[img_name]["  %d  " % (e+1)] = "%s                   %s          " % \
+                    ("n/a", "n/a")
+
     # close workbook
     workbook.close()
 
@@ -187,4 +198,4 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     plt.close()
 
     # return dictionary containing snow depth changes
-    return depths
+    return depths, imageSummary

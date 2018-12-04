@@ -392,7 +392,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     return stake_intersections, stake_distances, stake_dict, stake_dict_dist, name
 
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
-    debug, debug_directory, params, tensors, upper_border):
+    debug, debug_directory, params, tensors, upper_border, imageSummary):
     '''
     Function to get intersection coordinates and distances for an image set
     '''
@@ -435,6 +435,16 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         intersectionCoordinates[imgName] = stake_intersections
         intersectionDistances[imgName] = stake_distances
 
+        # add to image summary
+        imageSummary[imgName][" "] = ""
+        imageSummary[imgName]["Stake (Intersection Points)"] = "x (px)                 y (px)  "
+        for e, point in enumerate(stake_intersections):
+            if "average" in point.keys() and not False in point["average"]: # valid point found
+                x, y = np.round(point["average"], 2)
+                imageSummary[imgName]["   %d " % (e+1)] = "%0.2f              %0.2f" % (x, y)
+            else:
+                imageSummary[imgName]["   %d " % (e+1)] = "%s                     %s    " % ("n/a", "n/a")
+
         # increment iterator
         count += 1
 
@@ -445,7 +455,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         json.dump(intersection_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return dictionaries
-    return intersectionCoordinates, intersectionDistances
+    return intersectionCoordinates, intersectionDistances, imageSummary
 
 def unpackArgs(args):
     '''
@@ -458,7 +468,7 @@ def unpackArgs(args):
     return intersect(*args)
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
-    img_names, debug, debug_directory, params, tensors, upper_border):
+    img_names, debug, debug_directory, params, tensors, upper_border, imageSummary):
     '''
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
@@ -508,4 +518,4 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
         json.dump(intersection_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
     # return dictionaries
-    return intersectionCoordinates, intersectionDistances
+    return intersectionCoordinates, intersectionDistances, imageSummary

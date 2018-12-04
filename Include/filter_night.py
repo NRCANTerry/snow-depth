@@ -97,7 +97,7 @@ def isDay(img, name):
     # return whether image is day or night
     return (max_diff > MAX_NIGHT, img, name)
 
-def filterNight(directory, upperBorder, lowerBorder, dateRange):
+def filterNight(directory, upperBorder, lowerBorder, dateRange, imageSummary):
     '''
     Returns filtered list of day images
     @param directory the path to the directory containing the image
@@ -180,8 +180,11 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange):
             images_filtered.append(output[1])
             filtered_names.append(img_name)
 
+        # add to individual summary
+        imageSummary[img_name] = {"Valid Image": output[0]}
+
     # return lists
-    return images_filtered, filtered_names
+    return images_filtered, filtered_names, imageSummary
 
 def unpackArgs(args):
     '''
@@ -193,7 +196,7 @@ def unpackArgs(args):
     '''
     return isDay(*args)
 
-def filterNightParallel(pool, directory, upperBorder, lowerBorder):
+def filterNightParallel(pool, directory, upperBorder, lowerBorder, imageSummary):
     '''
     Returns filtered list of day images using parallel pool for computing
     @param pool the parallel pool used for computing
@@ -235,10 +238,11 @@ def filterNightParallel(pool, directory, upperBorder, lowerBorder):
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
         if i[0]: # if day image
             # add to lists
-            #images_filtered.append(balanceColour(i[1], 5))
             images_filtered.append(i[1])
             filtered_names.append(i[2])
-        pass
+
+        # add to individual summary
+        imageSummary[i[2]] = {"Valid Image": i[0]}
 
     # return lists
-    return images_filtered, filtered_names
+    return images_filtered, filtered_names, imageSummary
