@@ -556,6 +556,7 @@ class GUI:
         dateValid = (self.startDate.current_date is None and self.endDate.current_date is None) or \
             (self.startDate.current_date is not None and self.endDate.current_date is not None)
         dateFilled = (self.startDate.current_date is not None and self.endDate.current_date is not None)
+        dateEmpty = (self.startDate.current_date is None and self.endDate.current_date is None)
         timeValid = (self.selectedTime[0] is not None and self.selectedTime[1] is not None and
             self.selectedTime[2] is not None and self.selectedTime[3] is not None)
         timeEmpty = (self.selectedTime[0] is None and self.selectedTime[1] is None and
@@ -568,14 +569,16 @@ class GUI:
                 and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
                 and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.systemParameters["Directory"] != "" \
                 and self.profileMenuVar.get() != "Select Profile" and
-                (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty)))))
+                (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty) \
+                or (dateEmpty and timeEmpty)))))
         else:
             return (self.entryLowerH1.get() != "" and self.entryLowerS1.get() != "" and self.entryLowerV1.get() != "" \
                 and self.entryUpperH1.get() != "" and self.entryUpperS1.get() != "" and self.entryUpperV1.get() != "" \
                 and ((self.secondHSVFlag.get() == 1 and self.entryLowerH2.get() != "" and self.entryLowerS2.get() != "" \
                 and self.entryLowerV2.get() != "" and self.entryUpperH2.get() != "" and self.entryUpperS2.get() != "" \
                 and self.entryUpperV2.get() != "") or self.secondHSVFlag.get() != 1) and self.profileMenuVar.get() != "Select Profile"
-                and (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty)))))
+                and (not self.advancedFrameOpen or (self.advancedFrameOpen and ((timeValid and dateValid) or (dateFilled and timeEmpty) \
+                or (dateEmpty and timeEmpty)))))
 
     #===========================================================================
     # Function to confirm that required HSV fields are filled in
