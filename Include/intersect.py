@@ -11,6 +11,7 @@ from scipy.signal import find_peaks
 from scipy import signal
 from scipy import ndimage
 import tqdm
+import time
 
 def lineIntersections(pt1, pt2, ptA, ptB):
     '''
@@ -79,7 +80,7 @@ def adjustCoords(x0, x1, degree, type):
         return x0, x1
 
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
-    debug_directory, signal_dir, params, tensors, upper_border):
+    debug_directory, signal_dir, params, tensors, upper_border, signal_var):
     '''
     Function to get intersection coordinates and distances for an image
     '''
@@ -132,7 +133,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 y0, y1 = points[0][1], points[1][1]
 
                 # calculate line length
-                num = 1000 + ((roiCoordinates[i][1][1][1]-y1) * 4)
                 num_adjusted = roiCoordinates[i][0][1][1]- upper_border - y1
                 num_adjusted *= tensors[i] # 1pt/mm adjusted
 
@@ -144,7 +144,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 x0, x1 = adjustCoords(points[1][0], x1, 5, j)
 
                 # make a line with "num" points
-                x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+                x, y = np.linspace(x0, x1, num_adjusted), np.linspace(y0, y1, num_adjusted)
 
                 # extract values along the line
                 lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y))).astype(np.float32)
@@ -303,7 +303,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     coordinates[combination_names[j]] = (False, False)
 
                 # if in debugging mode
-                if debug:
+                if debug and signal_var:
                     # plot and save
                     fig, axes = plt.subplots(nrows = 2)
                     axes[0].imshow(img)
@@ -392,7 +392,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     return stake_intersections, stake_distances, stake_dict, stake_dict_dist, name
 
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
-    debug, debug_directory, params, tensors, upper_border, imageSummary):
+    debug, debug_directory, params, tensors, upper_border, imageSummary, signal_var):
     '''
     Function to get intersection coordinates and distances for an image set
     '''
@@ -422,7 +422,7 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         # get intersection points, distances and JSON output
         stake_intersections, stake_distances, stake_dict, stake_dict_dist, _ = intersect(img_,
             boxCoords[imgName], stakeValidity[imgName], roiCoordinates, imgName,
-            debug, debug_directory, signal_dir, params, tensors[imgName], upper_border)
+            debug, debug_directory, signal_dir, params, tensors[imgName], upper_border, signal_var)
 
         if(debug):
             # add data to output
@@ -468,7 +468,8 @@ def unpackArgs(args):
     return intersect(*args)
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
-    img_names, debug, debug_directory, params, tensors, upper_border, imageSummary):
+    img_names, debug, debug_directory, params, tensors, upper_border, imageSummary,
+    signal_var):
     '''
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
@@ -493,7 +494,8 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
     for i, img in enumerate(imgs):
         imgName = img_names[i]
         tasks.append((img, boxCoords[imgName], stakeValidity[imgName], roiCoordinates,
-        imgName, debug, debug_directory, signal_dir, params, tensors[imgName], upper_border))
+        imgName, debug, debug_directory, signal_dir, params, tensors[imgName], upper_border,
+        signal_var))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):

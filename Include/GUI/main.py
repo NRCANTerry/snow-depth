@@ -230,11 +230,8 @@ class GUI:
             activebackground = self.gray, activeforeground = self.white, variable = self.secondHSVFlag, command = lambda:self.updateSelections(), font=("Calibri Light", 14))
         createHoverLabel(self.checkBox, "Add a second range to the HSV filter")
 
-
         self.debug = tk.IntVar()
-        self.debugCheckBox = tk.Checkbutton(self.rootFrame, text="Debug", bg=self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
-            activeforeground = self.white, variable = self.debug, font=("Calibri Light", 14))
-        createHoverLabel(self.debugCheckBox, "Debug mode outputs images at each step of the algorithm")
+        self.debug.set(1) # default is to run in debugging mode
 
         #===========================================================================
         # Drop Down Menus
@@ -321,6 +318,14 @@ class GUI:
             self.advancedButton['bg'] = self.gray
             self.advancedButton['fg'] = 'white'
 
+        # function to disable signal checkbox if debug disabled
+        def processDebugSelection():
+            if self.debug.get():
+                self.signalCheckBox.config(state="normal")
+            else:
+                self.signalVar.set(0)
+                self.signalCheckBox.config(state="disabled")
+
         # advanced options button
         self.advancedButton = tk.Button(self.advancedFrame, text=">", bg=self.gray, fg=self.white, borderwidth=0,
             font=("Calibri Light", 20), command=lambda: self.toggleAdvancedOptions(0))
@@ -335,7 +340,7 @@ class GUI:
 
         # Labels
         self.dateLabel = tk.Label(self.advancedFrameWidgets, text="Date Range", bg=self.gray, fg=self.white,
-            font=("Calibri Light", 28))
+            font=("Calibri Light", 24))
         dateFont = font.Font(family="Calibri Light", size=20, underline=True)
         self.date1Label = tk.Label(self.advancedFrameWidgets, text="From", bg=self.gray, fg=self.white,
             font=dateFont)
@@ -353,6 +358,8 @@ class GUI:
             font=("Calibri Light", 18))
         self.date2SplitLabel = tk.Label(self.date2TimeFrame, text=":", bg=self.gray, fg=self.white,
             font=("Calibri Light", 18))
+        self.outputLabel = tk.Label(self.advancedFrameWidgets, text="Output", bg=self.gray, fg=self.white,
+            font=("Calibri Light", 24))
 
         # Time list
         self.selectedTime = [None, None, None, None]
@@ -370,6 +377,20 @@ class GUI:
             validatecommand =((advancedValidateCommand, '%P', 1)))
         self.endMinuteTime = tk.Entry(self.date2TimeFrame, font=("Calibri Light", 14), width=5, validate="key",
             validatecommand =((advancedValidateCommand, '%P', 3)))
+
+        # checkboxes
+        self.debugCheckBox = tk.Checkbutton(self.advancedFrameWidgets, text="Debug", bg=self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
+            activeforeground = self.white, variable = self.debug, font=("Calibri Light", 16), command = lambda: processDebugSelection())
+        createHoverLabel(self.debugCheckBox, "Debug mode outputs images at each step of the algorithm")
+
+        self.signalVar = tk.IntVar()
+        self.signalCheckBox = tk.Checkbutton(self.advancedFrameWidgets, text="Signals", bg=self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
+            activeforeground = self.white, variable = self.signalVar, font=("Calibri Light", 16))
+
+        self.summaryVar = tk.IntVar()
+        self.summaryVar.set(1) # default is to output summary
+        self.summaryCheckBox = tk.Checkbutton(self.advancedFrameWidgets, text="Summary", bg=self.gray, fg = self.white, selectcolor = self.gray, activebackground = self.gray,
+            activeforeground = self.white, variable = self.summaryVar, font=("Calibri Light", 16))
 
         # Advanced menu packing
         self.dateLabel.pack(pady=10)
@@ -392,6 +413,11 @@ class GUI:
         self.endHourTime.pack(side=tk.LEFT, padx=(5,3))
         self.date2SplitLabel.pack(side=tk.LEFT)
         self.endMinuteTime.pack(side=tk.LEFT, padx=(3,5))
+
+        self.outputLabel.pack(pady=5)
+        self.debugCheckBox.pack(pady =(0,5), padx=15, anchor=tk.W)
+        self.summaryCheckBox.pack(pady=5, padx=15, anchor=tk.W)
+        self.signalCheckBox.pack(pady=5, padx=15, anchor=tk.W)
 
         #===========================================================================
         # Packing
@@ -446,8 +472,7 @@ class GUI:
         self.profileMenu.pack(pady = 10)
 
         # button packing
-        self.runButton.pack(pady = (20,10))
-        self.debugCheckBox.pack(pady = (10,20))
+        self.runButton.pack(pady = (20,40))
 
         self.kwargs = {
             "bg": self.gray,
@@ -673,7 +698,8 @@ class GUI:
                     self.systemParameters["Current_Template_Name"], self.systemParameters["Current_Tensor_Dataset"], \
                     self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"], \
                     [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen], \
-                    self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"], self.systemParameters["Misc_Params"]
+                    self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"], self.systemParameters["Misc_Params"], \
+                    self.summaryVar.get(), self.signalVar.get()
 
         # return False if run button wasn't pressed
         else:

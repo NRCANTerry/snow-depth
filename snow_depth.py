@@ -20,6 +20,7 @@ from update_dataset import createDatasetTensor
 from tqdm import tqdm
 from pathlib import Path
 from generate_report import generate
+from validate_stakes import getValidStakes
 
 # class to allow dot functionality with dict
 class Map(dict):
@@ -80,6 +81,8 @@ if __name__ == '__main__':
     reg_params = params[21]
     int_params = params[22]
     misc_params = params[23]
+    summary_var = params[24]
+    signal_var = params[25]
 
     # update summary
     summary.start = datetime.now()
@@ -333,8 +336,7 @@ if __name__ == '__main__':
 
     print("\n\nValidating Stakes")
     intervalTime = time()
-    #from check_stakes import getValidStakes
-    from validate_stakes import getValidStakes
+#    from validate_stakes import getValidStakes
 
     # check stakes in image
     stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
@@ -363,11 +365,12 @@ if __name__ == '__main__':
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist, imageSummary = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors,
-            img_border_upper, imageSummary)
+            img_border_upper, imageSummary, signal_var)
     else:
         from intersect import getIntersections
         intersection_coords, intersection_dist, imageSummary = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
-            filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper, imageSummary)
+            filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper, imageSummary,
+            signal_var)
 
     # update summary
     intersectionTime = time() - intervalTime
@@ -402,5 +405,7 @@ if __name__ == '__main__':
     # Generate Report
     # ---------------------------------------------------------------------------------
 
-    print("\n\nGenerating Report...")
-    generate(summary, imageSummary, paths_dict["snow-depth"])
+    # if user selected summary checkbox
+    if summary_var:
+        print("\n\nGenerating Report...")
+        generate(summary, imageSummary, paths_dict["snow-depth"])
