@@ -37,8 +37,8 @@ def createDataset(template_name, dataset, dataset_enabled):
 
         # output to user
         print("\n\nDataset Created:")
-        print("Mean: %0.2f" % filtered_mean)
-        print("Standard Deviation: %0.2f" % filtered_std_dev)
+        print("Mean: %0.2f MSE" % filtered_mean)
+        print("Standard Deviation: %0.2f MSE" % filtered_std_dev)
         print("Number of Values: %d" % num_filtered_values)
 
     # convert from numpy to list
@@ -87,8 +87,8 @@ def createDatasetTensor(template_name, dataset, dataset_enabled):
 
             # output to user
             print("\n\nStake %d Dataset Created:" % j)
-            print("Mean: %0.3f" % filtered_mean)
-            print("Standard Deviation: %0.5f" % filtered_std_dev)
+            print("Mean: %0.3f mm/px" % filtered_mean)
+            print("Standard Deviation: %0.5f mm/px" % filtered_std_dev)
             print("Number of Values: %d" % num_filtered_values)
 
         # convert from numpy to list
