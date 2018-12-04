@@ -355,16 +355,18 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
     stake_dict = dict()
     stake_dict_coords_low = dict()
     stake_dict_coords_high = dict()
+    stake_dict_tensor = dict()
 
     # add data to output
     for x in range(0, len(coordinates)):
         stake_dict['stake' + str(x)] = validStakes[x]
         stake_dict_coords_low['stake' + str(x)] = blobCoordsStake[x][0:4]
         stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
+        stake_dict_tensor['stake' + str(x)] = actualTensorsStake[x]
 
     return (validStakes, actualCoordsStake, actualTensorsStake, stake_dict,
         stake_dict_coords_low, stake_dict_coords_high, validIndex, invalidIndex,
-        name, validBlobsImage)
+        name, validBlobsImage, stake_dict_tensor)
 
 def getModelData(validPath, invalidPath, coordinates):
     '''
@@ -469,8 +471,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     # iterate through images
     for img_ in tqdm.tqdm(imgs):
         # get valid stakes from image
-        validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, \
-            stake_dict_coords_high, validIndex, invalidIndex, name, validImgBlobs = imageValid(img_,
+        validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, stake_dict_coords_high, \
+            validIndex, invalidIndex, name, validImgBlobs, stake_dict_tensor = imageValid(img_,
             coordinates, hsvRanges, blobSizes, upper_border, debug, img_names[iterator],
             debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath,
             invalidPath, model, modelInitialized, validIndex, invalidIndex,
@@ -481,7 +483,8 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
             stake_output[img_names[iterator]] = {
                 "validity": stake_dict,
                 "lower blob": stake_dict_coords_low,
-                "upper blob": stake_dict_coords_high
+                "upper blob": stake_dict_coords_high,
+                "tensors": stake_dict_tensor
             }
 
         # add to return dictionaries
