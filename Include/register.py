@@ -148,17 +148,35 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     termination_thresh = 1.0 / pow(10, params[1]) if ORB_aligned_flag else 1.0 / pow(10, params[3])
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_iterations,  termination_thresh)
 
+    # Flag to indicate if ECC failed
+    ECC_Failed_Flag = False
+
     # run ECC algorithm (results are stored in warp matrix)
     # if ECC image registration selected
     if(params[5] == 0 or params[5] == 2):
-        warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
+        # run ECC registration on ORB aligned image
+        try:
+            warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
+        except:
+            # if ECC fails
+            if ORB_aligned_flag: # try again on original images
+                try:
+                    warp_matrix = cv2.findTransformECC(template, imgRegGray, warp_matrix, warp_mode, criteria)[1]
+                except:
+                    # set flags to False
+                    ORB_aligned_flag = False
+                    ECC_Failed_Flag = True
+            else: # if images weren't ORB aligned
+                # set flags to False
+                ORB_aligned_flag = False
+                ECC_Failed_Flag = True
 
     # compare warp matrix to data set
     mean_squared_error_ecc = np.sum(np.square(abs(warp_matrix) - zero_matrix))
 
     # only check if dataset enabled
     if(dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
-        MAX_SCALING, warp_matrix)):
+        MAX_SCALING, warp_matrix) and not ECC_Failed_Flag):
         # get mean and standard deviation from dataset
         mean = dataset[0][0]
         std_dev = dataset[0][1]
@@ -176,7 +194,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # align image if dataset not enabled
     elif mean_squared_error_ecc <= max_mean_squared_error and params[5] != 1 and \
         not dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
-        MAX_SCALING, warp_matrix):
+        MAX_SCALING, warp_matrix) and not ECC_Failed_Flag:
         # align image
         imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
         ECC_aligned_flag = True
