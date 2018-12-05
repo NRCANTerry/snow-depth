@@ -80,7 +80,8 @@ def adjustCoords(x0, x1, degree, type):
         return x0, x1
 
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
-    debug_directory, signal_dir, params, tensors, upper_border, signal_var):
+    debug_directory, signal_dir, params, tensors, upper_border, signal_var,
+    template_tensors):
     '''
     Function to get intersection coordinates and distances for an image
     '''
@@ -109,46 +110,50 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             bottomBlob = validCoordinates[0]
             topBlob = validCoordinates[len(validCoordinates)-1]
 
-            # determine upper centre of upper and lower reference blobs
-            middleTop = (float(topBlob[0][0] + topBlob[2][0]) / 2.0, \
-                float(topBlob[0][1] + topBlob[1][1]) / 2.0)
-            middleBottom = (float(bottomBlob[0][0] + bottomBlob[2][0]) / 2.0, \
-                float(bottomBlob[0][1] + bottomBlob[1][1]) / 2.0)
-
-            # add combinations to list
-            coordinateCombinations.append((middleTop, middleBottom)) # middle
-            coordinateCombinations.append((topBlob[0], bottomBlob[0])) # left
-            coordinateCombinations.append((topBlob[1], bottomBlob[1])) # right
-
-            # determine degree to move line in
-            lineShift = float(abs(topBlob[0][0] - topBlob[2][0])) / 10.0
-
             # combination names list
             combination_names = ["middle", "left", "right"]
 
             # dictionary containing coordinates
             coordinates = dict()
 
+            # determine x and y coordinates of three lines
+            x0, x1 = ((topBlob[0][0] + topBlob[2][0]) / 2.0, (bottomBlob[0][0] + \
+                bottomBlob[2][0]) / 2.0)
+            y0, y1 = ((topBlob[0][1] + topBlob[1][1]) / 2.0, (bottomBlob[0][1] +  \
+                bottomBlob[1][1]) / 2.0)
+            bottomBlob = (x1, y1)
+
+            # determine degree to move line in
+            lineShift = float(abs(topBlob[0][0] - topBlob[2][0])) / 3.0
+
+            # get endpoint for line
+            # intersection of line between points on blob with line defining bottom of stake
+            x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
+                roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
+            x0, y0 = bottomBlob # start line from bottom blob
+
+            # calculate line length
+            line_length = np.hypot(x1-x0, y1-y0)
+
+            # adjust line length so 1pt represents 1mm
+            line_length *= tensors[i] if tensors[i] != True else template_tensors[i]
+
+            # add combinations to list
+            coordinateCombinations.extend([
+                ((x0, y0), (x1, y1)), # middle
+                ((x0-lineShift, y0), (x1-lineShift, y1)), # left
+                ((x0+lineShift, y0), (x1+lineShift, y1)) # right
+            ])
+
+            img_show_ = img_write.copy()[int(y0):int(roiCoordinates[i][0][1][1]),
+                int(roiCoordinates[i][0][0][0]):int(roiCoordinates[i][0][1][0])]
+            cv2.imshow("img", img_show_)
+            cv2.waitKey()
+
             # iterate through combinations
-            for j, points in enumerate(coordinateCombinations):
-                # get points
-                x0, x1 = adjustCoords(points[0][0], points[1][0], lineShift, j)
-                y0, y1 = points[0][1], points[1][1]
-
-                # calculate line length
-                num_adjusted = roiCoordinates[i][0][1][1]- upper_border - y1
-                num_adjusted *= tensors[i] # 1pt/mm adjusted
-
-                # get endpoint for line
-                # intersection of line between points on blob with line defining bottom of stake
-                x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
-                    roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
-                y0 = points[1][1]
-                #x0, x1 = adjustCoords(points[1][0], x1, lineShift, j)
-                x0, _ = adjustCoords(points[1][0], x1, lineShift, j)
-
-                # make a line with "num" points
-                x, y = np.linspace(x0, x1, num_adjusted), np.linspace(y0, y1, num_adjusted)
+            for j, ((x0, y0), (x1, y1)) in enumerate(coordinateCombinations):
+                # make a line with 1pt per mm
+                x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)
 
                 # overlay line on image
                 if(debug):
@@ -406,7 +411,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     return stake_intersections, stake_distances, stake_dict, stake_dict_dist, name
 
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
-    debug, debug_directory, params, tensors, upper_border, imageSummary, signal_var):
+    debug, debug_directory, params, tensors, upper_border, imageSummary, signal_var,
+    template_tensors):
     '''
     Function to get intersection coordinates and distances for an image set
     '''
@@ -436,7 +442,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
         # get intersection points, distances and JSON output
         stake_intersections, stake_distances, stake_dict, stake_dict_dist, _ = intersect(img_,
             boxCoords[imgName], stakeValidity[imgName], roiCoordinates, imgName,
-            debug, debug_directory, signal_dir, params, tensors[imgName], upper_border, signal_var)
+            debug, debug_directory, signal_dir, params, tensors[imgName], upper_border,
+            signal_var, template_tensors)
 
         if(debug):
             # add data to output
@@ -509,7 +516,7 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
         imgName = img_names[i]
         tasks.append((img, boxCoords[imgName], stakeValidity[imgName], roiCoordinates,
         imgName, debug, debug_directory, signal_dir, params, tensors[imgName], upper_border,
-        signal_var))
+        signal_var, template_tensors))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
