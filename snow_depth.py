@@ -365,12 +365,12 @@ if __name__ == '__main__':
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist, imageSummary = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors,
-            img_border_upper, imageSummary, signal_var)
+            img_border_upper, imageSummary, signal_var, template_tensor)
     else:
         from intersect import getIntersections
         intersection_coords, intersection_dist, imageSummary = getIntersections(images_registered, blob_coords, stake_validity, roi_coordinates,
             filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors, img_border_upper, imageSummary,
-            signal_var)
+            signal_var, template_tensor)
 
     # update summary
     intersectionTime = time() - intervalTime

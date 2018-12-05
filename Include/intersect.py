@@ -121,7 +121,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 bottomBlob[2][0]) / 2.0)
             y0, y1 = ((topBlob[0][1] + topBlob[1][1]) / 2.0, (bottomBlob[0][1] +  \
                 bottomBlob[1][1]) / 2.0)
-            bottomBlob = (x1, y1)
+            temp = (x1, y1)
 
             # determine degree to move line in
             lineShift = float(abs(topBlob[0][0] - topBlob[2][0])) / 3.0
@@ -130,7 +130,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             # intersection of line between points on blob with line defining bottom of stake
             x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
                 roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
-            x0, y0 = bottomBlob # start line from bottom blob
+            x0, y0 = temp # start line from bottom blob
 
             # calculate line length
             line_length = np.hypot(x1-x0, y1-y0)
@@ -145,10 +145,55 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 ((x0+lineShift, y0), (x1+lineShift, y1)) # right
             ])
 
-            img_show_ = img_write.copy()[int(y0):int(roiCoordinates[i][0][1][1]),
+            # isolate bottom of stake roi
+            stake_bottom_roi = img_write.copy()[int(y0):int(roiCoordinates[i][0][1][1]),
                 int(roiCoordinates[i][0][0][0]):int(roiCoordinates[i][0][1][0])]
-            cv2.imshow("img", img_show_)
-            cv2.waitKey()
+
+            # find edges in roi
+            gray_roi = cv2.cvtColor(stake_bottom_roi, cv2.COLOR_BGR2GRAY)
+            gray_roi = cv2.GaussianBlur(gray_roi, (3, 3), 0)
+            edges = cv2.Canny(gray_roi, 50, 150)
+            edges = cv2.dilate(edges, np.ones((3, 3), dtype=np.uint8))
+
+            # calculate parameters for Hough Line Transform
+            maxLineGap = 75.0 / tensors[i] if tensors[i] != True else template_tensors[i] # 75mm
+            minLineLength = 20.0 / tensors[i] if tensors[i] != True else template_tensors[i] # 20mm
+
+            # Remove all but vertical edges
+            edgeKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 25))
+            edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, edgeKernel)
+
+            # find lines
+            lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180.0, threshold=100,
+                maxLineGap=maxLineGap, minLineLength=minLineLength)
+
+            # isolate lines along stake boundary
+            v_stake_lines = list()
+            if lines is not None:
+                for line in lines:
+                    for x1, y1, x2, y2 in line:
+                        x_coord = x1 + roiCoordinates[i][0][0][0]
+                        blob_shift = lineShift*2
+
+                        # if within stake boundary
+                        if (x_coord < bottomBlob[0][0] and x_coord > bottomBlob[0][0] - blob_shift) or \
+                            (x_coord > bottomBlob[2][0] and x_coord < bottomBlob[2][0] + blob_shift):
+                            v_stake_lines.append(line)
+
+            # find lowest stake line (near intersection point)
+            lowest_edge_y = -1
+            for line in v_stake_lines:
+                for x1, y1, x2, y2 in line:
+                    # draw line on debugging image
+                    if debug:
+                        cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
+                            (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
+
+                    # update lowest edge variable
+                    if y2 > lowest_edge_y and y2 > y1:
+                        lowest_edge_y = y2 + y0
+                    elif y1 > lowest_edge_y:
+                        lowest_edge_y = y1 + y0
 
             # iterate through combinations
             for j, ((x0, y0), (x1, y1)) in enumerate(coordinateCombinations):
@@ -194,6 +239,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     peak_intensity = lineVals[peak_index]
                     snow_threshold = peak_intensity * params[1] if peak_intensity < 200 else params[2]
                     stake_cover = float(len(np.where(peak_range < snow_threshold)[0])) / float(len(peak_range))
+                    right_edge = properties["right_ips"][index]
 
                     # determine snow cover after peak
                     peak_range = lineVals[int(left_edge):]
@@ -229,8 +275,9 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                             and float(peak_intensity) / float(next_peak_height) > 0.5))
-                        and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100))
-                        and (minimum_between_peaks > 75 or distance_between_peaks > 200)
+                        and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100)
+                            or (minimum_between_peaks < 75 and y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1 and peak_width > 25))
+                        and (minimum_between_peaks > 100 or distance_between_peaks > 200 or (y[int(right_edge)]>lowest_edge_y and lowest_edge_y != -1))
                     ):
                         # select peak
                         selected_peak = index
@@ -490,7 +537,7 @@ def unpackArgs(args):
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
     img_names, debug, debug_directory, params, tensors, upper_border, imageSummary,
-    signal_var):
+    signal_var, template_tensors):
     '''
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
