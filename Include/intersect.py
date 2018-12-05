@@ -120,6 +120,9 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             coordinateCombinations.append((topBlob[0], bottomBlob[0])) # left
             coordinateCombinations.append((topBlob[1], bottomBlob[1])) # right
 
+            # determine degree to move line in
+            lineShift = float(abs(topBlob[0][0] - topBlob[2][0])) / 10.0
+
             # combination names list
             combination_names = ["middle", "left", "right"]
 
@@ -129,7 +132,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             # iterate through combinations
             for j, points in enumerate(coordinateCombinations):
                 # get points
-                x0, x1 = adjustCoords(points[0][0], points[1][0], 5, j)
+                x0, x1 = adjustCoords(points[0][0], points[1][0], lineShift, j)
                 y0, y1 = points[0][1], points[1][1]
 
                 # calculate line length
@@ -141,10 +144,15 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 x1, y1 = (lineIntersections((x0,y0), (x1,y1), (roiCoordinates[i][0][0][0],
                     roiCoordinates[i][0][1][1]), tuple(roiCoordinates[i][0][1])))
                 y0 = points[1][1]
-                x0, x1 = adjustCoords(points[1][0], x1, 5, j)
+                #x0, x1 = adjustCoords(points[1][0], x1, lineShift, j)
+                x0, _ = adjustCoords(points[1][0], x1, lineShift, j)
 
                 # make a line with "num" points
                 x, y = np.linspace(x0, x1, num_adjusted), np.linspace(y0, y1, num_adjusted)
+
+                # overlay line on image
+                if(debug):
+                    cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
 
                 # extract values along the line
                 lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y))).astype(np.float32)
@@ -169,6 +177,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 # index of selected peak in sorted list of peaks
                 selected_peak = -1
                 major_peak = -1 # select larger peak for threshold calculation
+
+                peak_gradients = np.gradient(lineVals)
 
                 # iterate through peaks from top to bottom
                 for index in sorted_index:
@@ -200,20 +210,22 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     if index != last_index:
                         minimum_between_peaks = np.amin(lineVals[peak_index:peaks[index+1]])
                         num_between_peaks = sum(t < 75 for t in lineVals[peak_index:peaks[index+1]])
-                        distance_between_peaks = peaks[index+1] - peak_index
+                        distance_between_peaks = properties["left_ips"][index+1] - properties["right_ips"][index]
+                        shadow_ratio = float(num_between_peaks) / float(distance_between_peaks) # used to filter out shadows and branches
+
+                        left_edge1 = left_edge - 10 if left_edge > 10 else 0
+                        max_compare = max(peak_gradients.tolist()[int(left_edge1):int(left_edge+10)]) > \
+                            max(peak_gradients.tolist()[int(properties["left_ips"][index+1]-10):int(properties["left_ips"][index+1]+10)]) * 2
 
                     # if peak meets conditions select it
                     if (
                         index != last_index # peak isn't last
                         and stake_cover > params[3] # majority stake before peak
-                        and (snow_cover > params[4] or peak_width > 150 or (snow_cover > params[4] * 0.666 and peak_width > 100)) # snow after peak
+                        and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
-                            and float(peak_intensity) / float(next_peak_height) > 0.5)) # peak is sufficiently large
-                        and (peak_width > 100 or ((peak_width + peak_width_next > 100) and proximity_peak < 125
-                            and (float(peak_width) / float(peak_width_next) > 0.20))) # peak is sufficiently wide
-                        #and (np.amin(lineVals[peak_index:peaks[index+1]]) > 50 or peak_width_next < 75) # no stake after peak
-                        and (minimum_between_peaks > 75 or float(num_between_peaks) / float(distance_between_peaks) > 0.65 or
-                            distance_between_peaks > 200)
+                            and float(peak_intensity) / float(next_peak_height) > 0.5))
+                        and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100))
+                        and (minimum_between_peaks > 75 or distance_between_peaks > 200)
                     ):
                         # select peak
                         selected_peak = index
@@ -279,10 +291,13 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         # converted index
                         conv_index = peak_index_line-t
 
+                        # ensure drop in intensity is sustained
+                        #highest_close = float(np.amax(lineVals[conv_index-20:conv_index]))
+
                         # if below threshold or large drop
                         if(
                             (intensity < stake_threshold
-                                and (max_drop > drop_threshold or max_drop == 0))
+                                and (max_drop > drop_threshold or max_drop == 0))# and highest_close / float(intensity) < 1.05)
                             or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) \
                                 < stake_threshold * 1.25)
                         ):
@@ -291,7 +306,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                     # overlay debugging points
                     if(debug):
-                        cv2.line(img_write, (int(x0), int(y0)), (int(x1), int(y1)), (255,0,0),2)
                         cv2.circle(img_write, (int(x[intersection_index]), int(y[intersection_index])), 5, (0,255,0), 3)
 
                 else: peak_index_line = 0
@@ -512,6 +526,16 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
         # add data to return dictionaries
         intersectionCoordinates[imgName] = stake_intersections
         intersectionDistances[imgName] = stake_distances
+
+        # add to image summary
+        imageSummary[imgName][" "] = ""
+        imageSummary[imgName]["Stake (Intersection Points)"] = "x (px)                 y (px)  "
+        for e, point in enumerate(stake_intersections):
+            if "average" in point.keys() and not False in point["average"]: # valid point found
+                x, y = np.round(point["average"], 2)
+                imageSummary[imgName]["   %d " % (e+1)] = "%0.2f              %0.2f" % (x, y)
+            else:
+                imageSummary[imgName]["   %d " % (e+1)] = "%s                     %s    " % ("n/a", "n/a")
 
     # if in debugging mode
     if(debug):
