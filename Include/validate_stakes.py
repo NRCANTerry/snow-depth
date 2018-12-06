@@ -17,6 +17,22 @@ from keras.models import load_model
 median_kernel_size = 5
 dilate_kernel = (5, 5)
 
+def getActualCoords(dilatedCoords, upper_border):
+    '''
+    Function to get undilated coordinates from template roi
+    '''
+    top_left = (dilatedCoords[0][0], dilatedCoords[0][1]-upper_border)
+    bottom_right = (dilatedCoords[1][0], dilatedCoords[1][1]-upper_border)
+    blob_width = abs(top_left[0] - bottom_right[0]) / 1.6666
+    dilate_px = int(float(blob_width) * 0.33)
+
+    return (
+        [top_left[0]+dilate_px, top_left[1]+dilate_px],
+        [bottom_right[0]-dilate_px, top_left[1]+dilate_px],
+        [bottom_right[0]-dilate_px, bottom_right[1]-dilate_px],
+        [top_left[0]+dilate_px, bottom_right[1]-dilate_px]
+    )
+
 def roiValid(coordinates, blobs):
     '''
     Function to determine if a randomly sampled roi intersects with any blobs
@@ -327,9 +343,28 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
         if validStake:
             # order coordinates and append to list
             validCoordinates = [t for t in actualCoords if t != False]
-            ordered_coordinates_low = validCoordinates[0]
-            ordered_coordinates_high = validCoordinates[len(validCoordinates)-1]
-            blobCoordsStake.append(list(ordered_coordinates_low + ordered_coordinates_high))
+
+            # if there are more than 2 valid blobs on the stake
+            if len(validCoordinates) > 2:
+                ordered_coordinates_low = validCoordinates[0]
+                ordered_coordinates_high = validCoordinates[len(validCoordinates)-1]
+                blobCoordsStake.append(list(ordered_coordinates_low + ordered_coordinates_high))
+
+            # if there are only 2 valid blobs on the stake
+            else:
+                # take lowest and highest possible blobs on stake to create intersection lines
+                ordered_coordinates_low = getActualCoords(coordinates[j][1], upper_border)
+                ordered_coordinates_high = getActualCoords(coordinates[j][len(coordinates[j])-1], upper_border)
+
+                # replace valid blob coordinates with template coordinates in actualCoords
+                for blob_index in range(0, len(actualCoords)):
+                    if actualCoords[blob_index] != False: # valid blob but unreliable coordinates
+                        actualCoords[blob_index] = getActualCoords(coordinates[j][blob_index], upper_border)
+
+                # add to upper and lower list
+                blobCoordsStake.append(list(ordered_coordinates_low + ordered_coordinates_high))
+
+            # add actual coordinates to list for stake
             actualCoordsStake.append(actualCoords)
 
             # write labelled image if in debugging mode
