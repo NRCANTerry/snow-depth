@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     # output to user the status of the dataset
     print("\nStatus:")
-    print("Registration Dataset is %s" % ("ENABLED" if dataset_enabled else "DISABLED"))
+    print("Registration Dataset is %s" % ("ACTIVE" if dataset_enabled else "TRAINING"))
     if(not dataset_enabled):
         print("Number of images required: %d\n" % (50-len(template_data_set[1])))
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # output to user the status of the tensor dataset
     for k, stake in enumerate(tensor_data_set):
-        print("Stake %d Dataset is %s" % (k, "ENABLED" if dataset_tensor_enabled[k] else "DISABLED"))
+        print("Stake %d Dataset is %s" % (k, "ACTIVE" if dataset_tensor_enabled[k] else "TRAINING"))
 
         if(not dataset_tensor_enabled[k]):
             print("Number of images required: %d" % (50-len(stake[1])))
@@ -125,18 +125,18 @@ if __name__ == '__main__':
 
     # output status of deep learning model
     if(os.path.isfile(model_path) and misc_params[0]):
-        print("Deep Learning Blob Model is ENABLED")
+        print("Deep Learning Blob Model is ACTIVE")
     elif not misc_params[0]:
         print("Deep Learning Blob Model is DISABLED")
     else:
-        print("Deep Learning Blob Model is DISABLED")
+        print("Deep Learning Blob Model is TRAINING")
         validTrainingDir = [int(os.path.splitext(x)[0]) for x in os.listdir(training_path + "blob\\")]
         currentIndex = max(validTrainingDir) + 1 if len(validTrainingDir) > 0 else 0
         print("Number of training samples required: %d" % (1000-currentIndex))
 
     # update summary
-    summary["Registration Dataset Enabled"] = dataset_enabled
-    summary["Tensor Datasets Enabled"] = dataset_tensor_enabled
+    summary["Registration Dataset ACTIVE"] = dataset_enabled
+    summary["Tensor Datasets ACTIVE"] = dataset_tensor_enabled
     summary["Training Path"] = os.path.basename(os.path.normpath(training_path))
     summary["Model Path"] = os.path.basename(os.path.normpath(model_path))
 
