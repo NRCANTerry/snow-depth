@@ -392,13 +392,13 @@ class createTemplate:
         templateFrame.pack(side = tk.RIGHT)
 
         # setup scrollbars to allow user to pan in image
-        h_bar = tk.Scrollbar(templateFrame, orient = tk.HORIZONTAL, command = self.canvas.xview)
-        h_bar.pack(side = tk.BOTTOM, fill = tk.X)
-        v_bar = tk.Scrollbar(templateFrame, orient = tk.VERTICAL, command = self.canvas.yview)
-        v_bar.pack(side = tk.RIGHT, fill = tk.Y)
+        self.h_bar = tk.Scrollbar(templateFrame, orient = tk.HORIZONTAL, command = self.canvas.xview)
+        self.h_bar.pack(side = tk.BOTTOM, fill = tk.X)
+        self.v_bar = tk.Scrollbar(templateFrame, orient = tk.VERTICAL, command = self.canvas.yview)
+        self.v_bar.pack(side = tk.RIGHT, fill = tk.Y)
 
         # display canvas
-        self.canvas.config(xscrollcommand = h_bar.set, yscrollcommand = v_bar.set, bg = self.gray)
+        self.canvas.config(xscrollcommand = self.h_bar.set, yscrollcommand = self.v_bar.set, bg = self.gray)
         self.canvas.pack(side = tk.LEFT, expand = tk.YES, fill = tk.BOTH)
         self.canvas.create_image(0, 0, image = self.img, anchor = tk.NW, tag = 'image')
 
@@ -722,6 +722,10 @@ class createTemplate:
             self.img = ImageTk.PhotoImage(img_resize)
             self.canvas.config(scrollregion = (0, 0, new_width, new_height))
             self.canvas.create_image(0, 0, image = self.img, anchor = tk.NW, tag = 'image')
+
+            # reset scroll bars to top of screen
+            self.canvas.xview_moveto(0.0)
+            self.canvas.yview_moveto(0.0)
 
             # reset labels
             self.stakesLabel.config(text = "No Blobs Selected")
