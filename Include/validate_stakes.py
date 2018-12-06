@@ -494,10 +494,10 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
         # update image summary
         imageSummary[name][""] = ""
-        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor"
+        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor (mm/px)"
         for e, stake in enumerate(validImgBlobs):
             num_valid = stake.count(True)
-            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                 %0.2f " \
+            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                       %0.2f        " \
                 % (validStakes[e], num_valid, len(stake), actualTensorsStake[e])
 
         # increment iterator
@@ -615,10 +615,10 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
 
         # update image summary
         imageSummary[name][""] = ""
-        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor"
+        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor (mm/px)"
         for e, stake in enumerate(validImgBlobs):
             num_valid = stake.count(True)
-            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                 %0.2f " \
+            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                       %0.2f        " \
                 % (validStakes[e], num_valid, len(stake), actualTensorsStake[e])
 
     # update dataset
