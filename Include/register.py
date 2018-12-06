@@ -82,8 +82,9 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     mean_squared_error = np.sum(np.square(abs(affine_matrix) - zero_matrix))
 
     # update dataset
-    # if dataset isn't enabled, append mean_squared_error to dataset
-    if(not dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
+    # if dataset isn't enabled, append mean_squared_error to dataset or if
+    # robust registration isn't in use
+    if((not dataset_enabled or not params[6]) and validTransform(MAX_ROTATION, MAX_TRANSLATION,
         MAX_SCALING, affine_matrix) and params[5] != 2):
         # apply registration
         imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
@@ -377,8 +378,9 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         count += 1
 
     # update dataset
-    print("Updating Dataset...")
-    dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
+    if params[6]: # update dataset if using robust registration
+        print("Updating Dataset...")
+        dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
     avg_MSE = sum(MSE_vals) / len(MSE_vals) if len(MSE_vals) > 0 else 0
 
     # if in debugging mode
@@ -479,8 +481,9 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
             imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
 
     # update dataset
-    print("Updating Dataset...")
-    dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
+    if params[6]: # update dataset if using robust registration
+        print("Updating Dataset...")
+        dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
     avg_MSE = sum(MSE_vals) / len(MSE_vals)
 
     # if in debugging mode
