@@ -833,6 +833,16 @@ class createTemplate:
                 # update intersections list
                 self.templateIntersections[i] = [x_n, y_n]
 
+                # update stake boundary if intersection point is beyond it
+                # adjust by a blob width
+                degree = abs(self.rawTemplateCoordinates[i][1][0][0]-self.rawTemplateCoordinates[i][1][1][0])
+                if y_n > stake[0][0][1]:
+                    self.templateCoordinates[i][0][1][1] = y_n + degree
+                if x_n > stake[0][1][0]:
+                    self.templateCoordinates[i][0][1][0] = x_n + degree
+                elif x_n < stake[0][0][0]:
+                    self.templateCoordinates[i][0][0][0] = x_n - degree
+
                 # update template distances
                 old_distances = self.templateDistances[i]
                 self.templateDistances[i] = [x + d for x in old_distances]
