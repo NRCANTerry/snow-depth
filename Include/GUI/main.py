@@ -871,9 +871,9 @@ class GUI:
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
             self.systemParameters["Reg_Params"] = [int(optionsList[6]), float(optionsList[7]), float(optionsList[8]), float(optionsList[9]),
-                float(optionsList[10]), int(optionsList[11])]
+                float(optionsList[10]), int(optionsList[11]), int(optionsList[19])]
             self.systemParameters["Int_Params"] = [int(optionsList[12]), float(optionsList[13]), float(optionsList[14]), float(optionsList[15]),
-                float(optionsList[16])]
+                float(optionsList[16]), int(optionsList[20])]
             self.systemParameters["Misc_Params"] = [int(optionsList[17]), int(optionsList[18])]
 
     #===========================================================================
@@ -1283,10 +1283,13 @@ class GUI:
                         "," + str(self.systemParameters["Tile_Size"][0]) + "," + str(self.systemParameters["Tile_Size"][1]) + \
                         "," + str(self.systemParameters["Reg_Params"]).replace("[","").replace("]", "") + \
                         "," + str(self.systemParameters["Int_Params"]).replace("[","").replace("]", "") + \
-                        "," + str(deepLearningProfileFlag.get()) + "," + str(ssimProfileFlag.get()) + "]"
+                        "," + str(deepLearningProfileFlag.get()) + "," + str(ssimProfileFlag.get()) + \
+                        "," + str(robustRegistrationFlag.get()) + "," + str(robustIntersectionFlag.get()) + "]"
 
                     # add to config file
                     self.config.set('Profiles', var.get(), outputString)
+                    self.systemParameters["Reg_Params"].append(robustRegistrationFlag.get())
+                    self.systemParameters["Int_Params"].append(robustIntersectionFlag.get())
 
                     # update menu
                     self.profileMenu['menu'].add_command(label = var.get(), command = tk._setit(self.profileMenuVar, var.get()))
@@ -1483,6 +1486,7 @@ class GUI:
             if regStyle.get() != 0:
                 ssimProfileCheckbox.config(fg="#787d84")
                 ssimProfileCheckbox.config(state="disabled")
+                ssimProfileFlag.set(0)
             else:
                 ssimProfileCheckbox.config(fg=self.white)
                 ssimProfileCheckbox.config(state="normal")
@@ -1562,6 +1566,13 @@ class GUI:
             activebackground=self.gray, activeforeground=self.white,
             font=("Calibri Light", 16))
 
+        robustRegistrationFlag = tk.IntVar()
+        robustRegistrationCheckBox = tk.Checkbutton(regFrame,
+            variable=robustRegistrationFlag, bg=self.gray, fg=self.white,
+            text="Use Robust Registration", selectcolor=self.gray,
+            activebackground=self.gray, activeforeground=self.white,
+            font=("Calibri Light", 16))
+
         # packing
         titleLabel.pack(pady = 20)
         featureFrame.pack(pady=10, padx=50)
@@ -1583,7 +1594,8 @@ class GUI:
         ECCParamFrame4.pack(pady=5)
         ECCLabel6.pack(side=tk.LEFT, padx=(32,10))
         iterationsEntry2.pack(side=tk.LEFT, padx=(10,0))
-        ssimProfileCheckbox.pack(anchor=tk.W, pady=10, padx=(60,0))
+        ssimProfileCheckbox.pack(anchor=tk.W, pady=(10,1), padx=(60,0))
+        robustRegistrationCheckBox.pack(anchor=tk.W, pady=(1,10), padx=(60,0))
 
         regStyleLabel.pack(pady=(0, 10))
         for x in regRadioButtons:
@@ -1643,6 +1655,14 @@ class GUI:
             command = lambda: getName(), bg=self.gray, fg = self.white,
             font=("Calibri Light", 15), width = 17)
 
+        robustIntersectionFlag = tk.IntVar()
+        robustIntersectionFlag.set(1)
+        robustIntersectionCheckBox = tk.Checkbutton(intFrame,
+            variable=robustIntersectionFlag, bg=self.gray, fg=self.white,
+            text="Use Robust Intersection", selectcolor=self.gray,
+            activebackground=self.gray, activeforeground=self.white,
+            font=("Calibri Light", 16))
+
         # packing
         titleLabel.pack(pady = 20)
         peakFrame.pack(pady=15, padx=50)
@@ -1664,6 +1684,7 @@ class GUI:
         snowCoverFrame.pack(pady=15)
         snowCoverLabel.pack(side=tk.LEFT, padx=(0,10))
         snowCoverEntry.pack(side=tk.LEFT, padx=(10,20))
+        robustIntersectionCheckBox.pack(anchor=tk.W, pady=10, padx=(60,0))
 
         buttonFrameInt.pack(pady = 20)
         createProfileButtonInt.pack(side = tk.LEFT, padx = (5, 20))
