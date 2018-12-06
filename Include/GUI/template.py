@@ -861,10 +861,19 @@ class createTemplate:
 
     def calculateIntersections(self):
         # convert image to grayscale
-        imgGray = cv2.cvtColor(equalizeHistogramColour(self.cv2_img.copy(), 5.0, (8,8)), cv2.COLOR_BGR2GRAY)
+        equalizedImg = equalizeHistogramColour(self.cv2_img.copy(), 5.0, (8,8))
+        imgGray = cv2.cvtColor(equalizedImg, cv2.COLOR_BGR2GRAY)
 
         # iterate through stakes
         for i, stake in enumerate(self.rawTemplateCoordinates):
+            # list for three different point calculations
+            # measure intersection point using lines along left edge, centre
+            # and right edge of lowest blob
+            coordinateCombinations = list()
+
+            # list for combination results
+            combinationResults = list()
+
             # get coordinates of top and bottom blobs on stake
             bottomBlob = [[stake[1][0][0],stake[1][0][1]],
                 [stake[1][1][0],stake[1][1][1]]]
@@ -872,46 +881,97 @@ class createTemplate:
             topBlob = [[stake[topIndex][0][0],stake[topIndex][0][1]],
                 [stake[topIndex][1][0],stake[topIndex][1][1]]]
 
-            # generate combinations
-            coordinateCombinations = list()
+            # determine x and y coordinates of three lines
+            x0, x1 = ((topBlob[0][0] + topBlob[1][0]) / 2.0, (bottomBlob[0][0] + \
+                bottomBlob[1][0]) / 2.0)
+            y0, y1 = ((topBlob[0][1] + topBlob[1][1]) / 2.0, (bottomBlob[0][1] +  \
+                bottomBlob[1][1]) / 2.0)
+            temp = (x1, y1)
 
-            # determine middle of box
-            middleBottom = ((bottomBlob[0][0] + bottomBlob[1][0]) / 2.0,
-                (bottomBlob[0][1] + bottomBlob[1][1]) / 2.0)
-            middleTop = ((topBlob[0][0] + topBlob[1][0]) / 2.0,
-                (topBlob[0][1] + topBlob[1][1]) / 2.0)
+            # determine degree to move line in
+            lineShift = float(abs(topBlob[0][0] - topBlob[1][0])) / 3.0
 
-            coordinateCombinations.append((middleTop, middleBottom)) # middle
-            coordinateCombinations.append((topBlob[0], bottomBlob[0])) # Left
-            coordinateCombinations.append((topBlob[1], bottomBlob[1])) # right
+            # get endpoint for line
+            # intersection of line between points on blob with line defining bottom of stake
+            x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
+                stake[0][1][1]), tuple(stake[0][1])))
+            x0, y0 = temp # start line from bottom blob
 
-            # list for combination results
-            combinationResults = list()
+            # calculate line length
+            line_length = np.hypot(x1-x0, y1-y0)
+
+            # adjust line length so 1pt represents 1mm
+            line_length *= self.templateTensors[i]
+
+            # add combinations to list
+            coordinateCombinations.extend([
+                ((x0, y0), (x1, y1)), # middle
+                ((x0-lineShift, y0), (x1-lineShift, y1)), # left
+                ((x0+lineShift, y0), (x1+lineShift, y1)) # right
+            ])
+
+            # isolate bottom of stake roi
+            stake_bottom_roi = equalizedImg.copy()[int(y0):int(stake[0][1][1]),
+                int(stake[0][0][0]):int(stake[0][1][0])]
+
+            # find edges in roi
+            gray_roi = cv2.cvtColor(stake_bottom_roi, cv2.COLOR_BGR2GRAY)
+            gray_roi = cv2.GaussianBlur(gray_roi, (3, 3), 0)
+            edges = cv2.Canny(gray_roi, 50, 150)
+            edges = cv2.dilate(edges, np.ones((3, 3), dtype=np.uint8))
+
+            # calculate parameters for Hough Line Transform
+            maxLineGap = 75.0 / self.templateTensors[i] # 75mm
+            minLineLength = 20.0 / self.templateTensors[i] # 20mm
+
+            # Remove all but vertical edges
+            edgeKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 25))
+            edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, edgeKernel)
+
+            # find lines
+            lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180.0, threshold=100,
+                maxLineGap=maxLineGap, minLineLength=minLineLength)
+
+            # isolate lines along stake boundary
+            v_stake_lines = list()
+            if lines is not None:
+                for line in lines:
+                    for x1, y1, x2, y2 in line:
+                        x_coord = x1 + stake[0][0][0]
+                        blob_shift = lineShift*2
+
+                        # if within stake boundary
+                        if (x_coord < bottomBlob[0][0] and x_coord > bottomBlob[0][0] - blob_shift) or \
+                            (x_coord > bottomBlob[1][0] and x_coord < bottomBlob[1][0] + blob_shift):
+                            v_stake_lines.append(line)
+
+            # find lowest stake line (near intersection point)
+            lowest_edge_y = -1
+            for line in v_stake_lines:
+                for x1, y1, x2, y2 in line:
+                    # draw line on debugging image
+                    cv2.line(self.cv2_img, (int(x1+stake[0][0][0]), int(y1+y0)),
+                        (int(x2+stake[0][0][0]), int(y2+y0)), (0, 255, 0), 2)
+
+                    # update lowest edge variable
+                    if y2 > lowest_edge_y and y2 > y1:
+                        lowest_edge_y = y2 + y0
+                    elif y1 > lowest_edge_y:
+                        lowest_edge_y = y1 + y0
 
             # iterate through combinations
-            for j, points in enumerate(coordinateCombinations):
-                # get points
-                x0, x1 = self.adjustCoords(points[0][0], points[1][0], 3, j)
-                y0, y1 = self.adjustCoords(points[0][1], points[1][1], 3, j)
-
-                # calculate line length
-                num = 1000 + ((stake[1][1][1]-y1) * 4)
-
-                # get endpoint for line
-                # intersection of line between points on blob with line defining bottom of
-                x1, y1 = (lineIntersections((x0,y0), (x1,y1), (stake[0][0][0],
-                    stake[0][1][1]), tuple(stake[0][1])))
-                y0 = points[1][1]
-                x0 = points[1][0]
+            for j, ((x0, y0), (x1, y1)) in enumerate(coordinateCombinations):
+                # make a line with 1pt per mm
+                x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)
 
                 # draw line on output image
                 cv2.line(self.cv2_img, (int(x0),int(y0)), (int(x1), int(y1)), (255,0,0), 5)
 
                 # make a line with "num" points
-                x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+                x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)
 
                 # extract values along the line
-                lineVals = ndimage.map_coordinates(np.transpose(imgGray), np.vstack((x,y)))
+                lineVals = ndimage.map_coordinates(np.transpose(imgGray), np.vstack((x,y))).astype(np.float32)
 
                 # apply gaussian filter to smooth line
                 lineVals_smooth = ndimage.filters.gaussian_filter1d(lineVals, 10)
@@ -920,76 +980,135 @@ class createTemplate:
                 lineVals_smooth = np.append(lineVals_smooth, 0)
 
                 # determine peaks and properties
-                peaks, properties = find_peaks(lineVals_smooth, height=100, prominence=1, width=10)
+                peaks, properties = find_peaks(lineVals_smooth, height=90, width=10)
+                peakWidthsOutput = signal.peak_widths(lineVals_smooth, peaks, rel_height = 0.75)
+                peakWidths = peakWidthsOutput[0]
+                minLineVal = min(lineVals)
+                maxLineVal = float(max(lineVals)) * 0.75
 
                 # get sorted indexes (decreasing distance down the line)
                 sorted_index = np.argsort(peaks)
-                sorted_index = sorted_index[::-1]
+                last_index = sorted_index[len(sorted_index)-1] if len(sorted_index) > 0 else 0
 
                 # index of selected peak in sorted list of peaks
                 selected_peak = -1
+                major_peak = -1 # select larger peak for threshold calculation
 
-                # iterate through peaks from bottom to top
+                # iterate through peaks from top to bottom
                 for index in sorted_index:
-                    # only check if there is more than 1 peak remaining
-                    if(index > 0):
-                        # check that peak is isolated (doesn't have peak immediately next to it
-                        # of similar size)
-                        current_width = properties["right_ips"][index] - properties["left_ips"][index]
-                        next_width = properties["right_ips"][index-1] - properties["left_ips"][index-1]
+                    # determine snow cover before peak
+                    peak_index = peaks[index]
+                    left_edge = properties["left_ips"][index]
+                    peak_range = lineVals[:int(left_edge)]
+                    peak_intensity = lineVals[peak_index]
+                    snow_threshold = peak_intensity * 0.65 if peak_intensity < 200 else 125
+                    stake_cover = float(len(np.where(peak_range < snow_threshold)[0])) / float(len(peak_range))
+                    right_edge = properties["right_ips"][index]
 
-                        if(properties["left_ips"][index] - properties["right_ips"][index-1] > 50
-                            or properties["peak_heights"][index-1] < properties["peak_heights"][index-1] * 0.5
-                            or (current_width > (next_width*3) and index-1 == 0)):
-                            selected_peak = index
-                            break
-                    # else select the only peak remaining
-                    else:
-                        # determine if this is a no snow case
-                        # must see mostly snow after peak (50% coverage)
-                        # snow threshold is 75% of peak
-                        peak_index = peaks[index]
-                        peak_intensity = lineVals[peak_index]
-                        peak_range = lineVals[peak_index:]
-                        snow_cover = float(len(np.where(peak_range > peak_intensity * 0.75)[0])) / float(len(peak_range)) if \
-                            peak_intensity * 0.75 < 140 else float(len(np.where(peak_range > 140)[0])) / float(len(peak_range))
+                    # determine snow cover after peak
+                    peak_range = lineVals[int(left_edge):]
+                    snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
 
-                        if(snow_cover > 0.5 or float(len(peak_range)) / float(len(lineVals)) < 0.15):
-                            selected_peak = 0
+                    # get peak width and next peak width
+                    peak_width = peakWidths[index]
+                    if index != last_index:
+                        peak_width_next = peakWidths[index+1]
+
+                    # get proximity to next peak
+                    if index != last_index:
+                        proximity_peak = properties["left_ips"][index+1] - properties["right_ips"][index]
+
+                    # get size of next peak
+                    if(index != last_index): next_peak_height = lineVals[peaks[index+1]]
+
+                    # determine if stake is visible beyond peak
+                    if index != last_index:
+                        minimum_between_peaks = np.amin(lineVals[peak_index:peaks[index+1]])
+                        distance_between_peaks = properties["left_ips"][index+1] - properties["right_ips"][index]
+
+                    # if peak meets conditions select it
+                    if (
+                        index != last_index # peak isn't last
+                        and stake_cover > 0.5 # majority stake before peak
+                        and (snow_cover > 0.5 or (snow_cover > 0.5 * 0.666 and peak_width > 150)) # snow after peak
+                        and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
+                            and float(peak_intensity) / float(next_peak_height) > 0.5))
+                        and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100)
+                            or (minimum_between_peaks < 75 and y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1 and peak_width > 25))
+                        and (minimum_between_peaks > 100 or distance_between_peaks > 200 or (y[int(right_edge)]>lowest_edge_y and lowest_edge_y != -1))
+                    ):
+                        # select peak
+                        selected_peak = index
+
+                        # determine major peak
+                        if(peak_intensity < maxLineVal and next_peak_height > maxLineVal and proximity_peak < 100):
+                            major_peak = index + 1
                         else:
-                            selected_peak = -1
+                            major_peak = index
                         break
 
-                # if a snow peak was found
+                    # last peak intersection conditions
+                    elif (
+                        index == last_index # last peak
+                        and stake_cover > 0.5 # stake before peak
+                        and peak_intensity > float(maxLineVal) * 0.75 # large enough
+                        and (snow_cover > 0.5 * 0.666 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
+                    ):
+                        selected_peak = index
+                        major_peak = index
+                        break
+
+                # calculate gradient of line
+                line_gradients_full = np.gradient(lineVals)
+
+                # if a snow case was found
                 if(selected_peak != -1):
                     # determine peak index in lineVals array
                     peak_index_line = np.uint32(peaks[selected_peak])
 
                     # determine threshold for finding stake
                     # average of intensity at left edge of peak and intensity at base of peak
-                    left_edge_index = properties["left_ips"][selected_peak]
+                    left_edge_index = properties["left_ips"][major_peak]
                     left_edge_intensity = lineVals[int(left_edge_index)]
                     left_base_index = properties["left_bases"][selected_peak]
-                    left_base_intensity = lineVals[int(left_base_index)]
+                    left_base_intensity = lineVals[int(left_base_index)] if lineVals[peak_index_line] < left_edge_index * 1.5 \
+                         else lineVals[peak_index_line]
                     stake_threshold = (float(left_edge_intensity) - float(left_base_intensity)) / 2.0 + \
                                         float(left_base_intensity)
 
                     # restrict stake threshold
                     stake_threshold = 65 if stake_threshold < 65 else stake_threshold
-                    stake_threshold = 115 if stake_threshold > 115 else stake_threshold
+                    stake_threshold = 125 if stake_threshold > 125 else stake_threshold
+                    if(stake_threshold > 105 and max(lineVals) < 235): stake_threshold = 105
 
                     # determine index of intersection point
                     intersection_index = 0
 
                     # calculate gradients
-                    line_gradients = np.gradient(lineVals.astype(np.float32))[0:peak_index_line][::-1]
+                    line_gradients = np.gradient(lineVals)[0:peak_index_line][::-1]
+
+                    # determine threshold for drop in intensity
+                    # varies based on lighting conditions
+                    maximum_drop = max(x for x in line_gradients_full if x < 10)
+                    drop_threshold = maximum_drop * 0.333
 
                     # iterate through points prior to peak
                     for t, intensity in enumerate(reversed(lineVals[:peak_index_line])):
+                        # calculate maximum drop near point
+                        max_drop = max(line_gradients.tolist()[t-25:t+25]) if (t>25 and t<(len(line_gradients)-25)) \
+                            else 0
+
+                        # converted index
+                        conv_index = peak_index_line-t
+
                         # if below threshold or large drop
-                        if(intensity < stake_threshold or (line_gradients[t] > 25 and \
-                            lineVals[peak_index_line-t-10] < stake_threshold+10)):
-                            intersection_index = peak_index_line-t
+                        if(
+                            (intensity < stake_threshold
+                                and (max_drop > drop_threshold or max_drop == 0))
+                            or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) \
+                                < stake_threshold * 1.25)
+                        ):
+                            intersection_index = conv_index
                             break
 
                 # add coordinates to list
