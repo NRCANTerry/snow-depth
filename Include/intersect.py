@@ -229,8 +229,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 selected_peak = -1
                 major_peak = -1 # select larger peak for threshold calculation
 
-                peak_gradients = np.gradient(lineVals)
-
                 # iterate through peaks from top to bottom
                 for index in sorted_index:
                     # determine snow cover before peak
@@ -261,13 +259,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     # determine if stake is visible beyond peak
                     if index != last_index:
                         minimum_between_peaks = np.amin(lineVals[peak_index:peaks[index+1]])
-                        num_between_peaks = sum(t < 75 for t in lineVals[peak_index:peaks[index+1]])
                         distance_between_peaks = properties["left_ips"][index+1] - properties["right_ips"][index]
-                        shadow_ratio = float(num_between_peaks) / float(distance_between_peaks) # used to filter out shadows and branches
-
-                        left_edge1 = left_edge - 10 if left_edge > 10 else 0
-                        max_compare = max(peak_gradients.tolist()[int(left_edge1):int(left_edge+10)]) > \
-                            max(peak_gradients.tolist()[int(properties["left_ips"][index+1]-10):int(properties["left_ips"][index+1]+10)]) * 2
 
                     # if peak meets conditions select it
                     if (
