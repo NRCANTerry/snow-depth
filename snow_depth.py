@@ -20,7 +20,6 @@ from update_dataset import createDatasetTensor
 from tqdm import tqdm
 from pathlib import Path
 from generate_report import generate
-from validate_stakes import getValidStakes
 
 # class to allow dot functionality with dict
 class Map(dict):
@@ -246,7 +245,7 @@ if __name__ == '__main__':
     print("\n\nEqualizing Images")
     intervalTime = time()
 
-    if(num_imgs > 50):
+    if(num_imgs > 10):
         from equalize import equalizeImageSetParallel
         images_equalized, images_filtered, template_eq, template = equalizeImageSetParallel(pool,
             images_filtered, filtered_names, template_path, img_border_upper, img_border_lower,
@@ -338,13 +337,20 @@ if __name__ == '__main__':
 
     print("\n\nValidating Stakes")
     intervalTime = time()
-#    from validate_stakes import getValidStakes
 
     # check stakes in image
-    stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
-        upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
-        tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0],
-        imageSummary)
+    if(num_imgs > 10):
+        from validate_stakes import getValidStakesParallel
+        stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakesParallel(pool, images_registered, roi_coordinates, [lower_hsv1,
+            upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
+            tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0],
+            imageSummary)
+    else:
+        from validate_stakes import getValidStakes
+        stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakes(images_registered, roi_coordinates, [lower_hsv1,
+            upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
+            tensor_data_set, dataset_tensor_enabled, STD_DEV_TENSOR, training_path, model_path, misc_params[0],
+            imageSummary)
 
     # update tensor dataset
     createDatasetTensor(template_name, tensor_data_set, dataset_tensor_enabled)

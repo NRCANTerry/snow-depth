@@ -524,3 +524,121 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
     # return list of valid stakes
     return validImages, blobCoords, dataset, actualTensors, imageSummary
+
+
+def unpackArgs(args):
+    '''
+    Function to unpack arguments explicitly
+    @param args function arguments
+    @type args arguments
+    @return output of imageValid function
+    @rtype list
+    '''
+    return imageValid(*args)
+
+# parallel function to determine which stakes are valid
+# verify that blobs are still within reference windows
+# need at least two blobs to have a valid stake
+# returns a dictionary indicating which stakes in each image are valid
+def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_border,
+    debug, img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
+    training_path, model_path, DLActive, imageSummary):
+
+    # determine paths for training images
+    validPath = training_path + "blob\\"
+    invalidPath = training_path + "non-blob\\"
+
+    # flag whethermodel if initialized
+    modelInitialized = False
+    if os.path.isfile(model_path):
+        modelInitialized = True
+
+    if not modelInitialized:
+        # get data about model training
+        validIndex, invalidIndex, flattened_list = getModelData(validPath, invalidPath,
+            coordinates)
+        model = None
+    else:
+        # load model
+        model = load_model(model_path)
+        validIndex = None
+        invalidIndex = None
+        flattened_list = None
+
+    # contains output data
+    stake_output = {}
+
+    # create bool dictionary for images
+    validImages = dict()
+
+    # dictionary for blob coordinates
+    blobCoords = dict()
+
+    # dictionary for stkae tensor
+    actualTensors = dict()
+
+    # get number of blobs in image
+    num_blobs = len(flattened_list)
+
+    # create task list for pool
+    tasks = list()
+    for i, img_ in enumerate(imgs):
+        # determine start valid and invalid index
+        # assume all possible blobs on stake are valid
+        startIndexValid = validIndex + (i * num_blobs)
+        startIndexInvalid = invalidIndex + (i * num_blobs)
+
+        tasks.append((img_, coordinates, hsvRanges, blobSizes, upper_border, debug,
+            img_names[i], debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
+            validPath, invalidPath, model, modelInitialized, startIndexValid,
+            startIndexInvalid, flattened_list, DLActive))
+
+    # run tasks using pool
+    for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
+        # unpack return
+        validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, \
+            stake_dict_coords_high, validIndex, invalidIndex, name, validImgBlobs, stake_dict_tensor = i
+
+        # add to output dict if debugging
+        if debug:
+            stake_output[name] = {
+                "validity": stake_dict,
+                "lower blob": stake_dict_coords_low,
+                "upper blob": stake_dict_coords_high,
+                "tensors": stake_dict_tensor
+            }
+
+        # add to return dictionaries
+        validImages[name] = validStakes
+        blobCoords[name] = actualCoordsStake
+        actualTensors[name] = actualTensorsStake
+
+        # update image summary
+        imageSummary[name][""] = ""
+        imageSummary[name]["Stake (Blob Validity)"] = "Validity      Blob Validity      Tensor"
+        for e, stake in enumerate(validImgBlobs):
+            num_valid = stake.count(True)
+            imageSummary[name]["   %d" % (e+1)] = "%s                %d/%d                 %0.2f " \
+                % (validStakes[e], num_valid, len(stake), actualTensorsStake[e])
+
+    # update dataset
+    dataset = updateDatset(dataset, actualTensors, dataset_enabled)
+
+    # if in debugging mode
+    if(debug):
+        # output JSON file
+        file = open(debug_directory + 'stakes.json', 'w')
+        json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
+
+    # determine whether model should be initialized
+    if not modelInitialized and validIndex > 1000 and invalidIndex > 1000 and DLActive:
+        # create neural network
+        print("\nInitializing Deep Learning Model")
+        LeNet(model_path, validPath, invalidPath)
+
+        # delete training images
+        import shutil
+        shutil.rmtree(str(Path(validPath).parents[0]))
+
+    # return list of valid stakes
+    return validImages, blobCoords, dataset, actualTensors, imageSummary
