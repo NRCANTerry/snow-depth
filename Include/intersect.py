@@ -182,18 +182,19 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
             # find lowest stake line (near intersection point)
             lowest_edge_y = -1
-            for line in v_stake_lines:
-                for x1, y1, x2, y2 in line:
-                    # draw line on debugging image
-                    if debug:
-                        cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
-                            (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
+            if params[5]: # find lowest stake edge if using robust intersection
+                for line in v_stake_lines:
+                    for x1, y1, x2, y2 in line:
+                        # draw line on debugging image
+                        if debug:
+                            cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
+                                (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
 
-                    # update lowest edge variable
-                    if y2 > lowest_edge_y and y2 > y1:
-                        lowest_edge_y = y2 + y0
-                    elif y1 > lowest_edge_y:
-                        lowest_edge_y = y1 + y0
+                        # update lowest edge variable
+                        if y2 > lowest_edge_y and y2 > y1:
+                            lowest_edge_y = y2 + y0
+                        elif y1 > lowest_edge_y:
+                            lowest_edge_y = y1 + y0
 
             # iterate through combinations
             for j, ((x0, y0), (x1, y1)) in enumerate(coordinateCombinations):
