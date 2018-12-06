@@ -300,7 +300,9 @@ if __name__ == '__main__':
     summary["Average Mean Squared Error"] = "%0.2f" % stats[2]
 
     # update registration dataset
-    createDataset(template_name, template_data_set, dataset_enabled)
+    # if using robust registration
+    if reg_params[6]:
+        createDataset(template_name, template_data_set, dataset_enabled)
 
     # ---------------------------------------------------------------------------------
     # Get Date and Time of Images from EXIF data
