@@ -7,6 +7,7 @@ from numpy import squeeze, asarray
 from colour_balance import balanceColour
 from PIL import Image
 from datetime import datetime
+from datetime import time
 import numpy as np
 
 # Constant
@@ -144,6 +145,16 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange, imageSummary):
                 # reset time range
                 dateRange[2] = [None, None, None, None]
 
+            # create time boundaries
+            if dateRange[2] != [None, None, None, None]:
+                lower_time = time(dateRange[2][0], dateRange[2][1])
+                upper_time = lower_time
+
+                if dateRange[2][2] != None and dateRange[2][3] != None:
+                    upper_time = time(dateRange[2][2], dateRange[2][3])
+
+                current_time = time(date.hour, date.minute)
+
             # check if image is valid
             if date is None: # if no exif data available
                 # convert img to cv2
@@ -151,8 +162,8 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange, imageSummary):
             elif(
                 ((dateRange[0] is None and dateRange[1] is None) or
                     dateRange[0] <= date <= dateRange[1]) # date check
-                and (dateRange[2] == [None, None, None, None] or (dateRange[2][0] == date.hour
-                    and dateRange[2][1] == date.minute)) # time check
+                and (dateRange[2] == [None, None, None, None] or (lower_time <= current_time
+                    and current_time <= upper_time)) # time check
             ):
                 # convert img to cv2
                 img = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
