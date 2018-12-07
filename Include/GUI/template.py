@@ -664,10 +664,15 @@ class createTemplate:
                 self.undoButton.config(command = lambda: self.undoIntersection())
 
                 # wait until intersection point selected
-                self.templateWindow.wait_variable(self.waitVariable)
+                while(True):
+                    self.templateWindow.wait_variable(self.waitVariable)
 
-                # determine coordinates
-                if(not self.intersectSelect): return # break if window closed
+                    if(not self.intersectSelect): return # break if window closed
+                    if self.numPoint == 0: # output error if no intersection point selected
+                        messagebox.showinfo("Error", "No Intersection Point Selected")
+                    else:
+                        break
+
                 coords_c = self.canvas.coords(self.lastCircle)
                 [x0_c, y0_c] = [(float(x) + 15) / self.cropRatio for x in coords_c][:2]
                 [x0_c, y0_c] = [x0_c + sx0, y0_c + sy0]
