@@ -76,6 +76,25 @@ You will also need to setup a python 3.6 environment. You can use the attached e
 	3. Maximum Transformation parameters - how much an image can be rotated, translated and scaled before the translation is considered invalid (used to filter out poor registrations)
 6. Click Continue
 7. Follow the GUI instructions
+	1. Select all the stakes in the image  
+		
+	Good selection:  
+	![template3](https://user-images.githubusercontent.com/43354925/49673443-8455d700-fa3c-11e8-8fef-d067103c4377.PNG)  
+	
+	Bad selection:  
+	![template4](https://user-images.githubusercontent.com/43354925/49673444-84ee6d80-fa3c-11e8-8da7-03ed43496f36.PNG)  
+	
+	2. Select blobs on stake  
+	
+	Good selection:  
+	![template5](https://user-images.githubusercontent.com/43354925/49673483-a7808680-fa3c-11e8-92d7-ee783d12b765.PNG)  
+	
+	Bad selection:  
+	![template6](https://user-images.githubusercontent.com/43354925/49673484-a7808680-fa3c-11e8-960f-285a1a2bc33a.PNG)  
+
+	Bad selection:  
+	![template7](https://user-images.githubusercontent.com/43354925/49673482-a6e7f000-fa3c-11e8-9fa6-12e844ed744f.PNG)  
+	
 8. If the template has no snow, after selecting the blobs, you will be asked to identify the intersection point
 	1. If it is visible, you may click on it with the mouse
 	2. If it is not visible, you may click on any point along the stake and provide the GUI with the height of that point. It will automatically calculate where the base of the stake should be.
@@ -83,7 +102,10 @@ You will also need to setup a python 3.6 environment. You can use the attached e
 ### 2. Create a Profile
 - A profile contains the majority of the settings that are required to run the algorithm
 
-1. With the script running and the main GUI window open select "Profiles" then "Create Profile"
+1. With the script running and the main GUI window open select "Profiles" then "Create Profile"  
+
+![profile1](https://user-images.githubusercontent.com/43354925/49673675-43aa8d80-fa3d-11e8-89d0-86e9ba56eb49.PNG)  
+  
 2. Fill in the empty boxes in the preferences window
 3. Filled boxes can also be modified but contain default values and should only be changed after running the algorithm on the default settings
 4. Click "Create Profile" and follow the on-screen instructions
@@ -99,7 +121,11 @@ You will also need to setup a python 3.6 environment. You can use the attached e
 	3. Use the sliders to experiment with different HSV ranges
 	4. The input image is shown on the left and the binary (thresholded) image on the right
 	5. When you find an HSV Range(s) that results in only the blobs being included in the binary image, click "Save Values" to have then inputted into the main GUI window
-3. Once you are happy with your HSV Range, save it by clicking "Colours" then "Save HSV Range"
+3. Once you are happy with your HSV Range, save it by clicking "Colours" then "Save HSV Range"  
+
+Good HSV Range:  
+![preview1](https://user-images.githubusercontent.com/43354925/49673702-5de46b80-fa3d-11e8-896b-12588064f603.PNG)  
+
 
 ### 4. Run the Algorithm
 1. If you have followed the above steps you have succesfully created a template, profile and an HSV range that will be used by the algorithm to determine the snow depth of your input images
