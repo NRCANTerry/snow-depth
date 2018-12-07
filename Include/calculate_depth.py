@@ -175,6 +175,12 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     workbook.close()
 
     # remove negative values
+    filterSet = zip(median_depths, median_depths_est, image_dates)
+    filterSet = [(x, y, z) for x, y, z in filterSet if x != False]
+    median_depths, median_depths_est, image_dates = zip(*filterSet)
+
+    #median_depths = [x for x in median_depths if x != False]
+    #median_depths_est = [x for x in median_depths_est if x!= False]
     median_depths = np.asarray(median_depths).clip(0)
     median_depths_est = np.asarray(median_depths_est).clip(0)
 

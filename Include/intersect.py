@@ -247,7 +247,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                     # determine snow cover after peak
                     peak_range = lineVals[int(left_edge):]
-                    snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / float(len(peak_range))
+                    snow_cover = float(len(np.where(peak_range > snow_threshold)[0])) / (float(len(peak_range)) - \
+                        float(len(np.where(peak_range == 0)[0]))) # don't count image border
 
                     # get peak width and next peak width
                     peak_width = peakWidths[index]
@@ -270,8 +271,10 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         edgeValid = True # flag for whether major amount of stake remaining
                         if right_edge < index_edge:
                             remaining_range = lineVals[int(right_edge):int(index_edge)]
-                            remaining_stake = float(len(np.where(remaining_range < 100)[0])) / float(len(remaining_range))
-                            if remaining_stake > 0.4: edgeValid = False # if more than 33% of remaining range is stake
+                            remaining_stake = (float(len(np.where(remaining_range < 100)[0])) - float(len(np.where(remaining_range == 0)[0]))) \
+                                / float(len(remaining_range))
+                            index_edge_prop = index_edge / float(line_length) # don't consider this check if stake edge extends to bottom
+                            if remaining_stake > 0.4 and index_edge_prop < 0.75: edgeValid = False # if more than 40% of remaining range is stake
 
                     # if peak meets conditions select it
                     if (
@@ -279,9 +282,9 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         and stake_cover > params[3] # majority stake before peak
                         and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
-                            and float(peak_intensity) / float(next_peak_height) > 0.5))
+                            and float(peak_intensity) / float(next_peak_height) > 0.5) or (y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1))
                         and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100)
-                            or (minimum_between_peaks < 75 and y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1 and peak_width > 25))
+                            or (minimum_between_peaks < 100 and y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1 and peak_width > 25))
                         and (minimum_between_peaks > 100 or distance_between_peaks > 200 or (y[int(right_edge)]>lowest_edge_y and lowest_edge_y != -1))
                         and edgeValid # ensure no more large amounts of stake remain
                     ):
@@ -353,35 +356,39 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         if(
                             (intensity < stake_threshold
                                 and (max_drop > drop_threshold or max_drop == 0))
-                            or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) \
-                                < stake_threshold * 1.25)
+                            #or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) \
+                            #    < stake_threshold * 1.5)
                         ):
                             # if intersection index is beyond edge of strong peak decrease threshold slightly
-                            if conv_index > peakWidthsOutput[2][selected_peak] and \
-                                lineVals[int(peakWidthsOutput[2][selected_peak])] > 60 and intersection_index == 0:
-                                # decrease threshold
-                                stake_threshold = lineVals[int(peakWidthsOutput[2][selected_peak])] + \
-                                    (abs(stake_threshold - lineVals[int(peakWidthsOutput[2][selected_peak])]) / 4.0)
-                                intersection_index = conv_index
-                                continue
+                            stake_threshold_updated = False
+                            if intersection_index == 0 and max(lineVals) < 230: # don't run on bright scenes
+                                for a, robustEdge in enumerate(peakWidthsOutput[2][selected_peak:]):
+                                    if conv_index > robustEdge and lineVals[int(robustEdge)] > 65 and \
+                                        abs(robustEdge-conv_index) < 50:
+                                        stake_threshold = lineVals[int(robustEdge)] + \
+                                            (abs(stake_threshold - lineVals[int(robustEdge)]) / 4.0)
+                                        conv_index = robustEdge
+                                        stake_threshold_updated = True
 
-                            if selected_peak != last_index and conv_index > peakWidthsOutput[2][selected_peak+1] \
-                                and lineVals[int(peakWidthsOutput[2][selected_peak+1])] > 60 and intersection_index == 0:
-                                # decrease threshold
-                                stake_threshold = lineVals[int(peakWidthsOutput[2][selected_peak+1])] + \
-                                    (abs(stake_threshold - lineVals[int(peakWidthsOutput[2][selected_peak+1])]) / 4.0)
-                                intersection_index = conv_index
-                                continue
+                                # if edge estimate and robust peak edge agree
+                                #if conv_index - index_edge < 20:
+                                #    intersection_index = int(conv_index)
+                                #    break
+
+                                if stake_threshold_updated:
+                                    intersection_index = int(conv_index)
+                                    continue # run again
 
                             # if there is a large drop nearby choose it
-                            max_nearby = max(line_gradients.tolist()[t:t+10]) if (t<len(line_gradients)-25) else 0
-                            if max_nearby > line_gradients[peak_index_line-t] * 2.0:
-                                if(lineVals[int(conv_index - np.argmax(line_gradients.tolist()[t:t+10]))] > 55):
-                                    conv_index -= np.argmax(line_gradients.tolist()[t:t+10])
+                            if not stake_threshold_updated:
+                            #    max_nearby = max(line_gradients.tolist()[t:t+10]) if (t<len(line_gradients)-25) else 0
+                            #    if max_nearby > line_gradients[peak_index_line-t] * 2.0 and max(lineVals) < 240:
+                            #        if(lineVals[int(conv_index - np.argmax(line_gradients.tolist()[t:t+10]))] > 55):
+                            #            conv_index -= np.argmax(line_gradients.tolist()[t:t+10])
 
-                            # set intersection index
-                            intersection_index = conv_index
-                            break
+                                # set intersection index
+                                intersection_index = conv_index
+                                break
 
                     # overlay debugging points
                     if(debug):

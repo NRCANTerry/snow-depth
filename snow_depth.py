@@ -237,6 +237,7 @@ if __name__ == '__main__':
 
     # update number of images
     num_imgs = len(images_filtered)
+    if num_imgs == 0: sys.exit()
 
     # ---------------------------------------------------------------------------------
     # Equalize Images
