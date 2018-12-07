@@ -596,8 +596,8 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
     else:
         # load model
         model = load_model(model_path)
-        validIndex = None
-        invalidIndex = None
+        validIndex = 0
+        invalidIndex = 0
         flattened_list = None
 
     # contains output data
@@ -613,7 +613,7 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
     actualTensors = dict()
 
     # get number of blobs in image
-    num_blobs = len(flattened_list)
+    num_blobs = len(flattened_list) if not modelInitialized else 0
 
     # create task list for pool
     tasks = list()
