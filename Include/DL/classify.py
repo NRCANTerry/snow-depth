@@ -18,6 +18,11 @@ def classify(img, model):
     @rtype prob float
     '''
 
+    # ensure width and height are non-zero
+    height, width = img.shape[:2]
+    if not height > 0 or not width > 0:
+        return False, 1.0
+
     # pre-process image
     img = cv2.resize(img, (28, 28))
     img = img.astype("float") / 255.0
