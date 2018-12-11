@@ -80,31 +80,107 @@ def adjustCoords(x0, x1, degree, type):
         return x0, x1
 
 
+def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
+    maxLineVal, properties, index_edge, line_length, y, lowest_edge_y):
+    """
+    Function to determine which peak corresponds to the intersection point
+    """
+
+    selected_peak = -1 # index of correct peak
+    major_peak = -1 # larger peak for threshold calculation
+
+    # iterate through peaks from top to bottom of stake
+    for index in sorted_index:
+        # determine stake cover before peak
+        peak_index = peaks[index]
+        left_edge = int(properties["left_ips"][index])
+        peak_range = lineVals[:left_edge]
+        peak_intensity = lineVals[peak_index]
+
+        snow_threshold = peak_intensity * params[1] if peak_intensity < 200 else params[2]
+        stake_cover = len(np.where(peak_range < snow_threshold)[0]) / float(len(peak_range))
+
+        # determine snow cover after peak
+        peak_range = lineVals[left_edge:]
+        snow_cover = len(np.where(peak_range > snow_threshold)[0]) / float(len(peak_range) - \
+            len(np.where(peak_range==0)[0])) # don't count image border
+
+        # determine peak width
+        peak_width = peakWidths[index]
+
+        # if peak is not last, calculate additional parameters
+        if index != last_index:
+            peak_width_next = peakWidths[index+1] # next peak width
+            proximity_peak = properties["left_ips"][index+1] - properties["right_ips"][index] # distance to next peak
+            next_peak_height = lineVals[peaks[index+1]] # intensity of next peak
+
+            # determine if stake is visible beyond peak
+            minimum_between_peaks = np.amin(lineVals[peak_index:peaks[index+1]])
+            distance_between_peaks = properties["left_ips"][index+1] - properties["right_ips"][index]
+
+            # determine if there is a significant amount of stake before the edge index
+            edgeValid = True # flag for whether major amount of stake remaining
+            right_edge = properties["right_ips"][index]
+            if right_edge < index_edge:
+                remaining_range = lineVals[int(right_edge):int(index_edge)]
+                remaining_stake = float(len(np.where(remaining_range < 100)[0]) - len(np.where(remaining_range==0)[0])) \
+                    / float(len(remaining_range))
+                index_edge_prop = index_edge / float(line_length) # don't consider this check if stake edge extends to bottom
+                if remaining_stake > 0.4 and index_edge_prop < 0.75: edgeValid = False # if more than 40% of remaining range is stake
+
+            # determine if peak is past last known stake edge
+            past_edge = y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1
+
+        # check if peak meets conditions
+        if (
+            index != last_index # peak isn't last
+            and stake_cover > params[3] # majority stake before peak
+            and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150) or past_edge) # snow after peak
+            and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
+                and peak_intensity / float(next_peak_height) > 0.5) or past_edge) # peak is high enough
+            and (peak_width > 50 or (peak_width + peak_width_next > 75 and proximity_peak < 100)
+                or (minimum_between_peaks < 100 and past_edge and peak_width > 25)) # peak is sustained (wide enough)
+            and (minimum_between_peaks > 100 or distance_between_peaks > 200 or past_edge) # no stake after peak
+            and edgeValid # no more large amounts of stake remain
+        ):
+            # select peak
+            selected_peak = index
+            if peak_intensity < maxLineVal and next_peak_height > maxLineVal and proximity_peak < 100:
+                major_peak = index + 1
+            else:
+                major_peak = index
+            break
+
+        # last peak intersection conditions
+        elif (
+            index == last_index # last peak
+            and stake_cover > params[3] # stake before peak
+            and peak_intensity > float(maxLineVal) * 0.75 # large enough
+            and (snow_cover > params[4] * 0.666 or peak_index > float(len(lineVals)) * 0.75) # enough snow afterwards or near end
+        ):
+            # select peak
+            selected_peak = index
+            major_peak = index
+            break
+
+    # return indexes of peaks
+    return selected_peak, major_peak
+
+
 def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals, properties,
     lowest_edge_y, index_edge):
-    '''
-    Function to determine point intersection index once peak has been identified
-    @param peaks list of peaks found in signal
-    @param selected_peak index of peak of interest
-    @param major_peak index of large peak (can be same as selected_peak)
-    @param lineVals signal intensity values
-    @param properties peak properties
-    @param lowest_edge_y y value of lowest edge of stake
-    @param index_edge approximate index of lowest edge value along signal
+    """
+    Function to determine intersection index once peak has been identified
 
-    @type peaks list
-    @type selected_peak int
-    @type major_peak int
-    @type lineVals np.array
-    @type properties np.array
-    @type lowest_edge_y float
-    @type index_edge int
-
-    @return intersection_index index of intersection of snow and stake
-    @return peak index of selected_peak
-    @rtype intersection_index int
-    @rtype peak int
-    '''
+    Keyword arguments:
+    peaks -- list of peaks found in signal
+    selected_peak -- index of peak selected in peak processing
+    major_peak -- index of large peak selected in peak processing
+    lineVals -- signal intensity values
+    properties -- peak properties
+    lowest_edge_y -- lowest known coordinate of stake
+    index_edge -- approximate index of lowest edge value along signal lin
+    """
 
     # determine peak index in lineVals array
     peak = np.uint32(peaks[selected_peak])
@@ -155,7 +231,7 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals, properties,
             min_nearby = np.amax(min_range) if len(min_range) > 0 else 0
 
             # compare against current point
-            if min_nearby > line_gradients[intersection_index] * 2.0:
+            if len(min_range) > 0 and abs(min_nearby) > abs(line_gradients[intersection_index]):
                 intersection_index -= np.argmax(min_range)
             break
 
@@ -311,11 +387,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                 # extract values along the line
                 lineVals = ndimage.map_coordinates(np.transpose(img), np.vstack((x,y))).astype(np.float32)
-
-                # apply gaussian filter to smooth line
                 lineVals_smooth = ndimage.filters.gaussian_filter1d(lineVals, 10)
-
-                # append zero to signal to create peak
                 lineVals_smooth = np.append(lineVals_smooth, 0)
 
                 # determine peaks and properties
@@ -329,15 +401,20 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 sorted_index = np.argsort(peaks)
                 last_index = sorted_index[len(sorted_index)-1] if len(sorted_index) > 0 else 0
 
-                # index of selected peak in sorted list of peaks
-                selected_peak = -1
-                major_peak = -1 # select larger peak for threshold calculation
-
                 # determine index of last known stake edge
                 index_edge = 0
                 if lowest_edge_y != -1:
                     index_edge = min(range(len(y)), key=lambda i: abs(y[i]-lowest_edge_y))
 
+                '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+                STEP 1: Find correct peak in signal
+                '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+                selected_peak, major_peak = getPeakIndex(sorted_index, peaks, params,
+                    lineVals, peakWidths, last_index, maxLineVal, properties, index_edge,
+                    line_length, y, lowest_edge_y)
+
+                '''
                 # iterate through peaks from top to bottom
                 for index in sorted_index:
                     # determine snow cover before peak
@@ -412,6 +489,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         selected_peak = index
                         major_peak = index
                         break
+                '''
 
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
                 STEP 2: Find intersection index
