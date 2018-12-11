@@ -79,6 +79,80 @@ def adjustCoords(x0, x1, degree, type):
     else:
         return x0, x1
 
+def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals, properties,
+    lowest_edge_y, index_edge):
+    '''
+    Function to determine point intersection index once peak has been identified
+    @param peaks list of peaks found in signal
+    @param selected_peak index of peak of interest
+    @param major_peak index of large peak (can be same as selected_peak)
+    @param lineVals signal intensity values
+    @param properties peak properties
+    @param lowest_edge_y y value of lowest edge of stake
+    @param index_edge approximate index of lowest edge value along signal
+
+    @type peaks list
+    @type selected_peak int
+    @type major_peak int
+    @type lineVals np.array
+    @type properties np.array
+    @type lowest_edge_y float
+    @type index_edge int
+
+    @return intersection_index index of intersection of snow and stake
+    @return peak index of selected_peak
+    @rtype intersection_index int
+    @rtype peak int
+    '''
+
+    # determine peak index in lineVals array
+    peak = np.uint32(peaks[selected_peak])
+
+    # stake threshold is average of intensity at left edge of peak and base
+    left_edge_intensity = lineVals[int(properties["left_ips"][major_peak])]
+    left_base_intensity = lineVals[int(properties["left_bases"][selected_peak])]
+    stake_threshold = (left_edge_intensity - left_base_intensity) / 2.0 + left_base_intensity
+
+    # restrict threshold to 65 - 125 range
+    stake_threshold = min(125, max(65, stake_threshold))
+
+    # adjust threshold based on edge detection results
+    if lowest_edge_y != -1:
+        lowest_edge_intensity = lineVals[int(index_edge)]
+
+        # if large difference between edge intensity and calculated threshold
+        if stake_threshold > lowest_edge_intensity * 1.5:
+            stake_threshold = (stake_threshold - lowest_edge_intensity) / 2.0 + lowest_edge_intensity
+
+    # determine index of intersection point
+    intersection_index = 0
+
+    # calculate gradients
+    line_gradients = np.gradient(lineVals)[:peak][::-1]
+
+    # iterate through points prior to peak
+    for t, intensity in enumerate(reversed(lineVals[:peak])):
+        if intensity < stake_threshold:
+            # converted index
+            intersection_index = peak-t
+
+            # find nearest peak
+            if selected_peak != 0:
+                nearest_edge = int(intersection_index - properties["right_ips"][selected_peak-1])
+                min_range = line_gradients[t:nearest_edge]
+            else:
+                min_range = line_gradients[t:t+50] if t < len(line_gradients) - 50 else []
+
+            # determine max drop
+            min_nearby = np.amax(min_range) if len(min_range) > 0 else 0
+
+            # compare against current point
+            if min_nearby > line_gradients[conv_index] * 2.0:
+                intersection_index -= np.argmax(min_range)
+            break
+
+    return intersection_index, peak
+
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     debug_directory, signal_dir, params, tensors, upper_border, signal_var,
     template_tensors):
@@ -152,19 +226,19 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             # find edges in roi
             gray_roi = cv2.cvtColor(stake_bottom_roi, cv2.COLOR_BGR2GRAY)
             gray_roi = cv2.GaussianBlur(gray_roi, (3, 3), 0)
-            edges = cv2.Canny(gray_roi, 50, 150)
+            edges = cv2.Canny(gray_roi, 50, 200)
             edges = cv2.dilate(edges, np.ones((3, 3), dtype=np.uint8))
 
             # calculate parameters for Hough Line Transform
-            maxLineGap = 75.0 / tensors[i] if tensors[i] != True else template_tensors[i] # 75mm
-            minLineLength = 20.0 / tensors[i] if tensors[i] != True else template_tensors[i] # 20mm
+            maxLineGap = 50.0 / tensors[i] if tensors[i] != True else 50.0 / template_tensors[i] # 75mm
+            minLineLength = 50.0 / tensors[i] if tensors[i] != True else 50.0 / template_tensors[i] # 20mm
 
             # Remove all but vertical edges
-            edgeKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 25))
+            edgeKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 15))
             edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, edgeKernel)
 
             # find lines
-            lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180.0, threshold=100,
+            lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180.0, threshold=25,
                 maxLineGap=maxLineGap, minLineLength=minLineLength)
 
             # isolate lines along stake boundary
@@ -173,12 +247,31 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 for line in lines:
                     for x1, y1, x2, y2 in line:
                         x_coord = x1 + roiCoordinates[i][0][0][0]
-                        blob_shift = lineShift*2
+                        blob_shift = lineShift
 
                         # if within stake boundary
                         if (x_coord < bottomBlob[0][0] and x_coord > bottomBlob[0][0] - blob_shift) or \
                             (x_coord > bottomBlob[2][0] and x_coord < bottomBlob[2][0] + blob_shift):
                             v_stake_lines.append(line)
+
+            # eliminate lines that don't have a matching line on opposite side of stake
+            stake_width = 100.0 / tensors[i] if tensors[i] != True else 100.0 / template_tensors[i] # 100 mm
+            for line_index, line in enumerate(v_stake_lines):
+                x1, y1, x2, y2 = line[0] # unpack coordinates
+
+                # check against other lines
+                lineValid = False
+                for second_line_index, secondLine in enumerate(v_stake_lines):
+                    x_1, y_1, x_2, y_2 = secondLine[0]
+
+                    # if line has x coordinate shift equal to stake width
+                    if abs(abs(x_1-x1) - stake_width) <= 10:
+                        lineValid = True
+                        break
+
+                # if line isn't valid remove
+                if not lineValid:
+                    v_stake_lines.pop(line_index)
 
             # find lowest stake line (near intersection point)
             lowest_edge_y = -1
@@ -189,6 +282,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         if debug:
                             cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
                                 (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
+                            cv2.line(stake_bottom_roi, (int(x1), int(y1)),
+                                (int(x2), int(y2)), (0, 255, 0), 2)
 
                         # update lowest edge variable
                         if y2 + y0 > lowest_edge_y and y2 > y1:
@@ -280,7 +375,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     if (
                         index != last_index # peak isn't last
                         and stake_cover > params[3] # majority stake before peak
-                        and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150)) # snow after peak
+                        and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150) or (y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1)) # snow after peak
                         and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                             and float(peak_intensity) / float(next_peak_height) > 0.5) or (y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1))
                         and (peak_width > 50 or ((peak_width + peak_width_next > 75) and proximity_peak < 100)
@@ -314,6 +409,11 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                 # if a snow case was found
                 if(selected_peak != -1):
+                    # get index of snow intersection
+                    intersection_index, peak_index_line = getIntersectionIndex(peaks, selected_peak,
+                        major_peak, lineVals, properties, lowest_edge_y, index_edge)
+
+                    '''
                     # determine peak index in lineVals array
                     peak_index_line = np.uint32(peaks[selected_peak])
 
@@ -331,6 +431,15 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     stake_threshold = 65 if stake_threshold < 65 else stake_threshold
                     stake_threshold = 125 if stake_threshold > 125 else stake_threshold
                     if(stake_threshold > 105 and max(lineVals) < 235): stake_threshold = 105
+
+                    # adjust stake_threshold based on edge detection results
+                    if lowest_edge_y != -1:
+                        lowest_edge_intensity = lineVals[int(index_edge)]
+
+                        # if large difference between edge intensity and calculated threshold
+                        if stake_threshold > lowest_edge_intensity * 1.5:
+                            stake_threshold = (float(stake_threshold) - float(lowest_edge_intensity)) / 3.0 + \
+                                                float(lowest_edge_intensity)
 
                     # determine index of intersection point
                     intersection_index = 0
@@ -352,43 +461,26 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         # converted index
                         conv_index = peak_index_line-t
 
-                        # if below threshold or large drop
-                        if(
-                            (intensity < stake_threshold
-                                and (max_drop > drop_threshold or max_drop == 0))
-                            #or (line_gradients[t] > 25 and min(lineVals[conv_index-25:conv_index].tolist()) \
-                            #    < stake_threshold * 1.5)
-                        ):
-                            # if intersection index is beyond edge of strong peak decrease threshold slightly
-                            stake_threshold_updated = False
-                            if intersection_index == 0 and max(lineVals) < 230: # don't run on bright scenes
-                                for a, robustEdge in enumerate(peakWidthsOutput[2][selected_peak:]):
-                                    if conv_index > robustEdge and lineVals[int(robustEdge)] > 65 and \
-                                        abs(robustEdge-conv_index) < 50:
-                                        stake_threshold = lineVals[int(robustEdge)] + \
-                                            (abs(stake_threshold - lineVals[int(robustEdge)]) / 4.0)
-                                        conv_index = robustEdge
-                                        stake_threshold_updated = True
+                        # if below threshold
+                        if intensity < stake_threshold:
+                            # find nearest peak
+                            if selected_peak != 0:
+                                nearest_edge = int(conv_index - properties["right_ips"][selected_peak-1])
+                                min_range = line_gradients[t:nearest_edge]
+                            else:
+                                min_range = line_gradients[t:t+50] if t < len(line_gradients) - 50 else []
 
-                                # if edge estimate and robust peak edge agree
-                                #if conv_index - index_edge < 20:
-                                #    intersection_index = int(conv_index)
-                                #    break
+                            # determine max drop
+                            min_nearby = np.amax(min_range) if len(min_range) > 0 else 0
 
-                                if stake_threshold_updated:
-                                    intersection_index = int(conv_index)
-                                    continue # run again
+                            # compare against current point
+                            if min_nearby > line_gradients[conv_index] * 2.0:
+                                conv_index -= np.argmax(min_range)
 
-                            # if there is a large drop nearby choose it
-                            if not stake_threshold_updated:
-                            #    max_nearby = max(line_gradients.tolist()[t:t+10]) if (t<len(line_gradients)-25) else 0
-                            #    if max_nearby > line_gradients[peak_index_line-t] * 2.0 and max(lineVals) < 240:
-                            #        if(lineVals[int(conv_index - np.argmax(line_gradients.tolist()[t:t+10]))] > 55):
-                            #            conv_index -= np.argmax(line_gradients.tolist()[t:t+10])
-
-                                # set intersection index
-                                intersection_index = conv_index
-                                break
+                            # set intersection index
+                            intersection_index = conv_index
+                            break
+                    '''
 
                     # overlay debugging points
                     if(debug):
@@ -405,7 +497,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 # if in debugging mode
                 if debug and signal_var:
                     # plot and save
-                    fig, axes = plt.subplots(nrows = 2)
+                    fig, axes = plt.subplots(nrows=2)
                     axes[0].imshow(img)
                     axes[0].plot([x0, x1], [y0, y1], 'ro-')
                     axes[0].axis('image')
