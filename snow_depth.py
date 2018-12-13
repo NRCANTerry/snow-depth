@@ -293,7 +293,7 @@ if __name__ == '__main__':
     summary["Per Image Registration Time"] = "%0.2fs" % (regIntervalTime)
     summary.regRestrictions = [ROTATION, TRANSLATION, SCALE]
     regTypes = ["Feature and Intensity", "Feature Only", "Intensity Only"]
-    summary["Registration Mode"] = regTypes[reg_params[5]]
+    summary["Registration Mode"] = regTypes[reg_params[6]]
     summary["ORB Registration"] = "%d/%d" % (stats[0], num_imgs)
     summary["ECC Registration"] = "%d/%d" % (stats[1], num_imgs)
     summary["Failed Registration"] = "%d/%d" % (num_imgs - len(images_registered), num_imgs)
@@ -301,7 +301,7 @@ if __name__ == '__main__':
 
     # update registration dataset
     # if using robust registration
-    if reg_params[6]:
+    if reg_params[7]:
         createDataset(template_name, template_data_set, dataset_enabled)
 
     # ---------------------------------------------------------------------------------
