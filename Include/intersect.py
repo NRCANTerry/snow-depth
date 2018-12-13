@@ -392,7 +392,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     x_1, y_1, x_2, y_2 = secondLine[0]
 
                     # if line has x coordinate shift equal to stake width
-                    if abs(abs(x_1-x1) - stake_width) <= 10:
+                    if abs(abs(x_1-x1) - stake_width) <= 10 and \
+                        (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
                         lineValid = True
                         break
 
