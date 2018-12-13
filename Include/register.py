@@ -7,12 +7,6 @@ from matplotlib import pyplot as plt
 import os
 import time
 
-# constants
-MAX_FEATURES = 262144
-MAX_WIDTH = 1920
-MAX_HEIGHT = 1080
-MAX_DISTANCE = 0.05 # used to filter out bad matches
-
 # Function to align image to template (https://github.com/NRCANTerry/snow-depth/wiki/register.py)
 def register(img, name, template, template_reduced_noise, img_apply, debug,
     debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
@@ -38,6 +32,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # filter out poor matches based on distance between endpoints
     filteredMatches = list()
     height, width = template.shape
+    MAX_DISTANCE = params[5] / 100.0
     thresholdDist = MAX_DISTANCE * np.sqrt(np.square(height) + np.square(width))
     for m in matches:
         # extract endpoints
@@ -65,7 +60,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # determine affine 2D transformation using RANSAC robust method
     # if feature based registration selected
-    if(params[5] == 0 or params[5] == 1):
+    if(params[6] == 0 or params[6] == 1):
         affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
             refineIters=20)[0]
     else:
@@ -84,8 +79,8 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # update dataset
     # if dataset isn't enabled, append mean_squared_error to dataset or if
     # robust registration isn't in use
-    if((not dataset_enabled or not params[6]) and validTransform(MAX_ROTATION, MAX_TRANSLATION,
-        MAX_SCALING, affine_matrix) and params[5] != 2):
+    if((not dataset_enabled or not params[7]) and validTransform(MAX_ROTATION, MAX_TRANSLATION,
+        MAX_SCALING, affine_matrix) and params[6] != 2):
         # apply registration
         imgReg = cv2.warpAffine(img_apply, affine_matrix, (width, height))
         imgRegGray = cv2.cvtColor(imgReg, cv2.COLOR_BGR2GRAY)
@@ -93,7 +88,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # if dataset is enabled, compare matrix to mean
     elif validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, affine_matrix) \
-         and params[5] != 2:
+         and params[6] != 2:
         # get mean and standard deviation from dataset
         mean = dataset[0][0]
         std_dev = dataset[0][1]
@@ -154,7 +149,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # run ECC algorithm (results are stored in warp matrix)
     # if ECC image registration selected
-    if(params[5] == 0 or params[5] == 2):
+    if(params[6] == 0 or params[6] == 2):
         # run ECC registration on ORB aligned image
         try:
             warp_matrix = cv2.findTransformECC(templateCrop, imgCrop, warp_matrix, warp_mode, criteria)[1]
@@ -183,7 +178,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
         std_dev = dataset[0][1]
 
         # align image if warp is within spec
-        if (mean_squared_error_ecc <= (mean+(std_dev*NUM_STD_DEV)) and params[5] != 1):
+        if (mean_squared_error_ecc <= (mean+(std_dev*NUM_STD_DEV)) and params[6] != 1):
             # align image
             imgECCAligned = cv2.warpAffine(imgReg, warp_matrix, (width,height), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
             ECC_aligned_flag = True
@@ -193,7 +188,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
             imgECCAligned = imgReg
 
     # align image if dataset not enabled
-    elif mean_squared_error_ecc <= max_mean_squared_error and params[5] != 1 and \
+    elif mean_squared_error_ecc <= max_mean_squared_error and params[6] != 1 and \
         not dataset_enabled and validTransform(MAX_ROTATION, MAX_TRANSLATION,
         MAX_SCALING, warp_matrix) and not ECC_Failed_Flag:
         # align image
@@ -378,7 +373,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         count += 1
 
     # update dataset
-    if params[6]: # update dataset if using robust registration
+    if params[7]: # update dataset if using robust registration
         print("Updating Dataset...")
         dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
     avg_MSE = sum(MSE_vals) / len(MSE_vals) if len(MSE_vals) > 0 else 0
@@ -481,7 +476,7 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
             imageSummary[name]["ECC Matrix"] = np.round(ECCMatrix, 2)
 
     # update dataset
-    if params[6]: # update dataset if using robust registration
+    if params[7]: # update dataset if using robust registration
         print("Updating Dataset...")
         dataset = updateDataset(dataset, MSE_vals, dataset_enabled)
     avg_MSE = sum(MSE_vals) / len(MSE_vals)
