@@ -130,7 +130,7 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
             and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                 and peak_intensity / float(next_peak_height) > 0.5) or past_edge) # peak is high enough
             and (peak_width > 50 or (peak_width + peak_width_next > 50 and proximity_peak < 100)
-                or (minimum_between_peaks < 100 and past_edge)) # peak is sustained (wide enough)
+                or (minimum_between_peaks < 100 and past_edge) or (proximity_peak < 50 and past_edge)) # peak is sustained (wide enough)
             and (minimum_between_peaks > 100 or distance_between_peaks > 200 or past_edge) # no stake after peak
             and edgeValid # no more large amounts of stake remain
         ):
@@ -237,6 +237,7 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals,
 
                 # find highest peak
                 highest_peak = [0, line_gradients[len(line_gradients)-16], 0]
+                index_peak = 0
 
                 for w, pt in enumerate(gPeaks):
                     # get peak width
@@ -252,14 +253,33 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals,
                             and pWidth > highest_peak[2] * 2)) # higher peak or larger base
                     ):
                         highest_peak = [pt, line_gradients[pt], pWidth] # update highest peak
+                        index_peak = w # update index variable
 
                 # adjust intersection point via threshold
-                if highest_peak[0] < dist and highest_peak[0] != 0: # if adjustment is in forward direction
-                    #intersection_index -= (dist - highest_peak[0])
-                    conv_index = intersection_index - (dist - highest_peak[0])
-                    stake_threshold = (stake_threshold - lineVals[conv_index]) / 2.0 + lineVals[conv_index]
-                    intersection_adjusted = True
-                    continue
+                if highest_peak[0] < dist and highest_peak[0] != 0 and max_drop < 15: # if adjustment is in forward direction
+                    # check if peak is isolated --> no similar size peaks in front of it
+                    # this indicates a clean stake and allows us to select that as the intersection
+                    # point instead of simply adjusting the stake threshold
+                    left_endpoint_before = left_endpoint - 100 if left_endpoint > 100 else 0
+                    trimmed_line_vals = lineVals[int(left_endpoint_before):int(gProperties["left_bases"][index_peak]+left_endpoint)]
+
+                    if len(trimmed_line_vals) > 1:
+                        trimmed_line_gradients = np.clip(np.gradient(trimmed_line_vals), 0, 100)
+
+                        # find peaks in new range with height 50% or greater than highest peak
+                        gPeaksBefore = find_peaks(trimmed_line_gradients, height=highest_peak[1]*0.5)[0]
+
+                    # if no peaks found
+                    if len(trimmed_line_vals) > 1 and len(gPeaksBefore) == 0 and selected_peak >= 1:
+                        intersection_index -= (dist - highest_peak[0])
+                        break
+
+                    # noisy signal
+                    else:
+                        conv_index = intersection_index - (dist - highest_peak[0])
+                        stake_threshold = (stake_threshold - lineVals[conv_index]) / 2.0 + lineVals[conv_index]
+                        intersection_adjusted = True
+                        continue
             break
 
     # return final and initial indices and peaks
@@ -392,7 +412,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     x_1, y_1, x_2, y_2 = secondLine[0]
 
                     # if line has x coordinate shift equal to stake width
-                    if abs(abs(x_1-x1) - stake_width) <= 10 and \
+                    if abs(abs(x_1-x1) - stake_width) <= 10 or abs(abs(x_2-x2) - stake_width) <= 10 and \
                         (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
                         lineValid = True
                         break
@@ -452,7 +472,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
                 STEP 1: Find correct peak in signal
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
+                #print(i, j)
                 selected_peak, major_peak = getPeakIndex(sorted_index, peaks, params,
                     lineVals, peakWidths, last_index, maxLineVal, properties, index_edge,
                     line_length, y, lowest_edge_y)
