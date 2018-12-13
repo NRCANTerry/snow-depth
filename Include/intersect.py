@@ -135,8 +135,8 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
             and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150) or past_edge) # snow after peak
             and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                 and peak_intensity / float(next_peak_height) > 0.5) or past_edge) # peak is high enough
-            and (peak_width > 50 or (peak_width + peak_width_next > 75 and proximity_peak < 100)
-                or (minimum_between_peaks < 100 and past_edge) or (proximity_peak < 50 and past_edge)) # peak is sustained (wide enough)
+            and (peak_width > 50 or (peak_width + peak_width_next > 50 and proximity_peak < 100)
+                or (minimum_between_peaks < 100 and past_edge)) # peak is sustained (wide enough)
             and (minimum_between_peaks > 100 or distance_between_peaks > 200 or past_edge) # no stake after peak
             and edgeValid # no more large amounts of stake remain
         ):
@@ -164,8 +164,8 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
     return selected_peak, major_peak
 
 
-def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals_smooth,
-    lineVals, properties, lowest_edge_y, index_edge):
+def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals,
+    properties, lowest_edge_y, index_edge, peakWidthsOutput):
     """
     Function to determine intersection index once peak has been identified
 
@@ -187,23 +187,9 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals_smooth,
     left_base_intensity = lineVals[int(properties["left_bases"][selected_peak])]
     stake_threshold = (left_edge_intensity - left_base_intensity) / 2.0 + left_base_intensity
 
-    # restrict threshold to 70 - 125 range
-    stake_threshold = min(125, max(70, stake_threshold))
-
-    # adjust threshold based on edge detection results
-    if lowest_edge_y != -1:
-        lowest_edge_intensity = lineVals[int(index_edge)]
-
-        # if large difference between edge intensity and calculated threshold
-        #if stake_threshold > lowest_edge_intensity * 1.5:
-        #    stake_threshold = (stake_threshold - lowest_edge_intensity) / 4.0 + lowest_edge_intensity
-
-        # if edge intensity is much higher than base intensity
-        #elif lowest_edge_intensity > left_base_intensity * 1.5 and lowest_edge_intensity < 80:
-        #    stake_threshold = (left_edge_intensity - lowest_edge_intensity) / 2.0 + lowest_edge_intensity
-
-    # restrict threshold to 70 - 125 range
-    stake_threshold = min(125, max(70, stake_threshold))
+    # restrict threshold to 65 - 125 range or 65 - 105 range
+    stake_threshold = min(125, max(65, stake_threshold)) if max(lineVals) > 235 \
+        else min(105, max(65, stake_threshold))
 
     # determine index of intersection point
     intersection_index = 0
@@ -211,39 +197,79 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals_smooth,
     # calculate gradients
     line_gradients = np.gradient(lineVals)[:peak][::-1]
 
+    # determine threshold for drop in intensity
+    # varies based on lighting conditions
+    maximum_drop = max(x for x in line_gradients if x < 10)
+    drop_threshold = maximum_drop * 0.333
+
+    # initial intersection index
+    initial_intersection_index = 0
+    intersection_adjusted = False
+
     # iterate through points prior to peak
     for t, intensity in enumerate(reversed(lineVals[:peak])):
-        if intensity < stake_threshold:
+        # calculate maximum drop near point
+        max_drop = np.amax(line_gradients[t-25:t+25]) if t > 25 and t < len(line_gradients) - 25 \
+            else 0
+
+        if intensity < stake_threshold and (max_drop > drop_threshold or max_drop == 0):
             # converted index
             intersection_index = peak-t
+            if not intersection_adjusted:
+                initial_intersection_index = intersection_index
 
-            # find nearest peak
-            if t > 10 and t < len(line_gradients) - 25:
-                if selected_peak != 0:
-                    nearest_edge = int(peak - properties["right_ips"][selected_peak-1])
-                    min_range = line_gradients[t-10:nearest_edge]
+            # if we have a robust edge estimate, use it to fine tune the intersection
+            # estimate by finding the point with the highest gradient
+            if intersection_index > index_edge + 5 and not intersection_adjusted: # at least 5 mm separation
+                # find the number of points separating the edge and estimate
+                dist = intersection_index - index_edge + 15 # 15 is added to end of range
 
-                    # trim min range if too large
-                    if len(min_range) > 35: min_range = line_gradients[t-10:t+25]
-                else:
-                    min_range = line_gradients[t-10:t+25]
+                if dist > 150:
+                    break # don't try large searches
 
-                # determine maximum drop near intersection point
-                # used to refine intersection point estimation
-                min_nearby = np.amax(min_range) if len(min_range) > 0 else 0
+                # get endpoints
+                left_endpoint = index_edge - 15 if index_edge > 15 else 0
+                right_endpoint = intersection_index + 15 if intersection_index < len(lineVals) - 16 \
+                    else len(lineVals)-1
 
-                # compare against current point
-                if len(min_range) > 0 and min_nearby > line_gradients[intersection_index] * 1.5 \
-                    and max(lineVals) < 240:
-                    temp = np.argmax(min_range)
+                # find gradients for this range with a margin of 15
+                trimmed_line_vals = lineVals[left_endpoint:right_endpoint]
+                line_gradients = np.clip(np.gradient(trimmed_line_vals), 0, 100)
+                line_gradients = np.append(line_gradients, 0) # close last peak
 
-                    # if change in intensity is dramatic
-                    if lineVals[intersection_index] - lineVals[intersection_index-temp] > 1:
-                        intersection_index -= (temp-10)
+                # find peaks in range
+                gPeaks, gProperties = find_peaks(line_gradients, width=0)
+                gPeakWidths = signal.peak_widths(line_gradients, gPeaks, rel_height=0.75)
+
+                # find highest peak
+                highest_peak = [0, line_gradients[len(line_gradients)-16], 0]
+
+                for w, pt in enumerate(gPeaks):
+                    # get peak width
+                    pWidth = gPeakWidths[0][w]
+
+                    # check peak against criteria
+                    gLeftEdge = gProperties["left_bases"][w]
+                    gRightEdge = gProperties["right_bases"][w]
+
+                    if (
+                        not(trimmed_line_vals[gLeftEdge-1] < 60 and trimmed_line_vals[gRightEdge-1] < 60) # check edge intensities
+                        and (line_gradients[pt] > highest_peak[1] or (line_gradients[pt] > highest_peak[1] * 0.6
+                            and pWidth > highest_peak[2] * 2)) # higher peak or larger base
+                    ):
+                        highest_peak = [pt, line_gradients[pt], pWidth] # update highest peak
+
+                # adjust intersection point via threshold
+                if highest_peak[0] < dist and highest_peak[0] != 0: # if adjustment is in forward direction
+                    #intersection_index -= (dist - highest_peak[0])
+                    conv_index = intersection_index - (dist - highest_peak[0])
+                    stake_threshold = (stake_threshold - lineVals[conv_index]) / 2.0 + lineVals[conv_index]
+                    intersection_adjusted = True
+                    continue
             break
 
-    return intersection_index, peak
-
+    # return final and initial indices and peaks
+    return intersection_index, peak, initial_intersection_index
 
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     debug_directory, signal_dir, params, tensors, upper_border, signal_var,
@@ -428,16 +454,35 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 # if a snow case was found
                 if(selected_peak != -1):
                     # get index of snow intersection
-                    #intersection_index, peak_index_line = getIntersectionIndex(peaks, selected_peak,
-                    #    major_peak, lineVals, properties, lowest_edge_y, index_edge)
-                    intersection_index, peak_index_line = getIntersectionIndex(peaks, selected_peak,
-                        major_peak, lineVals_smooth, lineVals, properties, lowest_edge_y, index_edge)
+                    intersection_index, peak_index_line, init_intersection = getIntersectionIndex(peaks, selected_peak,
+                        major_peak, lineVals, properties, lowest_edge_y, index_edge, peakWidthsOutput)
 
                     # overlay debugging points
                     if(debug):
                         cv2.circle(img_write, (int(x[intersection_index]), int(y[intersection_index])), 5, (0,255,0), 3)
 
-                else: peak_index_line = 0
+                else:
+                    # indicate no intersection point found
+                    intersection_index = 0
+                    peak_index_line = 0
+
+                '''DELETE'''
+                line_gradients_full = np.clip(np.gradient(lineVals), a_min=0, a_max=100)
+                #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
+                highest = [0, line_gradients_full[intersection_index]]
+                peaks3 = 0
+                if intersection_index > index_edge:
+                    dist = intersection_index-index_edge
+                    line_gradients_full = np.clip(np.gradient(lineVals[index_edge:intersection_index+15]), a_min=0, a_max=100)
+                    #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
+                    peaks3, properties3 = find_peaks(line_gradients_full)
+                    for yt in peaks3:
+                        if line_gradients_full[yt] > highest[1]:
+                            highest = [yt, line_gradients_full[yt]]
+                    line_gradients_full = np.clip(np.gradient(lineVals), a_min=0, a_max=100)
+                    #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
+                    highest[0] = intersection_index - (dist-highest[0]) if highest[0] != 0 else intersection_index
+                '''DELETE'''
 
                 # add coordinates to dictionary
                 if(selected_peak != -1 and intersection_index != 0):
@@ -448,14 +493,16 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 # if in debugging mode
                 if debug and signal_var:
                     # plot and save
-                    fig, axes = plt.subplots(nrows=3)
+                    fig, axes = plt.subplots(nrows=4)
                     axes[0].imshow(img)
                     axes[0].plot([x0, x1], [y0, y1], 'ro-')
                     axes[0].axis('image')
                     axes[1].plot(lineVals)
                     axes[1].plot(peaks, lineVals[peaks], "x")
                     axes[1].plot(peak_index_line, lineVals[peak_index_line], "x")
-                    axes[2].plot(lineVals_smooth)
+                    axes[2].plot(line_gradients_full)
+                    axes[2].plot(peaks3, line_gradients_full[peaks3], "x")
+                    axes[3].plot(line_gradients_full)
 
                     # only show if valid intersction point found
                     if selected_peak != -1:
@@ -468,7 +515,9 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         axes[1].axvline(x=properties["left_ips"][selected_peak], color = 'y')
                         axes[1].axvline(x=intersection_index,color='r')
                         axes[1].axvline(x=index_edge, color='pink')
-                        axes[2].axvline(x=intersection_index,color='r')
+                        axes[1].axvline(x=init_intersection, color='magenta')
+                        #axes[2].axvline(x=intersection_index,color='r')
+                        axes[2].axvline(x=highest[0],color='r')
 
                     filename, file_extension = os.path.splitext(name)
                     plt.savefig((signal_dir + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
