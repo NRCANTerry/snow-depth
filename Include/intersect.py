@@ -14,21 +14,15 @@ import tqdm
 import time
 
 def lineIntersections(pt1, pt2, ptA, ptB):
-    '''
+    """
     Function that returns the intersection of lines defined by two points
-    @param pt1 first point of line A
-    @param pt2 second point of line A
-    @param ptA first point on line B
-    @param ptB second point on line B
 
-    @type pt1 float
-    @type pt2 float
-    @type ptA float
-    @type ptB float
-
-    @return xi, yi coordinates of intersection point
-    @rtype (float, float)
-    '''
+    Keyword arguments:
+    pt1 -- first point of line A
+    pt2 -- second point of line A
+    ptA -- first point of line B
+    ptB -- second point of line B
+    """
 
     # tolerance
     DET_TOLERANCE = 0.00000001
@@ -274,9 +268,24 @@ def getIntersectionIndex(peaks, selected_peak, major_peak, lineVals,
 def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
     debug_directory, signal_dir, params, tensors, upper_border, signal_var,
     template_tensors):
-    '''
+    """
     Function to get intersection coordinates and distances for an image
-    '''
+
+    Keyword arguments:
+    img -- input image
+    boxCoords -- region of interset coordinates
+    stakeValidity -- list indicating which stakes are valid
+    roiCoordinates -- template coordinates
+    name -- image name
+    debug -- bool flag to output images
+    debug_directory -- output directory
+    signal_dir -- directory for intensity signals
+    params -- user parameters from GUI
+    tensors -- calculated tensors for each stake
+    upper_border -- upper crop (to remove metadata)
+    signal_var -- bool flag to output intensity signals
+    template_tensors -- tensors from template image
+    """
 
     # convert image to grayscale
     img_write = img.copy()
@@ -442,7 +451,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
                 STEP 1: Find correct peak in signal
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-                print(i, j)
+
                 selected_peak, major_peak = getPeakIndex(sorted_index, peaks, params,
                     lineVals, peakWidths, last_index, maxLineVal, properties, index_edge,
                     line_length, y, lowest_edge_y)
@@ -589,9 +598,24 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
     debug, debug_directory, params, tensors, upper_border, imageSummary, signal_var,
     template_tensors):
-    '''
+    """
     Function to get intersection coordinates and distances for an image set
-    '''
+
+    Keyword arguments:
+    imgs -- input images
+    boxCoords -- region of interest coordinates
+    stakeValidity -- dictionary of lists indicating which stakes are valid
+    roiCoordinates -- template coordinates
+    img_names -- list of image names
+    debug -- bool flag to output images
+    debug_directory -- output directory
+    params -- user parameters from GUI
+    tensors -- calculated tensors for each stake
+    upper_border -- upper crop (to remove metadata)
+    imageSummary -- dictionary containing summary information for un
+    signal_var -- bool flag to output intensity signals
+    template_tensors -- tensors from template image
+    """
 
     # create directory for signal images
     if(debug):
@@ -655,22 +679,37 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
     return intersectionCoordinates, intersectionDistances, imageSummary
 
 def unpackArgs(args):
-    '''
-    Function to unpack arguments explicitly
-    @param args function arguments
-    @type args arguments
-    @return output of intersect function
-    @rtype list
-    '''
+    """
+    Function to unpack arguments explicitly and call intersect function
+
+    Keyword arguments:
+    args -- function arguments (passsed by getIntersectionsParallel)
+    """
     return intersect(*args)
 
 def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinates,
     img_names, debug, debug_directory, params, tensors, upper_border, imageSummary,
     signal_var, template_tensors):
-    '''
+    """
     Function to get intersection coordinates and distances for an image set using
         a parallel pool to improve efficiency
-    '''
+
+    Keyword arguments:
+    pool -- multiprocessing parallel pool
+    imgs -- input images
+    boxCoords -- region of interest coordinates
+    stakeValidity -- dictionary of lists indicating which stakes are valid
+    roiCoordinates -- template coordinates
+    img_names -- list of image names
+    debug -- bool flag to output images
+    debug_directory -- output directory
+    params -- user parameters from GUI
+    tensors -- calculated tensors for each stake
+    upper_border -- upper crop (to remove metadata)
+    imageSummary -- dictionary containing summary information for un
+    signal_var -- bool flag to output intensity signals
+    template_tensors -- tensors from template image
+    """
 
     # create directory for signal images
     if(debug):
