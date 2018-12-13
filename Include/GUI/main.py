@@ -83,7 +83,7 @@ class GUI:
             "Current_Blob_Distances": list(),
             "Current_Template_Settings": list(),
             "Window_Closed": False,
-            "Reg_Params": [0, 0, 0, 0, 0],
+            "Reg_Params": [0, 0, 0, 0, 0, 0],
             "Int_Params": [0, 0, 0, 0 , 0],
             "Misc_Params": [0, 0]
         }
@@ -871,10 +871,10 @@ class GUI:
             self.systemParameters["Clip_Limit"] = int(optionsList[3])
             self.systemParameters["Tile_Size"] = [int(optionsList[4]), int(optionsList[5])]
             self.systemParameters["Reg_Params"] = [int(optionsList[6]), float(optionsList[7]), float(optionsList[8]), float(optionsList[9]),
-                float(optionsList[10]), int(optionsList[11]), int(optionsList[19])]
-            self.systemParameters["Int_Params"] = [int(optionsList[12]), float(optionsList[13]), float(optionsList[14]), float(optionsList[15]),
-                float(optionsList[16]), int(optionsList[20])]
-            self.systemParameters["Misc_Params"] = [int(optionsList[17]), int(optionsList[18])]
+                float(optionsList[10]), int(optionsList[11]), int(optionsList[12]), int(optionsList[20])]
+            self.systemParameters["Int_Params"] = [int(optionsList[13]), float(optionsList[14]), float(optionsList[15]), float(optionsList[16]),
+                float(optionsList[17]), int(optionsList[21])]
+            self.systemParameters["Misc_Params"] = [int(optionsList[18]), int(optionsList[19])]
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1493,6 +1493,7 @@ class GUI:
 
         # frames
         featureFrame = tk.Frame(regFrame, bg=self.gray)
+        ORBThresholdFrame = tk.Frame(regFrame, bg=self.gray)
         ECCParamFrame1 = tk.Frame(regFrame, bg=self.gray)
         ECCParamFrame2 = tk.Frame(regFrame, bg=self.gray)
         ECCParamFrame3 = tk.Frame(regFrame, bg=self.gray)
@@ -1503,6 +1504,7 @@ class GUI:
         titleLabel = tk.Label(regFrame, text="Registration", bg=self.gray,
             fg=self.white, font=("Calibri Light", 24))
         featuresLabel = tk.Label(featureFrame, text="ORB Features")
+        ORBThresholdLabel = tk.Label(ORBThresholdFrame, text="ORB Threshold (%)")
         ECCLabel1 = tk.Label(regFrame, text="ECC Params (w/ ORB)",
             font=("Calibri Light", 16), bg=self.gray, fg=self.white)
         fECC = font.Font(ECCLabel1, ECCLabel1.cget("font"))
@@ -1515,12 +1517,13 @@ class GUI:
         ECCLabel5 = tk.Label(ECCParamFrame3, text="Threshold (1e-)")
         ECCLabel6 = tk.Label(ECCParamFrame4, text="Iterations")
 
-        labels = [featuresLabel, ECCLabel2, ECCLabel3, ECCLabel5, ECCLabel6]
+        labels = [featuresLabel, ORBThresholdLabel, ECCLabel2, ECCLabel3, ECCLabel5, ECCLabel6]
         for label in labels:
             label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
 
         # entries
         featureEntry = tk.Entry(featureFrame, validatecommand =((validateCommand, '%P', "Reg_Params", 0)))
+        ORBThresholdEntry = tk.Entry(ORBThresholdFrame, validatecommand =((validateCommand, '%P', "Reg_Params", 5)))
         thresholdEntry1 = tk.Entry(ECCParamFrame1, validatecommand =((validateCommand, '%P', "Reg_Params", 1)))
         iterationsEntry1 = tk.Entry(ECCParamFrame2, validatecommand =((validateCommand, '%P', "Reg_Params", 2)))
         thresholdEntry2 = tk.Entry(ECCParamFrame3, validatecommand =((validateCommand, '%P', "Reg_Params", 3)))
@@ -1528,13 +1531,14 @@ class GUI:
 
         # set default values
         featureEntry.insert(0, 262144)
+        ORBThresholdEntry.insert(0, 5)
         thresholdEntry1.insert(0, 5)
         iterationsEntry1.insert(0, 1000)
         thresholdEntry2.insert(0, 7)
         iterationsEntry2.insert(0, 2000)
-        self.systemParameters["Reg_Params"] = [262144, 5, 1000, 7, 2000]
+        self.systemParameters["Reg_Params"] = [262144, 5, 1000, 7, 2000, 5]
 
-        regEntries = [featureEntry, thresholdEntry1, iterationsEntry1, thresholdEntry2, iterationsEntry2]
+        regEntries = [featureEntry, ORBThresholdEntry, thresholdEntry1, iterationsEntry1, thresholdEntry2, iterationsEntry2]
         for entry in regEntries:
             entry.config(validate = "key", font=("Calibri Light", 14), width = 7)
 
@@ -1575,9 +1579,13 @@ class GUI:
 
         # packing
         titleLabel.pack(pady = 20)
-        featureFrame.pack(pady=10, padx=50)
+        featureFrame.pack(pady=(10,5), padx=50)
         featuresLabel.pack(side=tk.LEFT, padx=10)
         featureEntry.pack(side=tk.LEFT, padx=10)
+
+        ORBThresholdFrame.pack(pady=(5,10), padx=30)
+        ORBThresholdLabel.pack(side=tk.LEFT, padx=(0,10))
+        ORBThresholdEntry.pack(side=tk.LEFT, padx=(10,43))
 
         ECCLabel1.pack(pady=(15,10))
         ECCParamFrame1.pack(pady=5)
