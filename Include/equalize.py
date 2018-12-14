@@ -7,15 +7,13 @@ import tqdm
 from colour_balance import balanceColour
 
 def brighten(img, val):
-    '''
-    Increases the brightness of an input image
-    @param image the image to be brightened
-    @param val the magnitude of the operation
-    @type image cv2.image
-    @type val int
-    @return the modified image
-    @rtype cv2.image
-    '''
+    """
+    Function to increase the brightness of an input image
+
+    Keyword arguments:
+    img -- the input image for which the brightness should be increased
+    val -- magnitude of the operation
+    """
 
     # convert image to HSV colour space
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float32)
@@ -37,17 +35,14 @@ def brighten(img, val):
     return cv2.cvtColor(hsv_merge.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 def equalizeHistogramColour(img, clip_limit, tile_size):
-    '''
-    Equalize histogram of colour images
-    @param img the image to be equalized
-    @param clip_limit the clip limit for the equalization
-    @param tile_size the tile size for the equalization
-    @type img cv2.image
-    @type clip_limit float
-    @type tile_size list(a, b)
-    @return equalized image
-    @rtype cv2.image
-    '''
+    """
+    Function to equalize the histogram of colour images
+
+    Keyword arguments:
+    img -- input image
+    clip_limit -- clip limit for equalization operation
+    tile_size -- tile size for equalization operation
+    """
 
     # convert to LAB
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -69,17 +64,14 @@ def equalizeHistogramColour(img, clip_limit, tile_size):
     return brighten(bgr, 60)
 
 def equalizeHistogram(img, clip_limit, tile_size):
-    '''
-    Equalize histogram of grayscale images
-    @param img the image to be equalized
-    @param clip_limit the clip limit for the equalization
-    @param tile_size the tile size for the equalization
-    @type img cv2.image
-    @type clip_limit float
-    @type tile_size list(a, b)
-    @return equalized image
-    @rtype cv2.image
-    '''
+    """
+    Function to equalize the histogram of grayscale images
+
+    Keyword arguments:
+    img -- input image
+    clip_limit -- clip limit for equalization operation
+    tile_size -- tile size for equalization operation
+    """
 
     # convert to grayscale
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -93,23 +85,18 @@ def equalizeHistogram(img, clip_limit, tile_size):
 
 def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory,
     params):
-    '''
-    Perform equalization operations on an image
-    @param img the image to be equalized
-    @param clipLimit the clip limit for the equalization
-    @param tileSize the tile size for the equalization
-    @param name the name of the image
-    @param debug flag indicating whether image should be written to debug directory
-    @param debug_directory the directory where debug image should be written
-    @type img cv2.image
-    @type clipLimit float
-    @type tileSize list(a, b)
-    @type name string
-    @type debug bool
-    @type debug_directory string
-    @return img_eq_gray grayscale equalized image
-    @return img_eq colour equalized image
-    '''
+    """
+    Function to perform equalization operations on an image
+
+    Keyword arguments:
+    img -- the image to be equalized
+    clipLimit -- clip limit for equalization operation
+    tileSize -- tile size for equalization operation
+    name -- image file name
+    debug -- bool flag indicating where to output equalized images
+    debug_directory -- directory where debug images should be written
+    params -- parameters for bilateral filter
+    """
 
     # denoise using bilateral filter
     img_filter = cv2.bilateralFilter(img.copy(), params[0], params[1], params[2])
@@ -131,21 +118,17 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory,
 
 def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder,
     params):
-    '''
-    Crop and equalize template according to parameters
-    @param templatePath path to template image
-    @param clipLimit the clip limit for the equalization
-    @param tileSize the tile size for the equalization
-    @param upperBorder upper crop parameter
-    @param lowerBorder lower crop parameter
-    @type templatePath string
-    @type clipLimit float
-    @type tileSize list(a, b)
-    @type upperBorder int
-    @type lowerBorder int
-    @return template_eq equalized template image
-    @rtype cv2.image
-    '''
+    """
+    Function to crop and equalize a template image according to parameters
+
+    Keyword arguments:
+    templatePath -- path to template image
+    clipLimit -- clip limit for equalization operation
+    tileSize -- tile size for equalization operation
+    upperBorder -- upper crop parameter
+    lowerBorder -- lower crop parameter
+    params -- parameters for bilateral filter
+    """
 
     # import and crop template
     template = cv2.imread(templatePath)
@@ -161,37 +144,22 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
 def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
     debug_directory_template, params):
-    '''
-    Equalize sets of images without using a parallel pool
-    @param images_filtered set of images with night images removed
-    @param filtered_names corresponding names of images
-    @param templatePath path to template image
-    @param upperBorder upper crop parameter
-    @param lowerBorder lower crop parameter
-    @param clipLimit the clip limit for equalization
-    @param tileSize the tile size for equalization
-    @param debug flag indicating whether debugging mode is selected
-    @param debug_directory_img path where equalized images are written
-    @param debug_directory_template path where equalized template is written
+    """
+    Function to equalize a set of images
 
-    @type images_filtered list(cv2.image)
-    @type filtered_names list(string)
-    @type templatePath string
-    @type upperBorder int
-    @type lowerBorder int
-    @type clipLimit float
-    @type tileSize list(a, b)
-    @type debug bool
-    @type debug_directory_img string
-    @type debug_directory_template string
-
-    @return images_equalized list of grayscale equalized images
-    @return images_filtered list of colour equalized images
-    @return template_eq equalized template
-    @rtype images_equalized list(cv2.image)
-    @rtype images_filtered list(cv2.iamge)
-    @rtype template_eq cv2.image
-    '''
+    Keyword arguments:
+    images_filtered -- set of images with night images removed
+    filtered_names -- list of corresponding image file names
+    templatePath -- path to template image
+    upperBorder -- upper crop parameter
+    lowerBorder -- lower crop parameter
+    clipLimit -- clip limit for equalization operation
+    tileSize -- tile size for equalization operation
+    debug -- bool flag indicating where to output equalized images
+    debug_directory_img -- directory where debug images should be written
+    debug_directory_template -- directory where template image should be written
+    params -- parameters for bilateral filter
+    """
 
     # list for equalized images
     images_equalized = list()
@@ -225,51 +193,34 @@ def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     return images_equalized, images_filtered, template_eq, template_reduced_noise
 
 def unpackArgs(args):
-    '''
-    Function to unpack arguments explicitly
-    @param args function arguments
-    @type args arguments
-    @return output of equalizeImage function
-    @rtype list
-    '''
+    """
+    Function to unpack arguments explicitly and call equalizeImage function
+
+    Keyword arguments:
+    args -- function arguments passed by parallel equalization function
+    """
     return equalizeImage(*args)
 
 def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath,
     upperBorder, lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
     debug_directory_template, params):
-    '''
-    Equalize sets of images using a parallel pool
-    @param pool paralell pool to be used
-    @param images_filtered set of images with night images removed
-    @param filtered_names corresponding names of images
-    @param templatePath path to template image
-    @param upperBorder upper crop parameter
-    @param lowerBorder lower crop parameter
-    @param clipLimit the clip limit for equalization
-    @param tileSize the tile size for equalization
-    @param debug flag indicating whether debugging mode is selected
-    @param debug_directory_img path where equalized images are written
-    @param debug_directory_template path where equalized template is written
+    """
+    Function to equalize a set of images using a parallel pool for computing
 
-    @type pool multiprocessing.Pool
-    @type images_filtered list(cv2.image)
-    @type filtered_names list(string)
-    @type templatePath string
-    @type upperBorder int
-    @type lowerBorder int
-    @type clipLimit float
-    @type tileSize list(a, b)
-    @type debug bool
-    @type debug_directory_img string
-    @type debug_directory_template string
-
-    @return images_equalized list of grayscale equalized images
-    @return images_filtered list of colour equalized images
-    @return template_eq equalized template
-    @rtype images_equalized list(cv2.image)
-    @rtype images_filtered list(cv2.iamge)
-    @rtype template_eq cv2.image
-    '''
+    Keyword arguments:
+    pool -- the parallel pool to be used for computing
+    images_filtered -- set of images with night images removed
+    filtered_names -- list of corresponding image file names
+    templatePath -- path to template image
+    upperBorder -- upper crop parameter
+    lowerBorder -- lower crop parameter
+    clipLimit -- clip limit for equalization operation
+    tileSize -- tile size for equalization operation
+    debug -- bool flag indicating where to output equalized images
+    debug_directory_img -- directory where debug images should be written
+    debug_directory_template -- directory where template image should be written
+    params -- parameters for bilateral filter
+    """
 
     # setup lists
     images_equalized = list()

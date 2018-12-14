@@ -18,9 +18,14 @@ median_kernel_size = 5
 dilate_kernel = (5, 5)
 
 def getActualCoords(dilatedCoords, upper_border):
-    '''
+    """
     Function to get undilated coordinates from template roi
-    '''
+
+    Keyword arguments:
+    dilatedCoords -- list of blob roi coords (dilated to make search window)
+    upper_border -- upper crop parameter
+    """
+
     top_left = (dilatedCoords[0][0], dilatedCoords[0][1]-upper_border)
     bottom_right = (dilatedCoords[1][0], dilatedCoords[1][1]-upper_border)
     blob_width = abs(top_left[0] - bottom_right[0]) / 1.6666
@@ -34,15 +39,13 @@ def getActualCoords(dilatedCoords, upper_border):
     )
 
 def roiValid(coordinates, blobs):
-    '''
+    """
     Function to determine if a randomly sampled roi intersects with any blobs
-    @param coordinates the coordinates of the randomly sampled roi
-    @param blobs list of blob coordinates
-    @type coordinates list([x0, y0], [x1, y1])
-    @type blobs list(blob1[[x0, y0], [x1, y1]], ...)
-    @return whether the randomly sampled roi is valid
-    @rtype bool
-    '''
+
+    Keyword arguments:
+    coordinates -- coordinates of randomly sampled roi
+    blobs -- flattened list of blob coordinates
+    """
 
     # iterate through blobs
     for blob in blobs:
@@ -63,9 +66,31 @@ def roiValid(coordinates, blobs):
 def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, name,
     debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath, invalidPath,
     model, modelInitialized, validIndex, invalidIndex, flattened_list, DLActive):
-    '''
+    """
     Function to determine which stakes in an image are valid
-    '''
+
+    Keyword arguments:
+    img_ -- input image
+    coordinates -- template roi coordinates of stakes and blobs
+    hsvRanges -- hsv ranges used to threshold image
+    blobSizes -- blob size ranges generated from template
+    upper_border -- upper crop parameter
+    debug -- bool flag indicating whether output images should be saved
+    name -- image file name
+    debug_directory -- directory where output images should be written
+    dataset -- tensor dataset
+    dataset_enabled -- flag indicating whether dataset has been initialized
+    NUM_STD_DEV -- number of standard dev away from mean the tensor can be
+    validPath -- path where blob images should be stored for deep learning training
+    invalidPath -- path where non-blob images should be stored for deep learning
+        training
+    model -- path to deep learning model
+    modelInitialized -- flag indicating whether a deep learning model has been created
+    validIndex -- index of last valid training image (used for file naming)
+    invalidIndex -- index of last invalid training image (used for file naming)
+    flattened_list -- flattened list of blob roi coordinates
+    DLActive -- flag indicating whether user has elected to use deep learning
+    """
 
     # duplicate image
     img = img_.copy()
@@ -404,9 +429,15 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
         name, validBlobsImage, stake_dict_tensor)
 
 def getModelData(validPath, invalidPath, coordinates):
-    '''
+    """
     Function to get image indices and flattened list of coordinates
-    '''
+
+    Keyword arguments:
+    coordinates -- template roi coordinates of stakes and blobs
+    validPath -- path where blob images should be stored for deep learning training
+    invalidPath -- path where non-blob images should be stored for deep learning
+        training
+    """
 
     # get indexes from image names
     validFiles = [int(os.path.splitext(x)[0]) for x in os.listdir(validPath)]
@@ -427,9 +458,14 @@ def getModelData(validPath, invalidPath, coordinates):
     return validIndex, invalidIndex, flattened_list
 
 def updateDatset(dataset, tensor_vals, dataset_enabled):
-    '''
-    Update dataset given the tensors for a set of images
-    '''
+    """
+    Function to update dataset given calculated tensors for a set of images
+
+    Keyword arguments:
+    dataset -- tensor dataset to be updated
+    tensor_vals -- lists containing calculated tensors for each stake
+    dataset_enabled -- flag indicating whether dataset has been initialized
+    """
 
     # run for all stakes
     for i, x in enumerate(dataset):
@@ -459,13 +495,31 @@ def updateDatset(dataset, tensor_vals, dataset_enabled):
     # return updated dataset
     return dataset
 
-# function to determine which stakes are valid
-# verify that blobs are still within reference windows
-# need at least two blobs to have a valid stake
-# returns a dictionary indicating which stakes in each image are valid
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
     training_path, model_path, DLActive, imageSummary):
+    """
+    Function to determine which stakes are valid
+    - verify that blobs are still within reference windows
+    - need at least two blobs to have a valid stake
+    - returns a dictionary indicating which stakes in each image are valid
+
+    Keyword arguments:
+    imgs -- list of registered images to be verified
+    coordinates -- template roi coordinates of stakes and blobs
+    hsvRanges -- hsv ranges used to threshold image
+    blobSizes -- blob size ranges generated from template
+    upper_border -- upper crop parameter
+    debug -- bool flag indicating whether output images should be saved
+    img_names -- list containing corresponding image file names
+    debug_directory -- directory where output images should be written
+    dataset -- tensor dataset
+    dataset_enabled -- flag indicating whether dataset has been initialized
+    training_path -- path to directory where training images should be written
+    model_path -- path to deep learning model
+    DLActive -- flag indicating whether user has elected to use deep learning
+    imageSummary -- dictionary containing information about each run
+    """
 
     # determine paths for training images
     validPath = training_path + "blob\\"
@@ -562,22 +616,40 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
 
 def unpackArgs(args):
-    '''
-    Function to unpack arguments explicitly
-    @param args function arguments
-    @type args arguments
-    @return output of imageValid function
-    @rtype list
-    '''
+    """
+    Function to unpack arguments explicitly and call imageValid function
+
+    Keyword arguments:
+    args -- function arguments passed by parallel validation function
+    """
     return imageValid(*args)
 
-# parallel function to determine which stakes are valid
-# verify that blobs are still within reference windows
-# need at least two blobs to have a valid stake
-# returns a dictionary indicating which stakes in each image are valid
 def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_border,
     debug, img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
     training_path, model_path, DLActive, imageSummary):
+    """
+    Function to determine which stakes are valid using parallel pool
+    - verify that blobs are still within reference windows
+    - need at least two blobs to have a valid stake
+    - returns a dictionary indicating which stakes in each image are valid
+
+    Keyword arguments:
+    pool -- parallel pool used for computing
+    imgs -- list of registered images to be verified
+    coordinates -- template roi coordinates of stakes and blobs
+    hsvRanges -- hsv ranges used to threshold image
+    blobSizes -- blob size ranges generated from template
+    upper_border -- upper crop parameter
+    debug -- bool flag indicating whether output images should be saved
+    img_names -- list containing corresponding image file names
+    debug_directory -- directory where output images should be written
+    dataset -- tensor dataset
+    dataset_enabled -- flag indicating whether dataset has been initialized
+    training_path -- path to directory where training images should be written
+    model_path -- path to deep learning model
+    DLActive -- flag indicating whether user has elected to use deep learning
+    imageSummary -- dictionary containing information about each run
+    """
 
     # determine paths for training images
     validPath = training_path + "blob\\"

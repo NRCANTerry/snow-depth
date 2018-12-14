@@ -8,11 +8,31 @@ import tqdm
 import numpy as np
 import datetime
 
-# function to calculate the change in snow depth for each stake
-# using the tensor from the specified template
 def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateIntersections,
     upperBorder, tensors, actualTensors, intersectionDist, blobDistTemplate, debug, debug_directory,
     image_dates, imageSummary):
+    """
+    Function to calculate the change in snow depth for each stake using the tensor
+    from the specified template
+
+    Keyword arguments:
+    imgs -- list of input images
+    img_names -- list of corresponding image file names
+    intersectionCoords -- list containing intersection coordinates for input images
+    stakeValidity -- list indicating which stakes in input images are valid
+    templateIntersections -- list containing intersection coordinates for template
+    upperBorder -- upper crop parameter
+    tensors -- tensors from template image
+    actualTensors -- tensors calculated for input images
+    intersectionDist -- list containing distances from blobs to intersection points
+        for input images
+    blobDistTemplate -- list containing blob to intersection point distances from
+        template
+    debug -- bool flag indicating whether output images should be saved
+    debug_directory -- directory where output images should be written
+    image_dates -- list containing dates of images extracted from EXIF data
+    imageSummary -- dictionary containing information about each run
+    """
 
     # list containing median depths for each image
     median_depths = list()
@@ -178,9 +198,6 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     filterSet = zip(median_depths, median_depths_est, image_dates)
     filterSet = [(x, y, z) for x, y, z in filterSet if x != False]
     median_depths, median_depths_est, image_dates = zip(*filterSet)
-
-    #median_depths = [x for x in median_depths if x != False]
-    #median_depths_est = [x for x in median_depths_est if x!= False]
     median_depths = np.asarray(median_depths).clip(0)
     median_depths_est = np.asarray(median_depths_est).clip(0)
 
@@ -195,9 +212,6 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     ax.set_title("Change in Snow Depth (mm)")
     plt.xticks(rotation=75)
     plt.tight_layout()
-
-    # only show ever 4th label
-    #[label.set_visible(False) for (i,label) in enumerate(ax.get_xaxis().get_ticklabels()) if i % 4 != 0]
 
     # save figure
     plt.savefig(debug_directory + "depth-graph.jpg")

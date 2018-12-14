@@ -1,10 +1,16 @@
 import numpy as np
 from scipy.spatial import distance as dist
 
-# function to order coordinate points
-# returns coordinates in top-left, top-right, bottom-right,
-# bottom-left order
-def orderPoints(pts, numpy = True):
+def orderPoints(pts, numpy=True):
+	"""
+	Function to order coordinate points and return in top-left, top-right,
+	bottom-right, bottom-left order
+
+	Keyword arguments:
+	pts -- list of unordered bounding rect points
+	numpy -- flag indicating whether to return a numpy array or python list
+	"""
+
 	# sort the points based on their x-coordinates
 	xSorted = pts[np.argsort(pts[:, 0]), :]
 

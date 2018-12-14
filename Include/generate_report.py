@@ -19,8 +19,15 @@ headers = {
 index = 0 # index of header accessed
 written = list() # list of written headers
 
-# returns whether to insert a header
 def insertHeader(string):
+    """
+    Function to return whether to insert a header
+
+    Keyword arguments:
+    string -- input string (a header is returned when the string is part of
+        the header dictionary keys set)
+    """
+
     global index
     global written
 
@@ -32,8 +39,14 @@ def insertHeader(string):
     # return index of last header
     return index
 
-# returns header text
 def getHeader(string):
+    """
+    Function to get header text
+
+    Keyword arguments:
+    string -- input string (a header is returned when the string is part of
+        the header dictionary keys set)
+    """
     if string in headers.keys():
         return headers[string]
 
@@ -41,8 +54,15 @@ index_individual = -1
 previous_string = ""
 index_access = 0
 
-# returns whether to insert an individual header
 def insertIndividualHeader(string):
+    """
+    Function to return whether to insert an individual (image name) header
+
+    Keyword arguments:
+    string -- input string (a header is returned when "Valid Image" is written
+        to the file since this is the first entry per image)
+    """
+
     global index_individual
     global previous_string
 
@@ -61,13 +81,30 @@ individualHeaders = []
 
 # returns individual header text
 def getIndividualHeader(string):
+    """
+    Function to get individual header text (image names)
+
+    Keyword arguments:
+    string -- input string (a header is returned when "Valid Image" is written
+        to the file since this is the first entry per image)
+    """
+
     global index_access
     if string == "Valid Image":
         index_access += 1
         return individualHeaders[index_access-1]
 
-# generate a PDF summary for the run
 def generate(summary, individualSummary, path):
+    """
+    Function to generate PDF summaries for the run
+
+    Keyword arguments:
+    summary -- dictionary containing information about the run and environment
+    individualSummary -- dictionary contianing information about each image
+        that was processed
+    path -- output path for summary PDF files
+    """
+
     # must provide report class with datasource
     data = []
     for key, value in summary.items():

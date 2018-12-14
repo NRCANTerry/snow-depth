@@ -7,11 +7,33 @@ from matplotlib import pyplot as plt
 import os
 import time
 
-# Function to align image to template (https://github.com/NRCANTerry/snow-depth/wiki/register.py)
 def register(img, name, template, template_reduced_noise, img_apply, debug,
     debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
     NUM_STD_DEV, max_mean_squared_error, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING,
     params):
+    """
+    Function to align an image to a provided template
+
+    Keyword arguments:
+    img -- grayscale denoised image to be used for feature based alignment
+    name -- image file name
+    template -- equalized template image to be used in ECC alignment
+    template_reduced_noise -- denoised template image to be used in feature based alignment
+    img_apply -- equalized image to be aligned and used in later steps of algorithm
+    debug -- bool flag indicating whether output images should be saved
+    debug_directory_registered -- directory where registered images should be written
+    debug_directory_matches -- directory where match images should be written
+    dataset -- robust registration dataset
+    dataset_enabled -- bool flag indicating whether robust dataset should be used
+    NUM_STD_DEV -- number of standard deviations away from dataset mean the MSE
+        of the affine matrix can be
+    max_mean_squared_error -- calculated maximum MSE given the transformation parameters
+        inputted by the user during template creation
+    MAX_ROTATION -- maximum allowable rotation
+    MAX_TRANSLATION -- maximum allowable translation
+    MAX_SCALING -- maximum allowable image scaling
+    params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
+    """
 
     # flags for whether image was aligned
     ORB_aligned_flag = False
@@ -220,8 +242,16 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     else: return (None, name, mean_squared_error, ORB_aligned_flag,
         affine_matrix.tolist(), ECC_aligned_flag, warp_matrix.tolist())
 
-# determine whether a transformation is valid based on parameters
 def validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, matrix):
+    """
+    Function to determine whether a transformation is valid based on parameters
+
+    Keyword arguments:
+    MAX_ROTATION -- maximum allowable rotation
+    MAX_TRANSLATION -- maximum allowable translation
+    MAX_SCALING -- maximum allowable image scaling
+    matrix -- affine matrix to verify
+    """
 
     # calculate range for alpha
     scale = abs(MAX_SCALING) / 100.0
@@ -236,8 +266,15 @@ def validTransform(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, matrix):
     else:
         return False
 
-# determine maximum mean squared error for non-intiailized dataset
 def getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING):
+    """
+    Function to determine the maximum mean squared error for non-initialized dataset
+
+    Keyword arguments:
+    MAX_ROTATION -- maximum allowable rotation
+    MAX_TRANSLATION -- maximum allowable translation
+    MAX_SCALING -- maximum allowable image scaling
+    """
 
     # adjust scaling from % to absolute
     MAX_SCALING = abs(MAX_SCALING) / 100.0
@@ -255,9 +292,16 @@ def getMaxError(MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING):
     # get maximum mean squared error
     return np.sum(np.square(abs(affine_transform_matrix) - zero_matrix))
 
-
-# update dataset given the mean squared error values for a set of images
 def updateDataset(dataset, MSE_vals, dataset_enabled):
+    """
+    Function to update the dataset given the MSE values for a set of images
+
+    Keyword arguments:
+    dataset -- dataset to be updated
+    MSE_vals -- list of mean squared error values calculated from input images
+    dataset_enabled -- bool flag indicating whether dataset has been initialized
+    """
+
     # if dataset is enabled
     if dataset_enabled:
         # get mean and standard deviation from dataset
@@ -286,6 +330,28 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
     imageSummary):
+    """
+    Function to align a set of images to the provided template
+
+    Keyword arguments:
+    imgs -- input images to be aligned
+    template -- equalized template image to be used in ECC alignment
+    template_reduced_noise -- denoised template image to be used in feature based alignment
+    img_names -- list of corresponding image file names
+    imgs_apply -- list of equalized images to be aligned and used later in algorithm
+    debug_directory_registered -- directory where registered images should be written
+    debug_directory_matches -- directory where match images should be written
+    debug -- bool flag indicating whether output images should be saved
+    dataset -- robust registration dataset
+    dataset_enabled -- bool flag indicating whether robust dataset should be used
+    MAX_ROTATION -- maximum allowable rotation
+    MAX_TRANSLATION -- maximum allowable translation
+    MAX_SCALING -- maximum allowable image scaling
+    NUM_STD_DEV -- number of standard deviations away from dataset mean the MSE
+        of the affine matrix can be
+    params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
+    imageSummary -- dictionary containing information about each run
+    """
 
     # counter for successful ORB and ECC registrations
     validORB = 0
@@ -389,13 +455,41 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
 
 # unpack arguments of parallel pool tasks
 def unpackArgs(args):
+    """
+    Function to unpack arguments explicitly and call register function
+
+    Keyword arguments:
+    args -- function arguments passed by parallel registration function
+    """
     return register(*args)
 
-# align a set of images to the given template using a parallel pool
 def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
      imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
     imageSummary):
+    """
+    Function to align a set of images to the provided template using a parallel pool
+
+    Keyword arguments:
+    pool -- parallel pool to be used for computing
+    imgs -- input images to be aligned
+    template -- equalized template image to be used in ECC alignment
+    template_reduced_noise -- denoised template image to be used in feature based alignment
+    img_names -- list of corresponding image file names
+    imgs_apply -- list of equalized images to be aligned and used later in algorithm
+    debug_directory_registered -- directory where registered images should be written
+    debug_directory_matches -- directory where match images should be written
+    debug -- bool flag indicating whether output images should be saved
+    dataset -- robust registration dataset
+    dataset_enabled -- bool flag indicating whether robust dataset should be used
+    MAX_ROTATION -- maximum allowable rotation
+    MAX_TRANSLATION -- maximum allowable translation
+    MAX_SCALING -- maximum allowable image scaling
+    NUM_STD_DEV -- number of standard deviations away from dataset mean the MSE
+        of the affine matrix can be
+    params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
+    imageSummary -- dictionary containing information about each run
+    """
 
     # counter for successful ORB and ECC registrations
     validORB = 0

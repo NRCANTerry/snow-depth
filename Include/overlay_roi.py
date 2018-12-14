@@ -2,9 +2,21 @@
 import cv2
 import tqdm
 
-# optional function to overlay template roi (stake and blob bounding boxes)
-# onto registered images
 def overlay(imgs, templateIntersections, roiCoordinates, upperBorder, img_names, debug_directory):
+    """
+    Optional function to overlay template roi (stake and blob bounding boxes)
+    onto registered images
+
+    Keyword arguments:
+    imgs --  list of registered images
+    templateIntersections -- list containing intersection points from template
+    roiCoordinates -- list of coordinates for stake and blob bounding boxes
+        from template
+    upperBorder -- upper crop parameter
+    img_names -- list of corresponding image file names
+    debug_directory -- directory where marked images should be written
+    """
+
     # number of images
     num_images = len(imgs)
 

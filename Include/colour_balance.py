@@ -4,30 +4,27 @@ import numpy as np
 import math
 
 def applyMask(matrix, mask, fill_value):
-    '''
-    Apply mask to matrix
-    @param matrix the matrix to which the mask will be applied
-    @param mask the mask
-    @param fill_value degree of fill
-    @type matrix np.array
-    @type mask np.array
-    @type fill_value int
-    @return masked.filled() the filled mask
-    @rtype np.array
-    '''
+    """
+    Function to apply mask to matrix
+
+    Keyword arguments:
+    matrix -- the matrix to which the mask will be applied
+    mask -- mask to apply
+    fill_value -- degree of fill
+    """
 
     masked = np.ma.array(matrix, mask=mask, fill_value=fill_value)
     return masked.filled()
 
 def applyThreshold(matrix, low_val, high_val):
-    '''
-    Apply threshold to matrix
-    @param matrix the matrix to threshold
-    @param low_val lower value for mask
-    @param high_val upper value for mask
-    @return matrix thresholded matrix
-    @rtype np.array
-    '''
+    """
+    Function to apply threshold to matrix
+
+    Keyword arguments:
+    matrix -- the matrix to be thresholded
+    low_val -- lower value for mask
+    high_val -- high value for mask)
+    """
 
     low_mask = matrix < low_val
     matrix = applyMask(matrix, low_mask, low_val)
@@ -38,16 +35,14 @@ def applyThreshold(matrix, low_val, high_val):
     return matrix
 
 def balanceColour(img, percent):
-    '''
-    Correct the colour balance of an image by scaling histograms of R, G, B
-    channels so that they cover the entire 0-255 scale
-    @param img input image
-    @param percent degree of colour correction
-    @type img cv2.image
-    @type percent float
-    @return balanced image
-    @rtype cv2.image
-    '''
+    """
+    Function to correct the colour balance of an image
+    - scale the histograms of R, G, B channels to cover entire 0-255 scale
+
+    Keyword arguments:
+    img -- input image
+    percent -- degree of colour correction
+    """
 
     # ensure that image is colour and percent input is valid
     assert img.shape[2] == 3

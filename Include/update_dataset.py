@@ -4,12 +4,19 @@ import configparser
 from scipy.stats import trimboth
 import warnings
 
-# function to update the dataset of registration matrices
-# if the number of registrations is less than 50, the mean
-# squared error will only be appended
-# if the number is greater than 50 the mean and std dev will
-# be calculated and kept updated
 def createDataset(template_name, dataset, dataset_enabled):
+    """
+    Function to update the dataset of registration matrices
+    - if the number of registrations is less than 50, the MSE will only be appended
+    - if the number is greater than 50 the mean and std dev will be calculated
+        and updated
+
+    Keyword arguments:
+    template_name -- name of template for which dataset should be created/updated
+    dataset -- registration dataset to be updated
+    dataset_enabled -- bool flag indicating whether dataset has been initialized
+    """
+
     # disable FutureWarning from trimboth
     # caused by conflict of scipy 1.10 and numpy 1.15
     warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -52,12 +59,20 @@ def createDataset(template_name, dataset, dataset_enabled):
     with open('./AppData/preferences.cfg', 'w') as configfile:
         config.write(configfile)
 
-# function to update the dataset of tensor measurements
-# if the number of tensor measurements is less than 50, the tensor measurement
-# will only be appended
-# if the number is greater than 50 the mean and std dev will
-# be calculated and kept updated
 def createDatasetTensor(template_name, dataset, dataset_enabled):
+    """
+    Function to update the dataset of tensor measurements
+    - if the number of tensor measurements is less than 50, the tensor measurement
+        will only be appended
+    - if the number if greater than 50 the mean and std dev will be calculated
+        and updated
+
+    Keyword arguments:
+    template_name -- name of template for which dataset should be created/updated
+    dataset -- tensor dataset to be updated
+    dataset_enabled -- bool flag indicating whether dataset has been initialized
+    """
+
     # disable FutureWarning from trimboth
     # caused by conflict of scipy 1.10 and numpy 1.15
     warnings.simplefilter(action='ignore', category=FutureWarning)
