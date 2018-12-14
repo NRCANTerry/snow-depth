@@ -396,7 +396,7 @@ if __name__ == '__main__':
     # Calculate Change in Snow Depth
     # ---------------------------------------------------------------------------------
 
-    print("\n\nCalculating Change in Snow Depth")
+    print("\n\nCalculating Snow Depth")
     intervalTime = time()
 
     # get snow depths
