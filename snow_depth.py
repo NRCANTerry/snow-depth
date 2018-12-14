@@ -333,7 +333,6 @@ if __name__ == '__main__':
     # only run if in debugging mode
     if(debug):
         print("\n\nOverlaying ROI")
-
         overlay(images_registered, template_intersections, roi_coordinates, img_border_upper,
             filtered_names_reg, paths_dict["template-overlay"])
 
