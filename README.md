@@ -24,7 +24,6 @@ The files are organized as follows:
 |	|	|	| - - - template.py  
 ...  
 |	|	| - - - calculate_depth.py  
-|	|	| - - - check_stakes.py  
 |	|	| - - - colour_balance.py  
 |	|	| - - - equalize.py  
 |	|	| - - - filter_night.py  
@@ -35,6 +34,7 @@ The files are organized as follows:
 |	|	| - - - overlay_roi.py  
 |	|	| - - - register.py  
 |	|	| - - - update_dataset.py  
+|	|	| - - - validate_stakes.py
 ...  
 |	| - - - snow_depth.py (main script)  
 </pre>
