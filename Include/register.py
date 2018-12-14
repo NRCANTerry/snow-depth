@@ -10,7 +10,7 @@ import time
 def register(img, name, template, template_reduced_noise, img_apply, debug,
     debug_directory_registered, debug_directory_matches, dataset, dataset_enabled,
     NUM_STD_DEV, max_mean_squared_error, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING,
-    params):
+    params, misc_params):
     """
     Function to align an image to a provided template
 
@@ -33,6 +33,8 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     MAX_TRANSLATION -- maximum allowable translation
     MAX_SCALING -- maximum allowable image scaling
     params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
+    misc_params -- contains bool flag indicating whether ssim comparison should
+        be performed
     """
 
     # flags for whether image was aligned
@@ -128,6 +130,14 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
         cv2.imwrite(debug_directory_matches + name, imgMatches)
         cv2.imwrite(debug_directory_matches + filename + "-ORB" + ext, imgReg) # ORB aligned image
 
+    # calculate ssim of ORB registered image
+    if misc_params[1]: # if user is using ssim comparison
+        from skimage.measure import compare_ssim as ssim
+        ORB_ssim = ssim(imgRegGray, template)
+
+        # create copy of ORB registered image
+        imgRegCopy = imgReg.copy()
+
     # remove black space from image for ECC registration
     y_transform = affine_matrix[1][2]
     x_transform = affine_matrix[0][2]
@@ -219,6 +229,14 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # doesn't meet criteria
     else: imgECCAligned = imgReg
+
+    # calculate ssim of ECC registered image
+    if misc_params[1]: # if user is using ssim comparison
+        ECC_ssim = ssim(cv2.cvtColor(imgECCAligned.copy(), cv2.COLOR_BGR2GRAY), template)
+
+        # use ORB image if higher ssim
+        if ORB_ssim > ECC_ssim:
+            imgECCAligned = imgRegCopy
 
     # increase saturation of registered image to resemble input image
     h, s, v = cv2.split(cv2.cvtColor(imgECCAligned, cv2.COLOR_BGR2HSV).astype(np.float32))
@@ -329,7 +347,7 @@ def updateDataset(dataset, MSE_vals, dataset_enabled):
 def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
     debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
-    imageSummary):
+    imageSummary, misc_params):
     """
     Function to align a set of images to the provided template
 
@@ -351,6 +369,8 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         of the affine matrix can be
     params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
     imageSummary -- dictionary containing information about each run
+    misc_params -- contains bool flag indicating whether ssim comparison should
+        be performed
     """
 
     # counter for successful ORB and ECC registrations
@@ -382,7 +402,7 @@ def alignImages(imgs, template, template_reduced_noise, img_names, imgs_apply,
         output = register(img, img_names[count], template, template_reduced_noise,
             img_apply, debug, debug_directory_registered, debug_directory_matches,
             dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
-            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params)
+            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params, misc_params)
 
         # if image was aligned
         if output[0] is not None:
@@ -466,7 +486,7 @@ def unpackArgs(args):
 def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
      imgs_apply, debug_directory_registered, debug_directory_matches, debug, dataset,
     dataset_enabled, MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, NUM_STD_DEV, params,
-    imageSummary):
+    imageSummary, misc_params):
     """
     Function to align a set of images to the provided template using a parallel pool
 
@@ -489,6 +509,8 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         of the affine matrix can be
     params -- registration parameters (e.g. ECC thresholds, ORB features, etc.)
     imageSummary -- dictionary containing information about each run
+    misc_params -- contains bool flag indicating whether ssim comparison should
+        be performed
     """
 
     # counter for successful ORB and ECC registrations
@@ -514,7 +536,7 @@ def alignImagesParallel(pool, imgs, template, template_reduced_noise, img_names,
         tasks.append((img, img_names[i], template, template_reduced_noise,
             imgs_apply[i], debug, debug_directory_registered, debug_directory_matches,
             dataset, dataset_enabled, NUM_STD_DEV, max_mean_squared_error,
-            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params))
+            MAX_ROTATION, MAX_TRANSLATION, MAX_SCALING, params, misc_params))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):

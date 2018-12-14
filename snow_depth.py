@@ -284,12 +284,12 @@ if __name__ == '__main__':
         from register import alignImagesParallel
         images_registered, template_data_set, filtered_names_reg, stats, imageSummary = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
-            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary)
+            template_data_set, dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary, misc_params)
     else:
         from register import alignImages
         images_registered, template_data_set, filtered_names_reg, stats, imageSummary = alignImages(images_equalized, template_eq, template,
             filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug, template_data_set,
-            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary)
+            dataset_enabled, ROTATION, TRANSLATION, SCALE, STD_DEV_REG, reg_params, imageSummary, misc_params)
 
     # update summary
     registrationTime = time() - intervalTime
