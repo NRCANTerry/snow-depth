@@ -10,6 +10,8 @@ import statistics
 from scipy.signal import find_peaks
 from scipy import signal
 from scipy import ndimage
+from skimage import feature
+from skimage import img_as_ubyte
 import tqdm
 import time
 
@@ -92,7 +94,8 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
         stake_cover = len(np.where(peak_range < snow_threshold)[0]) / float(len(peak_range))
 
         # determine snow cover after peak
-        peak_range = lineVals[left_edge:]
+        right_edge = properties["right_ips"][index]
+        peak_range = lineVals[int(right_edge):]
         snow_cover = len(np.where(peak_range > snow_threshold)[0]) / float(len(peak_range) - \
             len(np.where(peak_range==0)[0])) # don't count image border
 
@@ -111,7 +114,6 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
 
             # determine if there is a significant amount of stake before the edge index
             edgeValid = True # flag for whether major amount of stake remaining
-            right_edge = properties["right_ips"][index]
             if right_edge < index_edge:
                 remaining_range = lineVals[int(right_edge):int(index_edge)]
                 remaining_stake = float(len(np.where(remaining_range < 100)[0]) - len(np.where(remaining_range==0)[0])) \
@@ -120,13 +122,15 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
                 if remaining_stake > 0.4 and index_edge_prop < 0.75: edgeValid = False # if more than 40% of remaining range is stake
 
             # determine if peak is past last known stake edge
-            past_edge = y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1
+            past_edge = y[int(left_edge)] > lowest_edge_y and lowest_edge_y != -1
+            if peak_width < 100:
+                past_edge = y[int(right_edge)] > lowest_edge_y and lowest_edge_y != -1
 
         # check if peak meets conditions
         if (
             index != last_index # peak isn't last
             and (stake_cover > params[3] or past_edge) # majority stake before peak
-            and (snow_cover > params[4] or (snow_cover > params[4] * 0.666 and peak_width > 150) or past_edge) # snow after peak
+            and (snow_cover > params[4] or past_edge) # snow after peak
             and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
                 and peak_intensity / float(next_peak_height) > 0.5) or past_edge) # peak is high enough
             and (peak_width > 50 or (peak_width + peak_width_next > 50 and proximity_peak < 100)
@@ -375,6 +379,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             gray_roi = cv2.GaussianBlur(gray_roi, (3, 3), 0)
             edges = cv2.Canny(gray_roi, 50, 200)
             edges = cv2.dilate(edges, np.ones((3, 3), dtype=np.uint8))
+            sEdges = feature.canny(gray_roi, sigma=3)
+            sEdges = cv2.dilate(img_as_ubyte(sEdges), np.ones((3, 3), dtype=np.uint8))
 
             # calculate parameters for Hough Line Transform
             maxLineGap = 50.0 / tensors[i] if tensors[i] != True else 50.0 / template_tensors[i] # 75mm
@@ -383,6 +389,8 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
             # Remove all but vertical edges
             edgeKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 15))
             edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, edgeKernel)
+            sEdges = cv2.morphologyEx(sEdges, cv2.MORPH_OPEN, edgeKernel)
+            edges = cv2.bitwise_or(edges, sEdges)
 
             # find lines
             lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180.0, threshold=100,
@@ -403,23 +411,28 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
             # eliminate lines that don't have a matching line on opposite side of stake
             stake_width = 100.0 / tensors[i] if tensors[i] != True else 100.0 / template_tensors[i] # 100 mm
-            for line_index, line in enumerate(v_stake_lines):
-                x1, y1, x2, y2 = line[0] # unpack coordinates
+            x_line_range = max(x[0][0] for x in v_stake_lines) - min(x[0][0] for x in v_stake_lines) # get range of x values
 
-                # check against other lines
-                lineValid = False
-                for second_line_index, secondLine in enumerate(v_stake_lines):
-                    x_1, y_1, x_2, y_2 = secondLine[0]
+            # if there are lines on both sides of the stake
+            if x_line_range > stake_width * 0.75:
+                for line_index, line in enumerate(v_stake_lines):
+                    x1, y1, x2, y2 = line[0] # unpack coordinates
 
-                    # if line has x coordinate shift equal to stake width
-                    if abs(abs(x_1-x1) - stake_width) <= 10 or abs(abs(x_2-x2) - stake_width) <= 10 and \
-                        (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
-                        lineValid = True
-                        break
+                    # check against other lines
+                    lineValid = False
+                    for second_line_index, secondLine in enumerate(v_stake_lines):
+                        x_1, y_1, x_2, y_2 = secondLine[0]
 
-                # if line isn't valid remove
-                if not lineValid:
-                    v_stake_lines.pop(line_index)
+                        # if line has x coordinate shift equal to stake width
+                        if abs(abs(x_1-x1) - stake_width) <= 10 and abs(abs(x_2-x2) - stake_width) <= 10 and \
+                            (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
+                            # line is valid
+                            lineValid = True
+                            break
+
+                    # if line isn't valid remove
+                    if not lineValid:
+                        v_stake_lines.pop(line_index)
 
             # find lowest stake line (near intersection point)
             lowest_edge_y = -1
@@ -472,7 +485,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
                 STEP 1: Find correct peak in signal
                 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-                #print(i, j)
+
                 selected_peak, major_peak = getPeakIndex(sorted_index, peaks, params,
                     lineVals, peakWidths, last_index, maxLineVal, properties, index_edge,
                     line_length, y, lowest_edge_y)
