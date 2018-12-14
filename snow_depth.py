@@ -82,6 +82,7 @@ if __name__ == '__main__':
     misc_params = params[23]
     summary_var = params[24]
     signal_var = params[25]
+    other_params = params[26]
 
     # update summary
     summary.start = datetime.now()
@@ -140,6 +141,9 @@ if __name__ == '__main__':
     summary["Training Path"] = os.path.basename(os.path.normpath(training_path))
     summary["Model Path"] = os.path.basename(os.path.normpath(model_path))
 
+    # get parallel pool parameter
+    use_pool = (other_params[3] == 1)
+
     # ---------------------------------------------------------------------------------
     # Create Directories
     # ---------------------------------------------------------------------------------
@@ -188,7 +192,7 @@ if __name__ == '__main__':
     summary["Number of Images"] = num_imgs
 
     # only use parallel pool if there are more than 5 images
-    if(num_imgs > 5):
+    if(num_imgs > 5 and use_pool):
         from multiprocessing import Pool
         from multiprocessing import cpu_count
         from multiprocessing import Queue
@@ -216,7 +220,7 @@ if __name__ == '__main__':
     numInitial = len([file_name for file_name in os.listdir(directory)]) # get intial image numbers
 
     # get filtered images and image names
-    if(num_imgs > 50 and not date_range[3]):
+    if(num_imgs > 50 and not date_range[3] and use_pool):
         from filter_night import filterNightParallel
         images_filtered, filtered_names, imageSummary = filterNightParallel(pool, directory,
             img_border_upper, img_border_lower, imageSummary)
@@ -246,16 +250,17 @@ if __name__ == '__main__':
     print("\n\nEqualizing Images")
     intervalTime = time()
 
-    if(num_imgs > 10):
+    if(num_imgs > 10 and use_pool):
         from equalize import equalizeImageSetParallel
         images_equalized, images_filtered, template_eq, template = equalizeImageSetParallel(pool,
             images_filtered, filtered_names, template_path, img_border_upper, img_border_lower,
-            clip_limit, tile_size, debug, paths_dict["equalized"], paths_dict["equalized-template"])
+            clip_limit, tile_size, debug, paths_dict["equalized"], paths_dict["equalized-template"],
+            other_params)
     else:
         from equalize import equalizeImageSet
         images_equalized, images_filtered, template_eq, template = equalizeImageSet(images_filtered,
             filtered_names, template_path, img_border_upper, img_border_lower, clip_limit, tile_size, debug,
-            paths_dict["equalized"], paths_dict["equalized-template"])
+            paths_dict["equalized"], paths_dict["equalized-template"], other_params)
 
     # update summary
     equalizationTime = time() - intervalTime
@@ -275,7 +280,7 @@ if __name__ == '__main__':
     print("\n\nRegistering Images")
     intervalTime = time()
 
-    if(num_imgs > 5):
+    if(num_imgs > 5 and use_pool):
         from register import alignImagesParallel
         images_registered, template_data_set, filtered_names_reg, stats, imageSummary = alignImagesParallel(pool, images_equalized,
             template_eq, template, filtered_names, images_filtered, paths_dict["registered"], paths_dict["matches"], debug,
@@ -340,7 +345,7 @@ if __name__ == '__main__':
     intervalTime = time()
 
     # check stakes in image
-    if(num_imgs > 10):
+    if(num_imgs > 10 and use_pool):
         from validate_stakes import getValidStakesParallel
         stake_validity, blob_coords, tensor_data_set, actual_tensors, imageSummary = getValidStakesParallel(pool, images_registered, roi_coordinates, [lower_hsv1,
             upper_hsv1, lower_hsv2, upper_hsv2], template_blob_sizes, img_border_upper, debug, filtered_names_reg, paths_dict["stake-check"],
@@ -370,7 +375,7 @@ if __name__ == '__main__':
     intervalTime = time()
 
     # get intersection points
-    if(num_imgs > 5):
+    if(num_imgs > 5 and use_pool):
         from intersect import getIntersectionsParallel
         intersection_coords, intersection_dist, imageSummary = getIntersectionsParallel(pool, images_registered, blob_coords, stake_validity,
             roi_coordinates, filtered_names_reg, debug, paths_dict["intersection"], int_params, actual_tensors,

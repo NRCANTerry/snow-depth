@@ -85,7 +85,8 @@ class GUI:
             "Window_Closed": False,
             "Reg_Params": [0, 0, 0, 0, 0, 0],
             "Int_Params": [0, 0, 0, 0 , 0],
-            "Misc_Params": [0, 0]
+            "Misc_Params": [0, 0],
+            "Other_Params": [0, 0, 0]
         }
 
         # dictionary with options for program
@@ -702,7 +703,7 @@ class GUI:
                     self.systemParameters["Current_Blob_Distances"], self.systemParameters["Current_Template_Settings"], \
                     [self.startDate.current_date, self.endDate.current_date, self.selectedTime, self.advancedFrameOpen], \
                     self.systemParameters["Reg_Params"], self.systemParameters["Int_Params"], self.systemParameters["Misc_Params"], \
-                    self.summaryVar.get(), self.signalVar.get()
+                    self.summaryVar.get(), self.signalVar.get(), self.systemParameters["Other_Params"]
 
         # return False if run button wasn't pressed
         else:
@@ -875,6 +876,7 @@ class GUI:
             self.systemParameters["Int_Params"] = [int(optionsList[13]), float(optionsList[14]), float(optionsList[15]), float(optionsList[16]),
                 float(optionsList[17]), int(optionsList[21])]
             self.systemParameters["Misc_Params"] = [int(optionsList[18]), int(optionsList[19])]
+            self.systemParameters["Other_Params"] = [int(optionsList[22]), int(optionsList[23]), int(optionsList[24]), int(optionsList[25])]
 
     #===========================================================================
     # Function to restart script to load changes
@@ -1275,6 +1277,7 @@ class GUI:
                     self.systemParameters["Reg_Params"].append(regStyle.get())
                     self.systemParameters["Misc_Params"] = [deepLearningProfileFlag.get(),
                         ssimProfileFlag.get()]
+                    self.systemParameters["Other_Params"].append(parallelFlag.get())
 
                     # create output string
                     outputString = "[" + str(self.systemParameters["Upper_Border"]) + "," + \
@@ -1284,7 +1287,8 @@ class GUI:
                         "," + str(self.systemParameters["Reg_Params"]).replace("[","").replace("]", "") + \
                         "," + str(self.systemParameters["Int_Params"]).replace("[","").replace("]", "") + \
                         "," + str(deepLearningProfileFlag.get()) + "," + str(ssimProfileFlag.get()) + \
-                        "," + str(robustRegistrationFlag.get()) + "," + str(robustIntersectionFlag.get()) + "]"
+                        "," + str(robustRegistrationFlag.get()) + "," + str(robustIntersectionFlag.get()) + \
+                        "," + str(self.systemParameters["Other_Params"]).replace("[","").replace("]", "") + "]"
 
                     # add to config file
                     self.config.set('Profiles', var.get(), outputString)
@@ -1328,6 +1332,7 @@ class GUI:
             defaultFrame.pack_forget()
             regFrame.pack_forget()
             intFrame.pack_forget()
+            otherFrame.pack_forget()
 
             # pack selected frame
             newFrame.pack(side=tk.RIGHT, pady=(10, 20), padx=50)
@@ -1343,6 +1348,7 @@ class GUI:
         defaultFrame = tk.Frame(newWindow, bg=self.gray)
         regFrame = tk.Frame(newWindow, bg=self.gray)
         intFrame = tk.Frame(newWindow, bg=self.gray)
+        otherFrame = tk.Frame(newWindow, bg=self.gray)
 
         #==================================================================
         # Side Menu
@@ -1365,12 +1371,16 @@ class GUI:
         intMenuButton = tk.Button(menuFrame, text="Intersection", bg=self.gray,
             fg=self.white, font=("Calibri Light", 14), borderwidth=0,
             justify=tk.LEFT, anchor="w", command=lambda: changeMenu(intFrame))
+        otherMenuButton = tk.Button(menuFrame, text="Other", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 14), borderwidth=0,
+            justify=tk.LEFT, anchor="w", command=lambda: changeMenu(otherFrame))
 
         # packing
         menuLabel.pack(pady=(10,0), fill=tk.X)
         defaultMenuButton.pack(pady=2, fill=tk.X)
         regMenuButton.pack(pady=2, fill=tk.X)
         intMenuButton.pack(pady=2, fill=tk.X)
+        otherMenuButton.pack(pady=2, fill=tk.X)
 
         #==================================================================
         # Default Page
@@ -1696,6 +1706,78 @@ class GUI:
 
         buttonFrameInt.pack(pady = 20)
         createProfileButtonInt.pack(side = tk.LEFT, padx = (5, 20))
+
+        #==================================================================
+        # Other Page
+        #==================================================================
+
+        # frames
+        bilateralFrame1 = tk.Frame(otherFrame, bg=self.gray)
+        bilateralFrame2 = tk.Frame(otherFrame, bg=self.gray)
+        bilateralFrame3 = tk.Frame(otherFrame, bg=self.gray)
+        buttonFrameOther = tk.Frame(otherFrame, bg=self.gray)
+
+        # labels
+        titleLabel = tk.Label(otherFrame, text="Other", bg=self.gray,
+            fg=self.white, font=("Calibri Light", 24))
+        fECC.configure(size=17)
+        bilateralLabel = tk.Label(otherFrame, text="Bilateral Params", bg=self.gray,
+            font=fECC, fg=self.white)
+        bilateralLabel1 = tk.Label(bilateralFrame1, text="Diameter")
+        bilateralLabel2 = tk.Label(bilateralFrame2, text="sigmaColour")
+        bilateralLabel3 = tk.Label(bilateralFrame3, text="sigmaSpace")
+
+        labels = [bilateralLabel1, bilateralLabel2, bilateralLabel3]
+        for label in labels:
+            label.config(bg=self.gray, fg=self.white, font=("Calibri Light", 16))
+
+        # entries
+        bilateralEntry1 = tk.Entry(bilateralFrame1, validatecommand =((validateCommand, '%P', "Other_Params", 0)))
+        bilateralEntry2 = tk.Entry(bilateralFrame2, validatecommand =((validateCommand, '%P', "Other_Params", 1)))
+        bilateralEntry3 = tk.Entry(bilateralFrame3, validatecommand =((validateCommand, '%P', "Other_Params", 2)))
+
+        # set default values
+        bilateralEntry1.insert(0, 9)
+        bilateralEntry2.insert(0, 75)
+        bilateralEntry3.insert(0, 75)
+        self.systemParameters["Other_Params"] = [9, 75, 75]
+
+        otherEntries = [bilateralEntry1, bilateralEntry2, bilateralEntry3]
+        for entry in otherEntries:
+            entry.config(validate = "key", font=("Calibri Light", 14), width = 7)
+
+        # button
+        createProfileButtonOther = tk.Button(buttonFrameOther, text = "Create Profile",
+            command = lambda: getName(), bg=self.gray, fg = self.white,
+            font=("Calibri Light", 15), width = 17)
+
+        # parallel pool checkbox
+        parallelFlag = tk.IntVar()
+        parallelFlag.set(1)
+        parallelCheckbox = tk.Checkbutton(otherFrame,
+            variable=parallelFlag, bg=self.gray, fg=self.white,
+            text="Use Parallel Pool", selectcolor=self.gray,
+            activebackground=self.gray, activeforeground=self.white,
+            font=("Calibri Light", 16))
+
+        # packing
+        titleLabel.pack(pady=20)
+        bilateralLabel.pack(pady=10)
+        bilateralFrame1.pack(pady=10)
+        bilateralLabel1.pack(side=tk.LEFT, padx=(20,10))
+        bilateralEntry1.pack(side=tk.LEFT, padx=10)
+
+        bilateralFrame2.pack(pady=10)
+        bilateralLabel2.pack(side=tk.LEFT, padx=(10,10))
+        bilateralEntry2.pack(side=tk.LEFT, padx=(10,25))
+
+        bilateralFrame3.pack(pady=10, padx=50)
+        bilateralLabel3.pack(side=tk.LEFT, padx=(10,10))
+        bilateralEntry3.pack(side=tk.LEFT, padx=(10,20))
+        parallelCheckbox.pack(anchor=tk.W, pady=10, padx=(60,0))
+
+        buttonFrameOther.pack(pady = 20)
+        createProfileButtonOther.pack(side = tk.LEFT, padx = (5, 20))
 
         menuFrame.pack(side=tk.LEFT, anchor=tk.N, pady=(20,0), padx=(20,0))
         defaultFrame.pack(side = tk.RIGHT, pady = (10,20), padx = 50)

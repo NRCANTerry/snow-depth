@@ -6,10 +6,6 @@ import sys
 import tqdm
 from colour_balance import balanceColour
 
-# image resizing parameters
-maxHeight = 1080.0
-maxWidth = 1920.0
-
 def brighten(img, val):
     '''
     Increases the brightness of an input image
@@ -95,7 +91,8 @@ def equalizeHistogram(img, clip_limit, tile_size):
     # return brightened image
     return np.where((255-l) < 75, 255, l + 75)
 
-def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
+def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory,
+    params):
     '''
     Perform equalization operations on an image
     @param img the image to be equalized
@@ -115,7 +112,7 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     '''
 
     # denoise using bilateral filter
-    img_filter = cv2.bilateralFilter(img.copy(), 9, 75, 75)
+    img_filter = cv2.bilateralFilter(img.copy(), params[0], params[1], params[2])
 
     # balance colour
     img_filter = balanceColour(img_filter, 5)
@@ -132,7 +129,8 @@ def equalizeImage(img, clipLimit, tileSize, name, debug, debug_directory):
     # return equalized images
     return img_eq_gray, img_eq
 
-def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder):
+def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder,
+    params):
     '''
     Crop and equalize template according to parameters
     @param templatePath path to template image
@@ -155,14 +153,14 @@ def equalizeTemplate(templatePath, clipLimit, tileSize, upperBorder, lowerBorder
     template = template[upperBorder:(h_temp-lowerBorder), :, :]
 
     # get denoised template
-    template_noise = cv2.bilateralFilter(template.copy(), 9, 75, 75)
+    template_noise = cv2.bilateralFilter(template.copy(), params[0], params[1], params[2])
 
     # return equalized template
     return equalizeHistogram(template, clipLimit, tileSize), equalizeHistogram(template_noise, clipLimit, tileSize)
 
 def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
-    debug_directory_template):
+    debug_directory_template, params):
     '''
     Equalize sets of images without using a parallel pool
     @param images_filtered set of images with night images removed
@@ -206,7 +204,7 @@ def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
     for img in tqdm.tqdm(images_filtered):
         # equalize image according to specified parameters
         img_eq_gray, img_eq = equalizeImage(img, clipLimit, tileSize, filtered_names[index],
-            debug, debug_directory_img)
+            debug, debug_directory_img, params)
 
         # add to lists
         images_filtered[index] = img_eq
@@ -217,7 +215,7 @@ def equalizeImageSet(images_filtered, filtered_names, templatePath, upperBorder,
 
     # equalize template
     template_eq, template_reduced_noise = equalizeTemplate(templatePath, clipLimit, tileSize,
-        upperBorder, lowerBorder)
+        upperBorder, lowerBorder, params)
 
     # if debugging write to directory
     if(debug):
@@ -238,7 +236,7 @@ def unpackArgs(args):
 
 def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath,
     upperBorder, lowerBorder, clipLimit, tileSize, debug, debug_directory_img,
-    debug_directory_template):
+    debug_directory_template, params):
     '''
     Equalize sets of images using a parallel pool
     @param pool paralell pool to be used
@@ -280,7 +278,8 @@ def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath
     # create task list for pool
     tasks = list()
     for i, img in enumerate(images_filtered):
-        tasks.append((img, clipLimit, tileSize, filtered_names[i], debug, debug_directory_img))
+        tasks.append((img, clipLimit, tileSize, filtered_names[i], debug,
+            debug_directory_img, params))
 
     # run tasks using pool
     for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total = len(tasks)):
@@ -290,7 +289,7 @@ def equalizeImageSetParallel(pool, images_filtered, filtered_names, templatePath
 
     # equalize template
     template_eq, template_reduced_noise = equalizeTemplate(templatePath, clipLimit, tileSize,
-        upperBorder, lowerBorder)
+        upperBorder, lowerBorder, params)
 
     # if debugging write to directory
     if(debug):
