@@ -18,13 +18,13 @@ maxWidth4K = 3840
 maxHeight4K = 2160
 
 def calculate_weighted_means(data):
-    '''
-    Calculates the weighted means for the histogram data
-    @param data the colour histogram data
-    @type data dict(red, green, blue)
-    @return the weighted means for red, green and blue channels
-    @rtype list(red, green, blue)
-    '''
+    """
+    Function that calculates the weighted means for the histogram data and
+    returns the weighted meansd for red, green and blue channels
+
+    Keyword arguments:
+    data -- the colour histogram data
+    """
 
     # weighted mean variables
     weighted_red = 0
@@ -47,13 +47,12 @@ def calculate_weighted_means(data):
     return [weighted_red, weighted_blue, weighted_green]
 
 def get_histogram(img):
-    '''
-    Calculates the histogram data for the image
-    @param img the image to compute the histogram for
-    @type img cv2 image
-    @return the calculated histogram data
-    @rtype dict(red, green, blue)
-    '''
+    """
+    Function that calculates the histogram of an input image
+
+    Keyword arguments:
+    img -- input image for which a histogram should be calculated
+    """
 
     # calculate histogram
     blue = cv2.calcHist([img], [0], None, [256], [0, 256])
@@ -68,19 +67,13 @@ def get_histogram(img):
     }
 
 def isDay(img, name):
-    '''
-    Returns whether an image is taken during the day or night
-    @param img the image to compute the histogram for
-    @param name the name of the image
-    @type img cv2 image
-    @type name string
-    @return whether the image is day or not
-    @return original image
-    @return image name
-    @rtype bool
-    @rtype image cv2.image
-    @rtype name string
-    '''
+    """
+    Function that returns whether an image is taken during the day or night
+
+    Keyword arguments:
+    img -- image for which the time should be determined
+    name -- image file name
+    """
 
     # compute histogram
     hist = get_histogram(img)
@@ -99,19 +92,16 @@ def isDay(img, name):
     return (max_diff > MAX_NIGHT, img, name)
 
 def filterNight(directory, upperBorder, lowerBorder, dateRange, imageSummary):
-    '''
-    Returns filtered list of day images
-    @param directory the path to the directory containing the image
-    @param upperBorder upper crop parameter
-    @param lowerBorder lower crop parameter
-    @type directory string
-    @type upperBorder int
-    @type lowerBorder int
-    @return list of filtered images
-    @return list of filtered names
-    @rtype list(images)
-    @rtype list(string)
-    '''
+    """
+    Function that returns a filtered list of daytime images
+
+    Keyword arguments:
+    directory -- path to the directory containing the input images
+    upperBorder -- upper crop parameter
+    lowerBorder -- lower crop parameter
+    dateRange -- list containing dates of images user would like to process
+    imageSummary -- dictionary containing information about each run
+    """
 
     # get file names
     images = [file_name for file_name in os.listdir(directory)]
@@ -202,31 +192,27 @@ def filterNight(directory, upperBorder, lowerBorder, dateRange, imageSummary):
     return images_filtered, filtered_names, imageSummary
 
 def unpackArgs(args):
-    '''
-    Function to unpack arguments explicitly
-    @param args function arguments
-    @type args arguments
-    @return output of isDay function
-    @rtype bool
-    '''
+    """
+    Function to unpack arguments explicitly and call isDay function
+
+    Keyword arguments:
+    args -- function arguments passed by parallel filtering night function
+    """
     return isDay(*args)
 
 def filterNightParallel(pool, directory, upperBorder, lowerBorder, imageSummary):
-    '''
-    Returns filtered list of day images using parallel pool for computing
-    @param pool the parallel pool used for computing
-    @param directory the path to the directory containing the image
-    @param upperBorder upper crop parameter
-    @param lowerBorder lower crop parameter
-    @type pool multiprocessing pool
-    @type directory string
-    @type upperBorder int
-    @type lowerBorder int
-    @return list of filtered images
-    @return list of filtered names
-    @rtype list(images)
-    @rtype list(string)
-    '''
+    """
+    Function that returns a filtered list of daytime images using parallel pool
+    for computing
+
+    Keyword arguments:
+    pool -- the parallel pool used for computing
+    directory -- path to the directory containing the input images
+    upperBorder -- upper crop parameter
+    lowerBorder -- lower crop parameter
+    dateRange -- list containing dates of images user would like to process
+    imageSummary -- dictionary containing information about each run
+    """
 
     # get file names
     images = tuple([file_name for file_name in os.listdir(directory)])
