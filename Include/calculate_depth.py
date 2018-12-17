@@ -207,9 +207,8 @@ def getDepths(imgs, img_names, intersectionCoords, stakeValidity, templateInters
     plt.plot(image_dates, median_depths_est)
     plt.gcf().autofmt_xdate()
     plt.legend(['Median Depth', 'Median Estimate'], loc='upper left')
-    ax.set_xlabel("Images")
-    ax.set_ylabel("Change (mm)")
-    ax.set_title("Change in Snow Depth (mm)")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Snow Depth (mm)")
     plt.xticks(rotation=75)
     plt.tight_layout()
 
