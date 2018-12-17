@@ -409,48 +409,51 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                             (x_coord > bottomBlob[2][0] and x_coord < bottomBlob[2][0] + blob_shift):
                             v_stake_lines.append(line)
 
-            # eliminate lines that don't have a matching line on opposite side of stake
-            stake_width = 100.0 / tensors[i] if tensors[i] != True else 100.0 / template_tensors[i] # 100 mm
-            x_line_range = max(x[0][0] for x in v_stake_lines) - min(x[0][0] for x in v_stake_lines) # get range of x values
-
-            # if there are lines on both sides of the stake
-            if x_line_range > stake_width * 0.75:
-                for line_index, line in enumerate(v_stake_lines):
-                    x1, y1, x2, y2 = line[0] # unpack coordinates
-
-                    # check against other lines
-                    lineValid = False
-                    for second_line_index, secondLine in enumerate(v_stake_lines):
-                        x_1, y_1, x_2, y_2 = secondLine[0]
-
-                        # if line has x coordinate shift equal to stake width
-                        if abs(abs(x_1-x1) - stake_width) <= 10 and abs(abs(x_2-x2) - stake_width) <= 10 and \
-                            (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
-                            # line is valid
-                            lineValid = True
-                            break
-
-                    # if line isn't valid remove
-                    if not lineValid:
-                        v_stake_lines.pop(line_index)
-
-            # find lowest stake line (near intersection point)
+            # variable for lowest stake line (near intersection point)
             lowest_edge_y = -1
-            if params[5]: # find lowest stake edge if using robust intersection
-                for line in v_stake_lines:
-                    for x1, y1, x2, y2 in line:
-                        # draw line on debugging image
-                        if debug:
-                            cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
-                                (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
-                            cv2.line(stake_bottom_roi, (int(x1), int(y1)),
-                                (int(x2), int(y2)), (0, 255, 0), 2)
 
-                        # update lowest edge variable
-                        if y2 + y0 > lowest_edge_y and y2 > y1:
-                            lowest_edge_y = y2 + y0
-                        elif y1 + y0 > lowest_edge_y:
-                            lowest_edge_y = y1 + y0
+            # if there are lines to process
+            if len(v_stake_lines) > 0:
+                # eliminate lines that don't have a matching line on opposite side of stake
+                stake_width = 100.0 / tensors[i] if tensors[i] != True else 100.0 / template_tensors[i] # 100 mm
+                x_line_range = max(x[0][0] for x in v_stake_lines) - min(x[0][0] for x in v_stake_lines) # get range of x values
+
+                # if there are lines on both sides of the stake
+                if x_line_range > stake_width * 0.75:
+                    for line_index, line in enumerate(v_stake_lines):
+                        x1, y1, x2, y2 = line[0] # unpack coordinates
+
+                        # check against other lines
+                        lineValid = False
+                        for second_line_index, secondLine in enumerate(v_stake_lines):
+                            x_1, y_1, x_2, y_2 = secondLine[0]
+
+                            # if line has x coordinate shift equal to stake width
+                            if abs(abs(x_1-x1) - stake_width) <= 10 and abs(abs(x_2-x2) - stake_width) <= 10 and \
+                                (abs(abs(y_1-y2) - stake_width) <= 50 or abs(abs(y_2-y1) - stake_width) <= 50):
+                                # line is valid
+                                lineValid = True
+                                break
+
+                        # if line isn't valid remove
+                        if not lineValid:
+                            v_stake_lines.pop(line_index)
+
+                if params[5]: # find lowest stake edge if using robust intersection
+                    for line in v_stake_lines:
+                        for x1, y1, x2, y2 in line:
+                            # draw line on debugging image
+                            if debug:
+                                cv2.line(img_write, (int(x1+roiCoordinates[i][0][0][0]), int(y1+y0)),
+                                    (int(x2+roiCoordinates[i][0][0][0]), int(y2+y0)), (0, 255, 0), 2)
+                                cv2.line(stake_bottom_roi, (int(x1), int(y1)),
+                                    (int(x2), int(y2)), (0, 255, 0), 2)
+
+                            # update lowest edge variable
+                            if y2 + y0 > lowest_edge_y and y2 > y1:
+                                lowest_edge_y = y2 + y0
+                            elif y1 + y0 > lowest_edge_y:
+                                lowest_edge_y = y1 + y0
 
             # iterate through combinations
             for j, ((x0, y0), (x1, y1)) in enumerate(coordinateCombinations):
