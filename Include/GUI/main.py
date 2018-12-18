@@ -275,7 +275,6 @@ class GUI:
         # add commands
         self.filemenu.add_command(label = "Load Preview Tool", command = lambda: self.runPreview())
         self.filemenu.add_separator()
-        self.filemenu.add_command(label = "Restart", command = lambda: self.restart())
         self.filemenu.add_command(label = "Exit", command = lambda: self.on_closing())
         self.menubar.add_cascade(label = "File", menu = self.filemenu)
 
@@ -877,21 +876,6 @@ class GUI:
                 float(optionsList[17]), int(optionsList[21])]
             self.systemParameters["Misc_Params"] = [int(optionsList[18]), int(optionsList[19])]
             self.systemParameters["Other_Params"] = [int(optionsList[22]), int(optionsList[23]), int(optionsList[24]), int(optionsList[25])]
-
-    #===========================================================================
-    # Function to restart script to load changes
-    #===========================================================================
-
-    def restart(self):
-        # write preferences to file
-        with open('./AppData/preferences.cfg', 'w') as configfile:
-            self.config.write(configfile)
-
-        # close window
-        self.root.destroy()
-
-        # restart program
-        os.execv(sys.executable, ['C:\\Users\\tbaricia\\AppData\\Local\\Continuum\\miniconda2\\python.exe'] + sys.argv)
 
     #===========================================================================
     # Function to provide widgets to build a save page
