@@ -195,7 +195,6 @@ if __name__ == '__main__':
     if(num_imgs > 5 and use_pool):
         from multiprocessing import Pool
         from multiprocessing import cpu_count
-        from multiprocessing import Queue
 
         print("\nCreating Parallel Pool...")
 
