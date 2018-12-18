@@ -20,7 +20,7 @@ maxHeight4K = 2160
 def calculate_weighted_means(data):
     """
     Function that calculates the weighted means for the histogram data and
-    returns the weighted meansd for red, green and blue channels
+    returns the weighted means for red, green and blue channels
 
     Keyword arguments:
     data -- the colour histogram data
