@@ -2,7 +2,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import cv2
-from order_points import orderPoints
 import math
 import os
 import json
