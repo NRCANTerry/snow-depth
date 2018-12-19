@@ -218,14 +218,14 @@ Good HSV Range:
 3. Then either input an HSV range input the text fields or select a saved field under "Select HSV Range"
 4. Select a profile under "Settings"
 5. **_Optional_** To specify output and date ranges press the arrow on the right to open the advanced menu
+   1. The advanced menu looks like this:
 
-The advanced menu looks like this:
-![advanced1](https://user-images.githubusercontent.com/43354925/50247981-6f1b6980-03a7-11e9-9c27-4b42a406f0bd.PNG)
+    ![advanced1](https://user-images.githubusercontent.com/43354925/50247981-6f1b6980-03a7-11e9-9c27-4b42a406f0bd.PNG)
 
-**_Selecting a Date and Time Range_**  
-a. To run images taken bewteen two dates, specify the start and end dates in the FROM and TO sections  
-b. To run images taken between two dates and times, specify the start and end dates and times in the FROM and TO sections  
-c. To run images taken at a certain time (but with no start and end date) specify the time in the FROM and TO sections  
+   2. **_Selecting a Date and Time Range:_**
+	1. To run images taken bewteen two dates, specify the start and end dates in the FROM and TO sections   
+	2. To run images taken between two dates and times, specify the start and end dates and times in the FROM and TO sections
+	3. To run images taken at a certain time (but with no start and end date) specify the time in the FROM and TO sections  
 
 6. If you would like the algorithm to output images at each stage (i.e. equalization, registration, etc.) then select "Debug"
 7. Click "Run"
