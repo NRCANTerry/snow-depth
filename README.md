@@ -149,6 +149,52 @@ python snow_depth.py
 3. Filled boxes can also be modified but contain default values and should only be changed after running the algorithm on the default settings
 4. Click "Create Profile" and follow the on-screen instructions
 
+### Profile Options  
+_**Basic**_  
+
+| Name  | Explanation |  
+| ----- | ----------- |  
+| Upper Border | Upper crop factor to remove metadata |
+| Lower Border | Lower crop factor to remove metadata |
+| Template | Template to be used with profile |
+| Clip Limit | Limit for contrast enhancement (prevents oversaturation) |
+| Tile Size | Number of rectangular regions the image is divided into for histogram equalization (e.g. (8, 8) produces 8 rows and 8 columns) |
+| Use Deep Learning | Option to use deep learning within profile |
+
+_**Registration**_  
+
+| Name  | Explanation |  
+| ----- | ----------- |  
+| ORB Features | Number of features for ORB algorithm |
+| ORB Threshold | How aggressively the ORB matches are discarded (lower threshold means less matches but higher quality) |
+| ECC Params (w/ ORB) | ECC parameters if feature-based registration was successful |
+| ECC Params (no ORB) | ECC parameters if feature-based registration failed |
+| Threshold (1e-) | Termination threshold for ECC algorithm (higher values i.e. 1e-10 will give better accuracy but will add significant computation time |
+| Iterations | Maximum number of iterations ECC algorithm will run for before exiting (if it doesn't meet the termination threshold) |
+| Use SSIM Selection | Option to use structural similarlity index to compare ORB and ECC registered images and choose the image that is most similar to the template. Should only use in cases where ECC is causing poor registrations. |
+| Use Robust Registration | Option to use registration dataset which tracks historical registrations and discards those that do not fit the trend. Should only be enabled if numerous poor registrations are not being detected. |
+| Mode | Registration mode: Either ORB + ECC, ORB Only, or ECC Only |
+
+_**Intersection**_
+
+| Name  | Explanation |  
+| ----- | ----------- |  
+| Peak Height | Minimum intensity for a peak in the intensity signal |
+| Peak Threshold (%) | Used to calculate ```snow_threhsold``` in peak analysis (```snow_threshold = peak_intensity * params[1]```) |
+| Min Threshold | Minimum ```snow_threshold``` used in peak analysis |
+| Stake Coverage (%) | How much of the signal before the peak should be identified as stake (```intensity < snow_threshold```) |
+| Snow Coverage (%) | How much of the signal after the peak should be identified as snow (```intensity > snow_threshold```) |
+| Use Robust Intersection | Option to use stake edge detection to refine intersection point estimation. Highly recommmended unless intersection results become erroneous. |
+
+_**Other**_
+
+| Name  | Explanation |  
+| ----- | ----------- |  
+| Diameter | Diameter of each pixel neighbourhood used during filtering (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
+| sigmaColour | Filter sigma in the colour space (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
+| sigmaSpace | Filter sigma in the coordinate space (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
+| Use Parallel Pool | Option to use a parallel pool. It this option is selected, the application will automatically use a parallel pool for computation to reduce processing time. |
+
 ### 3. Determine the HSV Range
 - In order to identify blobs in an input image, the algorithm must know what colour the reference blobs are
 - After multiple runs the algorithm will initialize its own deep learning algorithm to help identify blobs but it is still recommended that you provide it with an HSV range
