@@ -110,9 +110,9 @@ python snow_depth.py
 3. Select the template image using the pop-up window
 4. Indicate whether the image has snow in it
 5. Fill in the required parameters
-	1. Tensor STD Dev - how much the tensor of an input image can vary from the average (5 is a good starting point)
-	2. Register STD Dev - how much the registration matrix of an input image can vary from the average (5 is a good starting point)
-	3. Maximum Transformation parameters - how much an image can be rotated, translated and scaled before the translation is considered invalid (used to filter out poor registrations)
+	1. ```Tensor STD Dev``` - how much the tensor of an input image can vary from the average (5 is a good starting point)
+	2. ```Register STD Dev``` - how much the registration matrix of an input image can vary from the average (5 is a good starting point)
+	3. ```Maximum Transformation``` - how much an image can be rotated, translated and scaled before the translation is considered invalid (used to filter out poor registrations)
 6. Click Continue
 7. Follow the GUI instructions
 	1. Select all the stakes in the image  
