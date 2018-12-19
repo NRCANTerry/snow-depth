@@ -153,7 +153,7 @@ python snow_depth.py
 _**Basic**_  
 
 | Name  | Explanation |  
-| ----- | ----------- |  
+| :---: | ----------- |  
 | Upper Border | Upper crop factor to remove metadata |
 | Lower Border | Lower crop factor to remove metadata |
 | Template | Template to be used with profile |
@@ -164,7 +164,7 @@ _**Basic**_
 _**Registration**_  
 
 | Name  | Explanation |  
-| ----- | ----------- |  
+| :---: | ----------- |  
 | ORB Features | Number of features for ORB algorithm |
 | ORB Threshold | How aggressively the ORB matches are discarded (lower threshold means less matches but higher quality) |
 | ECC Params (w/ ORB) | ECC parameters if feature-based registration was successful |
@@ -178,7 +178,7 @@ _**Registration**_
 _**Intersection**_
 
 | Name  | Explanation |  
-| ----- | ----------- |  
+| :---: | ----------- | 
 | Peak Height | Minimum intensity for a peak in the intensity signal |
 | Peak Threshold (%) | Used to calculate ```snow_threhsold``` in peak analysis (```snow_threshold = peak_intensity * params[1]```) |
 | Min Threshold | Minimum ```snow_threshold``` used in peak analysis |
@@ -189,7 +189,7 @@ _**Intersection**_
 _**Other**_
 
 | Name  | Explanation |  
-| ----- | ----------- |  
+| :---: | ----------- | 
 | Diameter | Diameter of each pixel neighbourhood used during filtering (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
 | sigmaColour | Filter sigma in the colour space (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
 | sigmaSpace | Filter sigma in the coordinate space (https://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=bilateralfilter#bilateralfilter) |
