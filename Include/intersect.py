@@ -470,7 +470,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
                 # determine peaks and properties
                 peaks, properties = find_peaks(lineVals_smooth, height=params[0], width=5)
-                peaks2, properties2 = find_peaks(lineVals, height=params[0], width=1)
                 peakWidthsOutput = signal.peak_widths(lineVals_smooth, peaks, rel_height=0.75)
                 peakWidths = peakWidthsOutput[0]
                 maxLineVal = float(max(lineVals)) * 0.65
@@ -511,24 +510,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                     intersection_index = 0
                     peak_index_line = 0
 
-                '''DELETE'''
-                line_gradients_full = np.clip(np.gradient(lineVals), a_min=0, a_max=100)
-                #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
-                highest = [0, line_gradients_full[intersection_index]]
-                peaks3 = 0
-                if intersection_index > index_edge:
-                    dist = intersection_index-index_edge
-                    line_gradients_full = np.clip(np.gradient(lineVals[index_edge:intersection_index+15]), a_min=0, a_max=100)
-                    #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
-                    peaks3, properties3 = find_peaks(line_gradients_full)
-                    for yt in peaks3:
-                        if line_gradients_full[yt] > highest[1]:
-                            highest = [yt, line_gradients_full[yt]]
-                    line_gradients_full = np.clip(np.gradient(lineVals), a_min=0, a_max=100)
-                    #line_gradients_full = ndimage.filters.gaussian_filter1d(line_gradients_full, 2)
-                    highest[0] = intersection_index - (dist-highest[0]) if highest[0] != 0 else intersection_index
-                '''DELETE'''
-
                 # add coordinates to dictionary
                 if(selected_peak != -1 and intersection_index != 0):
                     coordinates[combination_names[j]] = (x[intersection_index], y[intersection_index])
@@ -538,16 +519,13 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                 # if in debugging mode
                 if debug and signal_var:
                     # plot and save
-                    fig, axes = plt.subplots(nrows=4)
+                    fig, axes = plt.subplots(nrows=2)
                     axes[0].imshow(img)
                     axes[0].plot([x0, x1], [y0, y1], 'ro-')
                     axes[0].axis('image')
                     axes[1].plot(lineVals)
                     axes[1].plot(peaks, lineVals[peaks], "x")
                     axes[1].plot(peak_index_line, lineVals[peak_index_line], "x")
-                    axes[2].plot(line_gradients_full)
-                    axes[2].plot(peaks3, line_gradients_full[peaks3], "x")
-                    axes[3].plot(line_gradients_full)
 
                     # only show if valid intersction point found
                     if selected_peak != -1:
@@ -561,8 +539,6 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
                         axes[1].axvline(x=intersection_index,color='r')
                         axes[1].axvline(x=index_edge, color='pink')
                         axes[1].axvline(x=init_intersection, color='magenta')
-                        #axes[2].axvline(x=intersection_index,color='r')
-                        axes[2].axvline(x=highest[0],color='r')
 
                     filename, file_extension = os.path.splitext(name)
                     plt.savefig((signal_dir + filename + 'stake' + str(i) + '-' + str(j) + file_extension))
