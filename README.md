@@ -149,7 +149,7 @@ python snow_depth.py
 3. Filled boxes can also be modified but contain default values and should only be changed after running the algorithm on the default settings
 4. Click "Create Profile" and follow the on-screen instructions
 
-### Profile Options  
+### 2.1 Profile Options  
 _**Basic**_  
 
 | Name  | Explanation |  
