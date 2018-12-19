@@ -143,8 +143,8 @@ python snow_depth.py
 
 1. With the script running and the main GUI window open select "Profiles" then "Create Profile"  
 
-![profile1](https://user-images.githubusercontent.com/43354925/49673675-43aa8d80-fa3d-11e8-89d0-86e9ba56eb49.PNG)  
-  
+![profile3](https://user-images.githubusercontent.com/43354925/50244567-42168900-039e-11e9-8b8b-cc1e35409111.PNG)
+
 2. Fill in the empty boxes in the preferences window
 3. Filled boxes can also be modified but contain default values and should only be changed after running the algorithm on the default settings
 4. Click "Create Profile" and follow the on-screen instructions
