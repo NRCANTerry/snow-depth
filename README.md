@@ -16,8 +16,15 @@ To install the application on your machine, following the steps below:
    - You can download Miniconda here (https://conda.io/miniconda.html)
    - Create a Python 3.6 environment using ```conda create -n envName python=3.6```
    
-3. Install the following Python packages (using pip, conda, etc.)
-   - I have provided a list of the pip/conda commands that can be run to do so
+3. Install the following Python packages (using pip, conda, etc.)   
+
+   **Option 1: Using requirements.txt file***   
+   Run the following commands (in the repository directory):   
+   - ```conda install matplotlib```   
+   - ```pip install -r requirements.txt```   
+
+   **Option 2: Individual Imports***
+   Run the following commands:
    - ```conda install matploblib```
    - ```pip install tqdm```
    - ```pip install opencv-python```
