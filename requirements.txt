@@ -1,0 +1,12 @@
+tqdm
+opencv-python
+Pillow
+numpy
+scipy
+keras
+xlsxwriter
+PollyReports
+reportlab
+scikit-learn
+tensorflow
+scikit-image
