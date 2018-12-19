@@ -1819,18 +1819,22 @@ class GUI:
             titleLabel = tk.Label(leftFrame, text = str(self.profileMenuVar.get()), bg=self.gray, fg = self.white, font=("Calibri Light", 24))
             underlineFont = font.Font(family="Calibri Light", size=18, underline=True)
             generalLabel = tk.Label(leftFrame, text="General", font=underlineFont, bg=self.gray, fg=self.white)
-            upperBorderLabel = tk.Label(leftFrame, text = "Upper Border: " + str(self.systemParameters["Upper_Border"]))
-            lowerBorderLabel = tk.Label(leftFrame, text = "Lower Border: " + str(self.systemParameters["Lower_Border"]))
+            borderLabel = tk.Label(leftFrame, text="Borders (Up, Low): " + str(self.systemParameters["Upper_Border"]) + ", " +
+                str(self.systemParameters["Lower_Border"]))
             templateLabel = tk.Label(leftFrame, text = "Template: " + str(self.systemParameters["Current_Template_Name"]))
-            clipLimitLabel = tk.Label(leftFrame, text = "Clip Limit: " + str(self.systemParameters["Clip_Limit"]))
-            tileSizeLabel = tk.Label(leftFrame, text = "Tile Size: " + str(self.systemParameters["Tile_Size"]))
+            eqLabel = tk.Label(leftFrame, text="Clip Limit/Tile Size: " + str(self.systemParameters["Clip_Limit"]) + ", " +
+                str(self.systemParameters["Tile_Size"]))
+            DLProfileLabel = tk.Label(leftFrame, text="Deep Learning: " + str(self.systemParameters["Misc_Params"][0] == 1))
 
             regLabel = tk.Label(leftFrame, text="Registration", font=underlineFont, bg=self.gray, fg=self.white)
             featuresLabel = tk.Label(leftFrame, text="ORB Features: " + str(self.systemParameters["Reg_Params"][0]))
-            ECCLabel1 = tk.Label(leftFrame, text="ECC Threshold (ORB): 1e-" + str(self.systemParameters["Reg_Params"][1]))
-            ECCLabel2 = tk.Label(leftFrame, text="ECC Iterations (ORB): " + str(self.systemParameters["Reg_Params"][2]))
-            ECCLabel3 = tk.Label(leftFrame, text="ECC Threshold: 1e-" + str(self.systemParameters["Reg_Params"][3]))
-            ECCLabel4 = tk.Label(leftFrame, text="ECC Iterations: " + str(self.systemParameters["Reg_Params"][4]))
+            ECCLabel1 = tk.Label(leftFrame, text="ECC (ORB): 1e-" + str(int(self.systemParameters["Reg_Params"][1])) + ", " +
+                str(int(self.systemParameters["Reg_Params"][2])))
+            ECCLabel2 = tk.Label(leftFrame, text="ECC: 1e-" + str(int(self.systemParameters["Reg_Params"][3])) + ", " +
+                str(int(self.systemParameters["Reg_Params"][4])))
+            regFlagLabel = tk.Label(leftFrame, text="SSIM/Robust: " + str(self.systemParameters["Misc_Params"][1] == 1) + ", " +
+                str(self.systemParameters["Reg_Params"][7] == 1))
+            regModeLabel = tk.Label(leftFrame, text="Mode: " + str(self.systemParameters["Reg_Params"][6]))
 
             intLabel = tk.Label(leftFrame, text="Intersection", font=underlineFont, bg=self.gray, fg=self.white)
             peakLabel = tk.Label(leftFrame, text="Peak Height: " + str(self.systemParameters["Int_Params"][0]))
@@ -1838,10 +1842,17 @@ class GUI:
             minThreshLabel = tk.Label(leftFrame, text= "Min Threshold: " + str(self.systemParameters["Int_Params"][2]))
             stakeCoverLabel = tk.Label(leftFrame, text="Stake Coverage (%): " + str(self.systemParameters["Int_Params"][3]*100.0))
             snowCoverLabel = tk.Label(leftFrame, text="Snow Coverage (%): " + str(self.systemParameters["Int_Params"][4]*100.0))
+            robustIntLabel = tk.Label(leftFrame, text="Robust: " + str(self.systemParameters["Int_Params"][5] == 1))
 
-            labels = [upperBorderLabel, lowerBorderLabel, templateLabel, clipLimitLabel, tileSizeLabel,
-                featuresLabel, ECCLabel1, ECCLabel2, ECCLabel3, ECCLabel4, peakLabel, threshLabel,
-                minThreshLabel, stakeCoverLabel, snowCoverLabel]
+            otherLabel = tk.Label(leftFrame, text="Other", font=underlineFont, bg=self.gray, fg=self.white)
+            bilateralParamsLabel = tk.Label(leftFrame, text="Bilateral: " + "(" + str(self.systemParameters["Other_Params"][0]) + ", "
+                + str(self.systemParameters["Other_Params"][1]) + ", " + str(self.systemParameters["Other_Params"][2]) + ")")
+            parallelLabel = tk.Label(leftFrame, text="Parallel Pool: " + str(self.systemParameters["Other_Params"][3] == 1))
+
+            labels = [templateLabel, eqLabel, regFlagLabel, regModeLabel, robustIntLabel,
+                DLProfileLabel, featuresLabel, ECCLabel1, ECCLabel2, peakLabel,
+                threshLabel, minThreshLabel, stakeCoverLabel, snowCoverLabel, borderLabel,
+                bilateralParamsLabel, parallelLabel]
 
             for label in labels:
                 label.config(bg=self.gray, fg = self.white, font=("Calibri Light", 16))
@@ -1871,23 +1882,26 @@ class GUI:
             leftFrame.pack(side = tk.LEFT, padx = 40)
             titleLabel.pack(pady = 10)
             generalLabel.pack(pady=(20,0))
-            upperBorderLabel.pack(pady = 5)
-            lowerBorderLabel.pack(pady = 5)
+            borderLabel.pack(pady=5)
             templateLabel.pack(pady = 5)
-            clipLimitLabel.pack(pady = 5)
-            tileSizeLabel.pack(pady = 5)
+            eqLabel.pack(pady=5)
+            DLProfileLabel.pack(pady=5)
             regLabel.pack(pady=(20,0))
             featuresLabel.pack(pady = 5)
             ECCLabel1.pack(pady = 5)
             ECCLabel2.pack(pady = 5)
-            ECCLabel3.pack(pady = 5)
-            ECCLabel4.pack(pady = 5)
+            regFlagLabel.pack(pady=5)
+            regModeLabel.pack(pady=5)
             intLabel.pack(pady=(20,0))
             peakLabel.pack(pady = 5)
             threshLabel.pack(pady = 5)
             minThreshLabel.pack(pady = 5)
             stakeCoverLabel.pack(pady = 5)
             snowCoverLabel.pack(pady = 5)
+            robustIntLabel.pack(pady=5)
+            otherLabel.pack(pady=(20,0))
+            bilateralParamsLabel.pack(pady=5)
+            parallelLabel.pack(pady=5)
 
             # canvas packing
             rightFrame.pack(side = tk.RIGHT)
