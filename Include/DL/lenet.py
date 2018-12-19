@@ -28,12 +28,12 @@ INIT_LR = 1e-3
 BATCH_SIZE = 32
 
 def absolutePaths(dir):
-	'''
+	"""
 	Function to get absolute file paths from a directory
-	@param directory the path to the file directory
-	@return absolute file paths
-	@rtype generator
-	'''
+
+	Keyword arguments:
+	dir -- the path to the file directory
+	"""
 	for path, _, filenames in os.walk(dir):
 		for f in filenames:
 			yield os.path.abspath(os.path.join(path, f))
@@ -41,15 +41,14 @@ def absolutePaths(dir):
 # convolutional neural network architecture
 class LeNet:
 	def __init__(self, path, validSetPath, invalidSetPath):
-		'''
+		"""
 		Function to train and save neural network
-		@param path path for saved .model file
-		@param validSetPath path to valid images
-		@param invalidSetPath path to invalid images
-		@type path string
-		@type validSetPath string
-		@type invalidSetPath string
-		'''
+
+		Keyword arguments:
+		path -- path for saved .model file
+		validSetPath -- path to valid training images
+		invalidSetPath -- path to invalid training images
+		"""
 
 		# get all image paths
 		validImages = list(absolutePaths(validSetPath))

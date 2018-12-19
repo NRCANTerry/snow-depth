@@ -5,18 +5,13 @@ import argparse
 import cv2
 
 def classify(img, model):
-    '''
+    """
     Function to classify input image based on model
-    @param img the image to be classified
-    @param model the lenet model to be used
-    @type img cv2.image
-    @type model keras.models
 
-    @return valid whether the input image is valid according to the model
-    @return prob the probability of the input image being valid/invalid
-    @rtype valid bool
-    @rtype prob float
-    '''
+    Keyword arguments:
+    img -- the image to be classified
+    model -- the lenet model to be used
+    """
 
     # ensure width and height are non-zero
     height, width = img.shape[:2]
