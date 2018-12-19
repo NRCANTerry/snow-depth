@@ -164,8 +164,9 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     templateCrop = template[int(upperY):int(lowerY), int(upperX):int(lowerX)]
 
     # write to matches directory
-    cv2.imwrite(debug_directory_matches + filename + "-crop" + ext, imgCrop)
-    cv2.imwrite(debug_directory_matches + filename + "-template-crop" + ext, templateCrop)
+    if debug:
+        cv2.imwrite(debug_directory_matches + filename + "-crop" + ext, imgCrop)
+        cv2.imwrite(debug_directory_matches + filename + "-template-crop" + ext, templateCrop)
 
     # define ECC motion model
     warp_mode = cv2.MOTION_AFFINE
@@ -250,7 +251,8 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
     # only if image was aligned (is not the same as input image)
     if(ORB_aligned_flag or ECC_aligned_flag):
         # write registered image to debug directory
-        cv2.imwrite(debug_directory_registered + name, imgECCAligned)
+        if debug:
+            cv2.imwrite(debug_directory_registered + name, imgECCAligned)
 
         # return registered image and parameters
         return (imgECCAligned, name, mean_squared_error, ORB_aligned_flag,

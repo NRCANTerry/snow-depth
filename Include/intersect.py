@@ -657,6 +657,8 @@ def getIntersections(imgs, boxCoords, stakeValidity, roiCoordinates, img_names,
     if(debug):
         signal_dir = debug_directory + "signals/"
         os.mkdir(signal_dir)
+    else:
+        signal_dir = ""
 
     # contains output data for JSON file
     intersection_output = {}
@@ -751,6 +753,8 @@ def getIntersectionsParallel(pool, imgs, boxCoords, stakeValidity, roiCoordinate
     if(debug):
         signal_dir = debug_directory + "signals/"
         os.mkdir(signal_dir)
+    else:
+        signal_dir = ""
 
     # contains output data for JSON file
     intersection_output = {}
