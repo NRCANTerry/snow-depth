@@ -236,7 +236,7 @@ if __name__ == '__main__':
     summary["Filtering Time"] = "%0.2fs" % filteringTime
     summary["Per Image Filtering Time"] = "%0.2f" % (filteringTime / float(num_imgs))
     summary["Number of Input Images"] = numInitial
-    summary["Number of Night Images"] = numInitial - len(images_filtered)
+    summary["Number of Invalid Images"] = numInitial - len(images_filtered)
 
     # update number of images
     num_imgs = len(images_filtered)

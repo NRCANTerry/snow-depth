@@ -8,7 +8,7 @@ RIGHT_DATA = 450
 # dictionary with header locations and header text
 headers = {
     "Lower HSV 1": "General",
-    "Filtering Time": "Night Filtering",
+    "Filtering Time": "Image Selection",
     "Equalization Time": "Equalization",
     "Registration Time": "Registration",
     "Check Time": "Stake Verification",
