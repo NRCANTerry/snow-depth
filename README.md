@@ -23,8 +23,8 @@ To install the application on your machine, following the steps below:
    - ```conda install matplotlib```   
    - ```pip install -r requirements.txt```   
 
-   **Option 2: Individual Imports**
-   Run the following commands:
+   **Option 2: Individual Imports**  
+   Run the following commands:  
    - ```conda install matploblib```
    - ```pip install tqdm```
    - ```pip install opencv-python```
