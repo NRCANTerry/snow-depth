@@ -1,8 +1,7 @@
 # import necessary packages
 import sys
-sys.path.append('C:\\Users\\tbaricia\\Documents\\GitHub\\snow-depth\\include\\DL')
-from lenet import LeNet
-from classify import classify
+from ...lenet import LeNet
+from ...classify import classify
 from keras.models import load_model
 import cv2
 import time
