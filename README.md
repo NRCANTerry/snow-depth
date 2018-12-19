@@ -18,12 +18,12 @@ To install the application on your machine, following the steps below:
    
 3. Install the following Python packages (using pip, conda, etc.)   
 
-   **Option 1: Using requirements.txt file***   
+   **Option 1: Using requirements.txt file**   
    Run the following commands (in the repository directory):   
    - ```conda install matplotlib```   
    - ```pip install -r requirements.txt```   
 
-   **Option 2: Individual Imports***
+   **Option 2: Individual Imports**
    Run the following commands:
    - ```conda install matploblib```
    - ```pip install tqdm```
